@@ -1,0 +1,65 @@
+:root {
+  /* Sacred Midnight Sanctuary — Color Tokens (DESIGN.md) */
+  --color-bg: #0B0D17;
+  --color-bg-elevated: #121526;
+  --color-surface: #171B2E;
+  --color-surface-highlight: #1F2442;
+  --color-border-subtle: rgba(255, 255, 255, 0.09);
+  --color-border-gold: rgba(226, 168, 62, 0.55);
+
+  --color-primary: #E2A83E;
+  --color-primary-hover: #EEB852;
+  --color-primary-fg: #11131F;
+  --color-secondary: #B855C8;
+  --color-accent-indigo: #6E75F5;
+  --color-accent-emerald: #10B981;
+  --color-accent-terracotta: #9A4A38;
+  --color-accent-terracotta-icon: #E07A5F;
+
+  --color-text: #F8FAFC;
+  --color-text-muted: #94A3B8;
+  --color-text-subtle: #64748B;
+
+  /* Ambient Liturgical Glows */
+  --glow-gold: rgba(226, 168, 62, 0.18);
+  --glow-violet: rgba(184, 85, 200, 0.20);
+  --glow-indigo: rgba(110, 117, 245, 0.18);
+
+  /* Typography */
+  --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --text-display-size: 2.375rem;
+  --text-display-lh: 1.12;
+  --text-h1-size: 2rem;
+  --text-h1-lh: 1.18;
+  --text-h2-size: 1.35rem;
+  --text-h2-lh: 1.3;
+  --text-scripture-size: 1.0625rem;
+  --text-scripture-lh: 1.55;
+  --text-eyebrow-size: 0.75rem;
+  --text-eyebrow-tracking: 0.14em;
+  --text-body-size: 0.95rem;
+  --text-body-lh: 1.5;
+
+  /* Radii */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 9999px;
+
+  /* Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Sanctuary Layout & Touch Baseline */
+  --sanctuary-max-width: 440px;
+  --sanctuary-gutter: 24px;
+  --btn-primary-height: 56px;
+  --btn-random-height: 54px;
+  --touch-target-min: 44px;
+  --section-transition-ms: 320ms;
+}

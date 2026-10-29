@@ -5,12 +5,17 @@
     "title": "Single-port TypeScript React server shell serves health check",
     "user_visible_behavior": "Starting the project serves the Midnight Sanctuary React application shell with DESIGN.md color/typography tokens alongside GET /api/health returning JSON { status: 'ok' } on a single unified port with allowedHosts enabled for public HTTPS tunnels.",
     "depends_on": [],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Provisional until bootstrap: run ./init.sh to verify install, typecheck, unit tests, and production build pass.",
       "Start the server and assert GET /api/health returns HTTP 200 with status 'ok' and GET / serves the React HTML shell on the same port."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: ./init.sh exited 0 in bootstrapped mode — npm run typecheck passed (tsconfig.client.json, tsconfig.server.json, tsconfig.json), npm test passed 3 Vitest suites / 14 tests (tests/unit/runtime-url.test.ts [8], tests/unit/app-shell.test.tsx [2], tests/integration/server-health.test.ts [4]), and npm run build emitted dist/client (index.html 0.94 kB, CSS 6.58 kB, JS 222.51 kB) + dist/server.",
+      "2026-10-29: npm run test:e2e (Playwright mobile-chromium 390x844 against single-port npm start) exited 0 (1 passed in 3.2s) verifying GET /api/health -> 200 { status: 'ok', activeSessionCount: 0, wsReady: true }, GET /api/nonexistent -> 404 JSON, /ws ping->pong upgrade, #0B0D17 canvas, Playfair Display heading, Study Leader/Participant labels (zero 'Assistant'), >= 16px input font-size, and 'v1.0 · Connected in community' footer pill.",
+      "2026-10-29: Direct CLI smoke check on PORT=3210 node dist/server/index.js confirmed curl -fsS http://127.0.0.1:3210/api/health returned HTTP 200 {\"status\":\"ok\",\"uptimeSeconds\":0,\"activeSessionCount\":0,\"wsReady\":true,...}, curl -fsSI http://127.0.0.1:3210/ returned HTTP/1.1 200 OK Content-Type: text/html; charset=utf-8, and GET /api/nonexistent returned HTTP 404 {\"error\":\"Not found\"} before clean SIGTERM shutdown.",
+      "2026-10-29: Independent validator verdict: accept — reran ./init.sh (exit 0, 14/14 Vitest tests), npm run test:e2e (exit 0, mobile-chromium 390x844), single-port production smoke on PORT=3215 with Host: demo-room.trycloudflare.com, and live Vite dev proxy + /ws upgrade check with 0 Critical/High/Medium findings."
+    ],
     "notes": "Initialize TypeScript, React, Vite (with /api and /ws proxy + allowedHosts: true), Node HTTP server, Vitest, Playwright config, and update init.sh to the bootstrapped variant. Follow docs/technical-discovery.md and DESIGN.md."
   },
   {

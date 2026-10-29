@@ -5,6 +5,8 @@ This repository contains **YA Bible Study**, an English-language, mobile-first i
 ## Read First
 
 - `CONTEXT.md` — canonical domain language (`Study Leader`, `Participant`, `Gospel Reading`, `Volunteer Turn`, `Sacred3DScene`).
+- `ARCHITECTURE.md` — `src/client`, `src/server`, and `src/shared` boundaries, unified single-port `/api` + `/ws` topology, and verification layers.
+- `CONSTRAINTS.md` — non-negotiable repo invariants (dynamic `ws(s)://`, `allowedHosts: true`, `Participant` terminology, Gospel-only Section 3, server-enforced gating, `>= 16px` mobile inputs, WebGL budget).
 - `docs/build-brief.md` — problem, target users, MVP vertical slice, non-goals, and validation plan.
 - `docs/domain-model.md` — entities, lifecycles, state transitions, and the canonical *"Great Is Your Faith"* (Matthew 15:21–28) seed content.
 - `docs/risks-and-open-questions.md` — active assumptions, technical risks, and implementation-time decisions.
@@ -39,7 +41,7 @@ Before writing code:
 
 - `feature_list.json`: source of truth for feature state, dependencies, verification steps, and evidence.
 - `PROGRESS.md`: current verified state and lightweight session log.
-- `init.sh`: standard startup and baseline verification path.
+- `init.sh`: standard non-blocking startup and baseline verification gate (`npm run typecheck`, `npm test`, `npm run build`); run `npm run test:e2e` for Playwright browser/single-port verification.
 
 ## Definition Of Done
 
