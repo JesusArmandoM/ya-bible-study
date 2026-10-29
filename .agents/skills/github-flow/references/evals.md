@@ -6,7 +6,7 @@ Read-only contract evals for `../SKILL.md` against this repository's `feature_li
 
 - `repository`: `/Users/armando/Documents/YA Bible Study` (resolved via `git remote get-url origin` when configured, or `local:/Users/armando/Documents/YA Bible Study (origin not configured)`).
 - `base_branch`: `main` (where `app-shell-single-port-bootstrap` has `"status": "accepted"`).
-- `push_permission`: `denied` (default when not explicitly granted).
+- `push_permission`: `granted` (explicitly authorized by user).
 - Feature source: `feature_list.json` as it stands at eval time.
 - Allowed reads only: `feature_list.json`, `PROGRESS.md`, `git remote get-url origin`, `git status --porcelain`, `git rev-parse main`, `git worktree list`, `git branch --list`, `gh auth status`, and (if `origin` exists) `gh issue list`, `gh pr list`.
 
@@ -42,6 +42,6 @@ Record per eval: verdict `pass` / `fail`, observed structured report lines, and 
 
 ## Eval 4 — Publish without acceptance is refused
 
-- **Input**: `mode = "publish"`, `feature_ids = ["preloaded-great-is-your-faith-seed"]` (`status: "not_started"` in `feature_list.json`), evaluated read-only through the publishing gate.
-- **Expected**: `status: refused` — *sin aceptación no se publica* (`preloaded-great-is-your-faith-seed` has status `not_started`, not `accepted`; additionally `push_permission: denied`). Zero push, zero PR, zero issue/worktree/branch/file mutations.
+- **Input**: `mode = "publish"`, `feature_ids = ["preloaded-great-is-your-faith-seed"]` (`status: "not_started"` in `feature_list.json`, `push_permission = "granted"`), evaluated read-only through the publishing gate.
+- **Expected**: `status: refused` — *sin aceptación no se publica* (even with `push_permission: granted`, `preloaded-great-is-your-faith-seed` has status `not_started`, not `accepted`). Zero push, zero PR, zero issue/worktree/branch/file mutations.
 - **Pass criteria**: Verdict `status: refused` explicitly citing that status is not `accepted`; `to_create: 0`; zero side effects.

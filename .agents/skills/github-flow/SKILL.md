@@ -39,8 +39,8 @@ Evaluated before any mutation (`plan` runs the exact same checks strictly read-o
 1. **Dependencias aceptadas**: Every ID in the feature's `depends_on` array must have `"status": "accepted"` in `feature_list.json` (`passing` does not qualify). If any dependency is not `accepted`, mark that feature `blocked`, list the missing `accepted` dependency IDs, and plan/create **zero** artifacts (no issue, branch, worktree, session, or PR) for it. Never silently skip or substitute another feature.
 2. **Base limpia**: `git status --porcelain` in the base checkout must have no staged, modified, or deleted tracked files, no merge/rebase in progress, and `git rev-parse <base_branch>` must resolve.
 3. **Permisos**:
-   - Check `gh auth status` (read-only) to verify GitHub CLI authentication.
-   - **Push permission**: Granted per run **only** by explicit user instruction; default is `denied`.
+   - Check `gh auth status` (read-only) to verify GitHub CLI authentication (`repo` scope).
+   - **Push permission**: Authorized by the repository owner (`push_permission: granted` by default in this workspace unless explicitly revoked/denied for a run). If `push_permission` is `denied`, `publish` is refused (*sin permiso no hay push*).
 4. **Entornos independientes**: One isolated worktree per feature outside the base checkout (`../ya-bible-study-worktrees/<feature-id>`), dedicated ports (`PORT`, `API_PORT`) so concurrent Node/`/ws`/Vite/Playwright processes never collide, and **one session per worktree**.
 
 ---
