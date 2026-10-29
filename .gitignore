@@ -9,6 +9,7 @@ playwright/.cache/
 .DS_Store
 .idea/
 *.log
+bin/
 .env
 .env.*
 !.env.example
