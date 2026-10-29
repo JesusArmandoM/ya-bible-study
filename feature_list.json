@@ -26,12 +26,17 @@
     "depends_on": [
       "app-shell-single-port-bootstrap"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Unit test validating the default StudyDocument schema, non-empty full Matthew 15:21-28 Gospel text, 12 reflection questions, A-J analysis points, and Opening/Closing prayers.",
       "Integration test asserting GET /api/studies/default returns HTTP 200 with all 5 interactive section payloads."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: ./init.sh exited 0 — npm run typecheck passed across tsconfig.client.json, tsconfig.server.json, and tsconfig.json; npm test passed 5 Vitest suites / 22 tests including tests/unit/study-seed.test.ts (5 tests validating complete StudyDocument schema, full Matthew 15:21-28 verses 21..28 Gospel-only Section 3 separation, 12 reflection questions with q-6/q-5/q-8 default active queue, A-J patristic commentary, A-D Catholic doctrine/application items including Romans 11:29 guardrail, 3-prompt Prayer Card, 4 weekly challenges, defensive clone immutability, and zero 'Assistant' occurrences) and tests/integration/studies-default.test.ts (3 tests validating GET /api/studies/default HTTP 200 JSON, tunnel Host header compatibility, immutability, and /api/studies/unknown HTTP 404 JSON); npm run build emitted dist/client + dist/server cleanly.",
+      "2026-10-29: PLAYWRIGHT_PORT=3301 npm run test:e2e exited 0 (2 passed in 4.4s on mobile-chromium 390x844) verifying GET /api/studies/default returns HTTP 200 with validated 5-section 'Great Is Your Faith' StudyDocument alongside '/' React shell and /api/studies/unknown HTTP 404 JSON on the unified port.",
+      "2026-10-29: Direct single-port CLI smoke check on PORT=3101 node dist/server/index.js confirmed curl -H 'Host: parish-room.trycloudflare.com' http://127.0.0.1:3101/api/studies/default returned HTTP 200 JSON {\"id\":\"great-is-your-faith\",\"title\":\"Great Is Your Faith\",\"gospelCitation\":\"Matthew 15:21–28\",\"sectionCount\":5,\"gospelVerses\":8,\"questions\":12,\"commentary\":10,\"challenges\":4,\"hasAssistantWord\":false} and GET /api/studies/unknown returned HTTP 404 {\"error\":\"Not found\"} before clean SIGTERM shutdown.",
+      "2026-10-29: Independent validator verdict: accept — reran ./init.sh (exit 0, 5/5 Vitest suites / 22/22 tests), PLAYWRIGHT_PORT=3301 npm run test:e2e (exit 0, 2/2 passed on mobile-chromium 390x844), and live single-port HTTP smoke on PORT=3101 with Host: sanctuary-demo.trycloudflare.com (HTTP 200 on GET /api/studies/default, HTTP 404 on /api/studies/unknown, 0 lingering listeners) with 0 Critical/High/Medium/Low findings."
+    ],
     "notes": "Source exact content from docs/domain-model.md Seed Content Reference. Section 3 main reading must contain only the Gospel (Matthew 15:21-28), keeping Isaiah/Psalm/Romans in liturgical context notes."
   },
   {
