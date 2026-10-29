@@ -5,11 +5,18 @@ import path from 'node:path';
 import express, { type Express } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { HealthResponse } from '../shared/health.js';
+import {
+  DEFAULT_WS_MAX_PAYLOAD_BYTES,
+  type ServerWsMessage,
+} from '../shared/session.js';
+import { LiveSessionStore } from './sessionStore.js';
 import { getDefaultStudyDocument } from './studies/greatIsYourFaithSeed.js';
 
 export interface AppServerOptions {
   staticDir?: string | false;
+  sessionStore?: LiveSessionStore;
   getActiveSessionCount?: () => number;
+  wsMaxPayloadBytes?: number;
 }
 
 export interface BoundServerAddress {
@@ -21,6 +28,7 @@ export interface AppServer {
   app: Express;
   httpServer: http.Server;
   wss: WebSocketServer;
+  sessionStore: LiveSessionStore;
   start: (port?: number, host?: string) => Promise<BoundServerAddress>;
   close: () => Promise<void>;
 }
@@ -42,7 +50,9 @@ function resolveDefaultStaticDir(): string | undefined {
 
 export function createAppServer(options: AppServerOptions = {}): AppServer {
   const startedAtMs = Date.now();
-  const getActiveSessionCount = options.getActiveSessionCount ?? (() => 0);
+  const sessionStore = options.sessionStore ?? new LiveSessionStore();
+  const getActiveSessionCount =
+    options.getActiveSessionCount ?? (() => sessionStore.getActiveSessionCount());
   let isClosing = false;
   let closePromise: Promise<void> | undefined;
 
@@ -94,27 +104,66 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
   }
 
   const httpServer = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: options.wsMaxPayloadBytes ?? DEFAULT_WS_MAX_PAYLOAD_BYTES,
+  });
+
+  const sendSocketMessage = (socket: WebSocket, message: ServerWsMessage) => {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    }
+  };
 
   wss.on('connection', (socket) => {
     socket.on('error', () => {
-      // Prevent unhandled client socket errors from crashing the server process.
+      // Prevent unhandled client socket errors (including maxPayload violations) from crashing the process.
     });
 
-    socket.on('message', (rawData) => {
-      try {
-        const parsed = JSON.parse(String(rawData)) as { type?: unknown };
-        if (parsed.type === 'ping' && socket.readyState === WebSocket.OPEN) {
-          socket.send(
-            JSON.stringify({
-              type: 'pong',
-              timestamp: new Date().toISOString(),
-            }),
-          );
-        }
-      } catch {
-        // Malformed frames are ignored at bootstrap; protocol handlers arrive in ws-live-session-room-lifecycle.
+    socket.on('close', () => {
+      sessionStore.handleSocketClose(socket);
+    });
+
+    socket.on('message', (rawData, isBinary) => {
+      if (isBinary) {
+        sendSocketMessage(socket, {
+          type: 'session_error',
+          code: 'INVALID_MESSAGE',
+          message: 'Binary WebSocket frames are not supported; send UTF-8 JSON.',
+        });
+        return;
       }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(rawData));
+      } catch {
+        sendSocketMessage(socket, {
+          type: 'session_error',
+          code: 'INVALID_MESSAGE',
+          message: 'Malformed WebSocket JSON frame.',
+        });
+        return;
+      }
+
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        !Array.isArray(parsed) &&
+        (parsed as { type?: unknown }).type === 'ping'
+      ) {
+        const requestId = (parsed as { requestId?: unknown }).requestId;
+        sendSocketMessage(socket, {
+          type: 'pong',
+          timestamp: new Date().toISOString(),
+          ...(typeof requestId === 'string' && requestId.length > 0
+            ? { requestId }
+            : {}),
+        });
+        return;
+      }
+
+      sessionStore.handleMessage(socket, parsed);
     });
   });
 
@@ -174,6 +223,7 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
       return closePromise;
     }
     isClosing = true;
+    sessionStore.dispose();
 
     closePromise = new Promise<void>((resolve, reject) => {
       for (const client of wss.clients) {
@@ -202,6 +252,7 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
     app,
     httpServer,
     wss,
+    sessionStore,
     start,
     close,
   };

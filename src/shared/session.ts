@@ -1,0 +1,290 @@
+import type { SanctuaryRole } from './health.js';
+
+export const SESSION_CODE_LENGTH = 6;
+export const SESSION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const LEADER_PIN_LENGTH = 4;
+export const MAX_DISPLAY_NAME_LENGTH = 48;
+export const DEFAULT_SESSION_TTL_MS = 4 * 60 * 60 * 1000;
+export const DEFAULT_SESSION_SWEEP_INTERVAL_MS = 60 * 1000;
+export const DEFAULT_WS_MAX_PAYLOAD_BYTES = 64 * 1024;
+
+export const AVATAR_PALETTES = [
+  'gold',
+  'indigo',
+  'violet',
+  'emerald',
+  'terracotta',
+] as const;
+
+export type AvatarPalette = (typeof AVATAR_PALETTES)[number];
+
+export const PARTICIPANT_AVATAR_PALETTES: readonly AvatarPalette[] = [
+  'indigo',
+  'violet',
+  'emerald',
+  'terracotta',
+  'gold',
+] as const;
+
+export const STUDY_SECTION_IDS = [
+  'section_1_prayer',
+  'section_2_icebreaker',
+  'section_3_reading',
+  'section_4_discussion',
+  'section_5_closing',
+] as const;
+
+export type StudySectionId = (typeof STUDY_SECTION_IDS)[number];
+
+export type LiveSessionStatus = 'setup' | 'lobby' | 'in_progress' | 'completed';
+
+export type MemberConnectionStatus = 'connected' | 'disconnected';
+
+export interface PublicSessionMember {
+  memberId: string;
+  displayName: string;
+  initials: string;
+  avatarPalette: AvatarPalette;
+  role: SanctuaryRole;
+  connectionStatus: MemberConnectionStatus;
+  joinedAt: string;
+}
+
+export interface PublicLiveSessionSnapshot {
+  sessionCode: string;
+  status: LiveSessionStatus;
+  currentSectionIndex: number | null;
+  currentSectionId: StudySectionId | null;
+  createdAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  connectedMemberCount: number;
+  connectedParticipantCount: number;
+  members: PublicSessionMember[];
+}
+
+export type SessionErrorCode =
+  | 'INVALID_MESSAGE'
+  | 'INVALID_DISPLAY_NAME'
+  | 'INVALID_SESSION_CODE'
+  | 'SESSION_NOT_FOUND'
+  | 'SESSION_CLOSED'
+  | 'INVALID_LEADER_PIN'
+  | 'FORBIDDEN_LEADER_ONLY'
+  | 'UNAUTHORIZED_LEADER'
+  | 'UNAUTHORIZED_RECONNECT'
+  | 'INVALID_STATE_TRANSITION';
+
+export type LeaderCommandType =
+  | 'open_lobby'
+  | 'start_study'
+  | 'next_section'
+  | 'close_session';
+
+export type SessionCloseReason = 'closed_by_leader' | 'expired_inactivity';
+
+export type ClientWsMessage =
+  | {
+      type: 'ping';
+      requestId?: string;
+    }
+  | {
+      type: 'create_session';
+      displayName: string;
+      requestId?: string;
+    }
+  | {
+      type: 'join_session';
+      sessionCode: string;
+      displayName: string;
+      requestId?: string;
+    }
+  | {
+      type: 'claim_leader';
+      sessionCode: string;
+      leaderPin: string;
+      displayName?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'reconnect_session';
+      sessionCode: string;
+      memberId: string;
+      reconnectToken?: string;
+      leaderToken?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'open_lobby';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'start_study';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'next_section';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'close_session';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      reason?: string;
+      requestId?: string;
+    };
+
+export type ServerWsMessage =
+  | {
+      type: 'pong';
+      timestamp: string;
+      requestId?: string;
+    }
+  | {
+      type: 'session_created';
+      requestId?: string;
+      sessionCode: string;
+      memberId: string;
+      role: 'Study Leader';
+      leaderPin: string;
+      leaderToken: string;
+      reconnectToken: string;
+      session: PublicLiveSessionSnapshot;
+    }
+  | {
+      type: 'session_joined';
+      requestId?: string;
+      sessionCode: string;
+      memberId: string;
+      role: 'Participant';
+      displayName: string;
+      avatarPalette: AvatarPalette;
+      reconnectToken: string;
+      member: PublicSessionMember;
+      session: PublicLiveSessionSnapshot;
+    }
+  | {
+      type: 'roster_updated';
+      sessionCode: string;
+      session: PublicLiveSessionSnapshot;
+    }
+  | {
+      type: 'leader_claimed';
+      requestId?: string;
+      sessionCode: string;
+      memberId: string;
+      role: 'Study Leader';
+      leaderPin: string;
+      leaderToken: string;
+      reconnectToken: string;
+      session: PublicLiveSessionSnapshot;
+    }
+  | {
+      type: 'leader_replaced';
+      sessionCode: string;
+      message: string;
+    }
+  | {
+      type: 'session_reconnected';
+      requestId?: string;
+      sessionCode: string;
+      memberId: string;
+      role: SanctuaryRole;
+      member: PublicSessionMember;
+      session: PublicLiveSessionSnapshot;
+    }
+  | {
+      type: 'session_updated';
+      requestId?: string;
+      command: Exclude<LeaderCommandType, 'close_session'>;
+      sessionCode: string;
+      session: PublicLiveSessionSnapshot;
+    }
+  | {
+      type: 'session_closed';
+      requestId?: string;
+      sessionCode: string;
+      reason: SessionCloseReason;
+    }
+  | {
+      type: 'session_error';
+      requestId?: string;
+      code: SessionErrorCode;
+      message: string;
+    };
+
+export function normalizeDisplayName(raw: unknown): string {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  return raw.trim().replace(/\s+/g, ' ');
+}
+
+export function isValidDisplayName(normalizedName: string): boolean {
+  return (
+    normalizedName.length >= 1 &&
+    normalizedName.length <= MAX_DISPLAY_NAME_LENGTH
+  );
+}
+
+export function normalizeSessionCode(raw: unknown): string {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  return raw.trim().toUpperCase();
+}
+
+export function isValidSessionCode(normalizedCode: string): boolean {
+  return /^[A-Z0-9]{6}$/.test(normalizedCode);
+}
+
+export function normalizeLeaderPin(raw: unknown): string {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  return raw.trim();
+}
+
+export function isValidLeaderPin(pin: string): boolean {
+  return /^\d{4}$/.test(pin);
+}
+
+/**
+ * Derives 1-2 uppercase avatar initials from a member's display name,
+ * ignoring trailing duplicate-disambiguation suffixes like " (2)".
+ */
+export function deriveInitials(displayName: string): string {
+  const withoutSuffix = normalizeDisplayName(displayName).replace(
+    /\s+\(\d+\)$/,
+    '',
+  );
+  const words = withoutSuffix.match(/[\p{L}\p{N}]+/gu) ?? [];
+
+  if (words.length >= 2) {
+    const firstChar = Array.from(words[0] ?? '')[0] ?? '';
+    const secondChar = Array.from(words[1] ?? '')[0] ?? '';
+    return `${firstChar}${secondChar}`.toUpperCase();
+  }
+
+  if (words.length === 1) {
+    const chars = Array.from(words[0] ?? '');
+    if (chars.length >= 2) {
+      return `${chars[0]}${chars[1]}`.toUpperCase();
+    }
+    if (chars.length === 1) {
+      return `${chars[0]}${chars[0]}`.toUpperCase();
+    }
+  }
+
+  return 'YA';
+}

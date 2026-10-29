@@ -79,12 +79,17 @@
     "depends_on": [
       "app-shell-single-port-bootstrap"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "WebSocket integration tests verifying room creation, Participant join roster broadcast, duplicate displayName disambiguation, rejection of Participant attempts to run leader commands, and leaderPin handoff.",
       "Verify client WebSocket helper resolves ws:// vs wss:// dynamically from window.location."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: ./init.sh exited 0 — npm run typecheck passed across tsconfig.client.json, tsconfig.server.json, and tsconfig.json; npm test passed 5 Vitest suites / 26 tests (including tests/unit/session-socket.test.ts [7] for ws:// vs wss:// resolution, role-scoped sessionStorage credentials, collision retry, stale-socket close guard, and 4-hour 14,400,000 ms inactivity TTL; and tests/integration/ws-session-lifecycle.test.ts [5] for room creation + GET /api/health activeSessionCount, duplicate displayName disambiguation + zero secret leakage, Participant/intruder command rejection, leaderPin handoff + leaderToken rotation, safe reconnect, and 64 KiB maxPayload enforcement); npm run build emitted dist/client and dist/server.",
+      "2026-10-29: PLAYWRIGHT_PORT=3302 npm run test:e2e exited 0 (2 passed in 5.4s on mobile-chromium 390x844), verifying both tests/e2e/app-shell-bootstrap.spec.ts and multi-context tests/e2e/ws-room-lifecycle.spec.ts (Study Leader room creation, duplicate-name Participant joins, FORBIDDEN_LEADER_ONLY rejection, leaderPin handoff + stale token revocation, reconnect_session, close_session, and GET /api/health activeSessionCount 0 -> 1 -> 0).",
+      "2026-10-29: Direct single-port smoke check on PORT=3102 node dist/server/index.js with Host: sanctuary-smoke.trycloudflare.com verified activeSessionCount 0 -> 1 on create_session (6-char sessionCode, 4-digit leaderPin) -> 0 on close_session before clean SIGTERM shutdown.",
+      "2026-10-29: Independent validator verdict: accept — reran ./init.sh (exit 0, 5 suites / 26 Vitest tests), PLAYWRIGHT_PORT=3302 npm run test:e2e (exit 0, 2/2 mobile-chromium 390x844 specs), static invariant scan across src/** (zero 'Assistant' occurrences, zero hardcoded localhost in src/client), and live single-port HTTP + /ws smoke on PORT=3102 with Host: validator-smoke.trycloudflare.com verifying room lifecycle, duplicate-name disambiguation, secret stripping, leaderPin rotation handoff, and clean SIGTERM shutdown with 0 Critical/High/Medium findings."
+    ],
     "notes": "Follow docs/user-and-access-model.md and docs/technical-discovery.md. Enforce 4-hour inactivity TTL cleanup on the in-memory session map."
   },
   {

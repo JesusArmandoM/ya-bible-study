@@ -11,12 +11,13 @@ src/client/  ──imports──▶  src/shared/  ◀──imports──  src/se
 ```
 
 - `src/shared/`
-  - Pure TypeScript types, constants, and validation contracts shared between browser and server (`src/shared/health.ts`, `src/shared/study.ts`, and upcoming session/WS schemas).
+  - Pure TypeScript types, constants, and validation contracts shared between browser and server (`src/shared/health.ts`, `src/shared/study.ts`, `src/shared/session.ts`).
   - **Allowed imports**: `src/shared/*` only (no DOM globals, no Node built-ins, no `src/client/*` or `src/server/*`).
 - `src/server/`
-  - Express + Node `http.Server` + `ws` (`WebSocketServer` in `noServer` mode handling HTTP `upgrade` exclusively for `/ws`).
+  - Express + Node `http.Server` + `ws` (`WebSocketServer` in `noServer` mode with `maxPayload: 64 * 1024`, handling HTTP `upgrade` exclusively for `/ws`).
   - `src/server/studies/` holds server-side study curriculum providers (`src/server/studies/greatIsYourFaithSeed.ts` exposing immutable preloaded `StudyDocument` clones via `getDefaultStudyDocument()`) and upcoming deterministic `.md`/`.pdf` parsers.
-  - `src/server/app.ts` exports `createAppServer(options)` with deterministic `start(port, host)` and `close()` lifecycle helpers so integration tests bind ephemeral port `0` cleanly.
+  - `src/server/sessionStore.ts` implements the in-memory `LiveSessionStore` (`create_session`, `join_session`, `claim_leader`, `reconnect_session`, leader lifecycle commands, secret stripping on public snapshots, and 4-hour inactivity TTL sweep).
+  - `src/server/app.ts` exports `createAppServer(options)` wiring `LiveSessionStore` to `/ws` and `GET /api/health` (`activeSessionCount`), with deterministic `start(port, host)` and `close()` lifecycle helpers (including TTL timer disposal) so integration tests bind ephemeral port `0` cleanly.
   - `src/server/index.ts` is the production/dev CLI entrypoint binding `PORT` (default `3000`, or `API_PORT=3001` behind Vite in dev).
   - Routing order on the unified port:
     1. Explicit `/api/*` handlers (`GET /api/health`, `GET /api/studies/default`, and upcoming study upload endpoints).
@@ -28,6 +29,7 @@ src/client/  ──imports──▶  src/shared/  ◀──imports──  src/se
   - React 19 SPA compiled by Vite into `dist/client`.
   - `src/client/styles/tokens.css` & `src/client/styles/global.css`: Sacred Midnight Sanctuary design tokens (`DESIGN.md`), `440px` mobile-first safe-area column (`100dvh`), ambient radial glows, and `>= 16px` form control baseline.
   - `src/client/lib/runtimeUrl.ts`: Dynamic same-origin `/api/*` and `ws://` / `wss://` URL resolution derived from `window.location`.
+  - `src/client/lib/sessionSocket.ts`: Typed `/ws` session client and role-scoped `sessionStorage` reconnect credential helpers built on `resolveWebSocketUrl`.
   - `src/client/App.tsx`: Root Midnight Sanctuary application shell.
   - **Allowed imports**: Browser/React packages, `src/client/*`, and `src/shared/*`. Never `src/server/*`.
 

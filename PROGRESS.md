@@ -5,11 +5,44 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `markdown-study-deterministic-parser` (`preloaded-great-is-your-faith-seed` accepted; `ws-live-session-room-lifecycle` and `sacred-3d-persistent-stage` also dependency-ready)
+- Current next ready feature: `markdown-study-deterministic-parser` (`preloaded-great-is-your-faith-seed` and `ws-live-session-room-lifecycle` accepted; `welcome-role-selection-flow` and `sacred-3d-persistent-stage` also dependency-ready)
 - Current blocker: `none`
 - Last verified at: `2026-10-29`
 
 ## Session Log
+
+### Session 007
+
+- Date: `2026-10-29`
+- Goal: Independent validation and acceptance persistence for `ws-live-session-room-lifecycle`.
+- Completed: Independent `validator` subagent audited `docs/specs/ws-live-session-room-lifecycle.md` and the full diff, reran `./init.sh`, `PLAYWRIGHT_PORT=3302 npm run test:e2e` (`mobile-chromium` `390x844`), static invariant/boundary checks across `src/**`, and a live single-port HTTP + `/ws` smoke on `PORT=3102` (`Host: validator-smoke.trycloudflare.com`), returning verdict `accept` with `0` Critical/High/Medium findings. Updated `feature_list.json` status to `accepted`.
+- Verification run: `./init.sh`, `PLAYWRIGHT_PORT=3302 npm run test:e2e`, static terminology/origin/import check, and single-port HTTP + `/ws` smoke on `PORT=3102`.
+- Evidence captured: All gates exited `0` (`5` Vitest suites / `26` tests, `2` Playwright E2E specs); `ws-live-session-room-lifecycle` marked `accepted` in `feature_list.json`.
+- Files or artifacts updated: `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: Optional per-socket/session failed-PIN backoff can be layered onto `claim_leader` if rooms are later exposed to untrusted public traffic beyond ephemeral parish sessions; PDF parser library choice remains scheduled for `pdf-study-deterministic-parser`.
+- Next best step: Run `$feature-flow` (`planner`) on `markdown-study-deterministic-parser` (or `welcome-role-selection-flow`, now dependency-ready). Integrated on top of accepted `preloaded-great-is-your-faith-seed` via `github-flow` rebase.
+
+### Session 006
+
+- Date: `2026-10-29`
+- Goal: Implement `ws-live-session-room-lifecycle` per `docs/specs/ws-live-session-room-lifecycle.md` in isolated worktree `ws-live-session-room-lifecycle`.
+- Completed:
+  - Created shared session & `/ws` protocol contracts (`src/shared/session.ts`) with `'Study Leader'` / `'Participant'` roles, sanitized `PublicSessionMember` / `PublicLiveSessionSnapshot` types, error codes, and code/PIN/initials helpers.
+  - Implemented `LiveSessionStore` (`src/server/sessionStore.ts`) with unambiguous 6-character `sessionCode`, zero-padded 4-digit `leaderPin`, `base64url` `leaderToken` + `reconnectToken` generation, timing-safe secret validation, case-insensitive duplicate `displayName` disambiguation (`"Daniel"` -> `"Daniel (2)"`) with distinct `AvatarPalette` cycling, leader-only command gating (`open_lobby`, `start_study`, `next_section`, `close_session`), `leaderPin` rotation handoff (`leader_claimed` + `leader_replaced`), safe member reconnect, and 4-hour (`14,400,000` ms) inactivity TTL cleanup.
+  - Wired `LiveSessionStore` and `maxPayload: 64 * 1024` into `createAppServer` (`src/server/app.ts`) so `GET /api/health` reports live `activeSessionCount`, `/ws` preserves `{ type: 'ping' } -> { type: 'pong' }` without unsolicited open frames, malformed JSON returns `INVALID_MESSAGE`, and `close()` disposes TTL timers.
+  - Implemented typed client `/ws` session helper and role-scoped `sessionStorage` credential persistence (`src/client/lib/sessionSocket.ts`) on top of `resolveWebSocketUrl`, plus unit, integration, and multi-context Playwright E2E coverage (`tests/unit/session-socket.test.ts`, `tests/integration/ws-session-lifecycle.test.ts`, `tests/e2e/ws-room-lifecycle.spec.ts`, and `workers: 1` determinism in `playwright.config.ts`).
+  - Updated `ARCHITECTURE.md`, `CONSTRAINTS.md`, and `docs/risks-and-open-questions.md`.
+- Verification run:
+  - `./init.sh` (`npm run typecheck`, `npm test`, `npm run build`)
+  - `PLAYWRIGHT_PORT=3302 npm run test:e2e`
+  - Direct single-port HTTP + `/ws` smoke check on `PORT=3102 node dist/server/index.js`
+- Evidence captured:
+  - `./init.sh` exited `0`: `tsc --noEmit` passed across all 3 configs; Vitest passed `5` test files / `26` tests in `911ms`; production build emitted `dist/client` and `dist/server`.
+  - `PLAYWRIGHT_PORT=3302 npm run test:e2e` exited `0`: `2 passed (5.4s)` on `mobile-chromium` (`390x844`).
+  - Direct smoke check on `PORT=3102` confirmed `activeSessionCount` transitioned `0 -> 1 -> 0` across `create_session` and `close_session` with tunnel `Host` header before clean `SIGTERM` shutdown.
+- Files or artifacts updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/server/app.ts`, `src/client/lib/sessionSocket.ts`, `playwright.config.ts`, `tests/unit/session-socket.test.ts`, `tests/integration/ws-session-lifecycle.test.ts`, `tests/e2e/ws-room-lifecycle.spec.ts`, `ARCHITECTURE.md`, `CONSTRAINTS.md`, `docs/risks-and-open-questions.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: Session 003's `WebSocketServer` `maxPayload` item and Implementation-Time Question #2 (`leaderPin` + `sessionCode` generation/handoff) are resolved; PDF parser library choice remains scheduled for `pdf-study-deterministic-parser`.
+- Next best step: Run independent `$feature-validator` on `ws-live-session-room-lifecycle` before persisting `accepted`.
 
 ### Session 005
 
