@@ -5,11 +5,47 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `markdown-study-deterministic-parser` (Wave 1 complete: `preloaded-great-is-your-faith-seed`, `ws-live-session-room-lifecycle`, and `sacred-3d-persistent-stage` accepted; `welcome-role-selection-flow` also dependency-ready)
+- Current next ready feature: `pdf-study-deterministic-parser` (also ready: `welcome-role-selection-flow`)
 - Current blocker: `none`
 - Last verified at: `2026-10-29`
 
 ## Session Log
+
+### Session 011
+
+- Date: `2026-10-29`
+- Goal: Independent validation and acceptance persistence for `markdown-study-deterministic-parser`.
+- Completed: Independent `validator` subagent audited `docs/specs/markdown-study-deterministic-parser.md` and the full diff, reran `./init.sh` (11 Vitest suites / 61 tests exit 0), `PLAYWRIGHT_PORT=3301 npm run test:e2e` (10/10 mobile-chromium 390x844 specs exit 0), live single-port HTTP smoke check on `PORT=3101` (HTTP 200 for canonical 'Great Is Your Faith' and second study 'Peace! Be Still', HTTP 413 on >10MB payload, HTTP 400 with actionable error list on malformed input), zero 'Assistant' matches in src/, zero external AI API calls, Section 8 Gospel fallback verified, and clean SIGTERM shutdown with 0 Critical/High/Medium/Low findings. Updated `feature_list.json` status to `accepted`.
+- Verification run: `./init.sh`, `PLAYWRIGHT_PORT=3301 npm run test:e2e`, live single-port HTTP smoke on `PORT=3101`.
+- Evidence captured: All gates exited `0` (11 Vitest suites / 61 tests, 10 Playwright E2E specs); `markdown-study-deterministic-parser` marked `accepted` in `feature_list.json`.
+- Files or artifacts updated: `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: None for Markdown parsing; PDF study parsing (`pdf-study-deterministic-parser`) is now unblocked.
+- Next best step: Run `$feature-flow` on `pdf-study-deterministic-parser` (or `welcome-role-selection-flow`).
+
+### Session 010
+
+- Date: `2026-10-29`
+- Goal: Implement `markdown-study-deterministic-parser` per `docs/specs/markdown-study-deterministic-parser.md`.
+- Completed:
+  - Added `multer` and `@types/multer` with in-memory upload storage for `multipart/form-data` uploads.
+  - Created canonical Catholic study fixtures: `tests/fixtures/great-is-your-faith.md`, `tests/fixtures/great-is-your-faith-section8-fallback.md` (omitting Section 6 verse body to exercise the Section 8 fallback rule), and `tests/fixtures/peace-be-still-mark-4.md` (second distinct weekly study for Mark 4:35–41).
+  - Implemented `src/server/studies/markdownParser.ts` (`parseMarkdownStudy`) extracting 17 numbered headings into validated 5-section `StudyDocument` instances conforming to `src/shared/study.ts`, with Gospel-only Section 3 main reading isolation (OT/Psalm/Epistle kept in `leaderLiturgicalContextNote`), Section 8 Gospel reconstruction fallback, and zero external AI/LLM API calls.
+  - Mounted `POST /api/studies/parse` in `createAppServer` (`src/server/app.ts`) supporting raw text/markdown, application/json, and multipart/form-data uploads up to 10MB, with early `Content-Length` ceiling check, HTTP 413 rejection for payloads > 10MB, and actionable HTTP 400 validation error lists.
+  - Added unit test suite `tests/unit/markdown-parser.test.ts` (6 tests), integration test suite `tests/integration/studies-parse.test.ts` (9 tests), and Playwright E2E suite `tests/e2e/studies-parse.spec.ts` (4 tests).
+  - Updated `ARCHITECTURE.md` and verified zero occurrences of `"Assistant"` across code, copy, fixtures, and error strings.
+- Verification run:
+  - `./init.sh` (`npm run typecheck`, `npm test`, `npm run build`)
+  - `PLAYWRIGHT_PORT=3301 npm run test:e2e`
+  - CLI single-port smoke on `PORT=3101` (`curl -X POST` with raw text, multipart, >10MB `Content-Length: 11500000`, and invalid markdown)
+  - Static terminology scan: `grep -rn "Assistant" src/server/studies/markdownParser.ts tests/unit/markdown-parser.test.ts tests/integration/studies-parse.test.ts tests/e2e/studies-parse.spec.ts tests/fixtures/*.md`
+- Evidence captured:
+  - `./init.sh` exited `0`: `tsc --noEmit` clean across client, server, and root configs; Vitest passed 11 test files / 61 tests; production build emitted `dist/client` and `dist/server`.
+  - `PLAYWRIGHT_PORT=3301 npm run test:e2e` exited `0`: `10 passed (36.3s)` on mobile-chromium (`390x844`) against the unified production server.
+  - CLI smoke on `PORT=3101` verified HTTP 200 JSON for `great-is-your-faith.md` and `peace-be-still-mark-4.md`, HTTP 413 `{"error":"File size exceeds 10MB limit"}` on oversized payload, and HTTP 400 `{"error":"Study validation failed", ...}` on invalid markdown before clean shutdown.
+  - Static scan confirmed 0 occurrences of `"Assistant"` in implementation and fixtures.
+- Files or artifacts updated: `package.json`, `package-lock.json`, `src/server/studies/markdownParser.ts`, `src/server/app.ts`, `tests/fixtures/great-is-your-faith.md`, `tests/fixtures/great-is-your-faith-section8-fallback.md`, `tests/fixtures/peace-be-still-mark-4.md`, `tests/unit/markdown-parser.test.ts`, `tests/integration/studies-parse.test.ts`, `tests/e2e/studies-parse.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: None for Markdown parsing. PDF study parsing (`pdf-study-deterministic-parser`) will reuse `parseMarkdownStudy` or normalized section extractors once PDF text extraction is added.
+- Next best step: Run independent `$feature-validator` on `markdown-study-deterministic-parser`.
 
 ### Session 009
 

@@ -15,15 +15,18 @@ src/client/  ──imports──▶  src/shared/  ◀──imports──  src/se
   - **Allowed imports**: `src/shared/*` only (no DOM globals, no Node built-ins, no `src/client/*` or `src/server/*`).
 - `src/server/`
   - Express + Node `http.Server` + `ws` (`WebSocketServer` in `noServer` mode with `maxPayload: 64 * 1024`, handling HTTP `upgrade` exclusively for `/ws`).
-  - `src/server/studies/` holds server-side study curriculum providers (`src/server/studies/greatIsYourFaithSeed.ts` exposing immutable preloaded `StudyDocument` clones via `getDefaultStudyDocument()`) and upcoming deterministic `.md`/`.pdf` parsers.
+  - `src/server/studies/` holds server-side study curriculum providers (`src/server/studies/greatIsYourFaithSeed.ts` exposing immutable preloaded `StudyDocument` clones via `getDefaultStudyDocument()`) and deterministic parsers (`src/server/studies/markdownParser.ts` extracting 5-section `StudyDocument` structures from standard numbered Markdown outlines with Section 8 Gospel reconstruction fallback and zero external AI).
   - `src/server/sessionStore.ts` implements the in-memory `LiveSessionStore` (`create_session`, `join_session`, `claim_leader`, `reconnect_session`, leader lifecycle commands, secret stripping on public snapshots, and 4-hour inactivity TTL sweep).
-  - `src/server/app.ts` exports `createAppServer(options)` wiring `LiveSessionStore` to `/ws` and `GET /api/health` (`activeSessionCount`), with deterministic `start(port, host)` and `close()` lifecycle helpers (including TTL timer disposal) so integration tests bind ephemeral port `0` cleanly.
+  - `src/server/app.ts` exports `createAppServer(options)` wiring `LiveSessionStore` to `/ws`, `GET /api/health` (`activeSessionCount`), `GET /api/studies/default`, and `POST /api/studies/parse` (supporting `multipart/form-data` file uploads, raw `text/markdown`, and JSON payloads up to 10MB with HTTP 413/400 validation error handling), with deterministic `start(port, host)` and `close()` lifecycle helpers (including TTL timer disposal) so integration tests bind ephemeral port `0` cleanly.
   - `src/server/index.ts` is the production/dev CLI entrypoint binding `PORT` (default `3000`, or `API_PORT=3001` behind Vite in dev).
   - Routing order on the unified port:
-    1. Explicit `/api/*` handlers (`GET /api/health`, `GET /api/studies/default`, and upcoming study upload endpoints).
-    2. `/api` JSON `404` fallback (`{ "error": "Not found" }`) so mistyped API calls never receive HTML.
-    3. Built `dist/client` static assets + SPA `index.html` fallback for non-`/api`, non-`/ws` `GET`/`HEAD` requests.
-    4. HTTP `upgrade` listener routing `/ws` to `WebSocketServer` and rejecting other upgrade paths with `404`.
+    1. Early `Content-Length` ceiling middleware on `POST /api/studies/parse` rejecting requests > 10MB with HTTP 413.
+    2. Body parsers (`express.json({ limit: '10mb' })`, `express.text({ limit: '10mb' })`, and multer memory upload).
+    3. Explicit `/api/*` handlers (`GET /api/health`, `GET /api/studies/default`, `POST /api/studies/parse`, and upcoming PDF endpoints).
+    4. `/api` JSON `404` fallback (`{ "error": "Not found" }`) so mistyped API calls never receive HTML.
+    5. Payload error-handling middleware formatting HTTP 413 `{ "error": "File size exceeds 10MB limit" }`.
+    6. Built `dist/client` static assets + SPA `index.html` fallback for non-`/api`, non-`/ws` `GET`/`HEAD` requests.
+    7. HTTP `upgrade` listener routing `/ws` to `WebSocketServer` and rejecting other upgrade paths with `404`.
   - **Allowed imports**: Node built-ins, server packages (`express`, `ws`), `src/server/*`, and `src/shared/*`. Never `src/client/*`.
 - `src/client/`
   - React 19 SPA compiled by Vite into `dist/client`.
