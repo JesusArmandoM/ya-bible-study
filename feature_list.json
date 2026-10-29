@@ -47,12 +47,18 @@
     "depends_on": [
       "preloaded-great-is-your-faith-seed"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Vitest parser suite testing canonical 'Great Is Your Faith' Markdown plus a second distinct weekly Bible study Markdown following the same numbered heading structure.",
       "Integration test verifying POST /api/studies/parse rejects malformed/oversized (>10 MB) payloads cleanly."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: ./init.sh exited 0 — npm run typecheck passed across tsconfig.client.json, tsconfig.server.json, and tsconfig.json; npm test passed 11 Vitest suites / 61 tests including tests/unit/markdown-parser.test.ts (6 tests validating canonical 'Great Is Your Faith' 5-section parse, Section 8 Gospel reconstruction fallback, second distinct 'Peace! Be Still' Mark 4:35-41 study, empty input rejection, missing section rejection, and zero 'Assistant' occurrences) and tests/integration/studies-parse.test.ts (9 tests validating raw text/markdown body, application/json body, multipart/form-data upload, early Content-Length >10MB rejection, oversized multipart >10MB rejection, oversized raw text >10MB rejection, empty/missing section HTTP 400 validation errors, and zero 'Assistant' matches); npm run build emitted dist/client and dist/server.",
+      "2026-10-29: PLAYWRIGHT_PORT=3301 npm run test:e2e exited 0 (10 passed in 36.3s on mobile-chromium 390x844) including tests/e2e/studies-parse.spec.ts verifying POST /api/studies/parse on the unified production port across raw text, multipart file upload, >10MB HTTP 413 rejection, and HTTP 400 validation errors.",
+      "2026-10-29: Direct CLI smoke check on PORT=3101 node dist/server/index.js confirmed curl -X POST --data-binary @tests/fixtures/great-is-your-faith.md returned HTTP 200 JSON (id: 'great-is-your-faith'), curl -X POST -F 'file=@tests/fixtures/peace-be-still-mark-4.md' returned HTTP 200 JSON (id: 'peace-be-still'), curl -H 'Content-Length: 11500000' returned HTTP 413 (File size exceeds 10MB limit), and invalid markdown returned HTTP 400 (Study validation failed).",
+      "2026-10-29: Static scan confirmed 0 occurrences of 'Assistant' across src/server/studies/markdownParser.ts, test suites, and markdown fixtures.",
+      "2026-10-29: Independent validator verdict: accept — reran ./init.sh (exit 0, 11 Vitest suites / 61 tests), PLAYWRIGHT_PORT=3301 npm run test:e2e (exit 0, 10/10 mobile-chromium 390x844 tests), live single-port HTTP smoke check on PORT=3101 (HTTP 200 for canonical 'Great Is Your Faith' and second study 'Peace! Be Still', HTTP 413 for >10MB payload, HTTP 400 with actionable error list for malformed input), zero 'Assistant' matches in src/, zero external AI API calls, Section 8 Gospel fallback verified, and clean SIGTERM shutdown with 0 Critical/High/Medium/Low findings."
+    ],
     "notes": "See docs/domain-model.md Canonical Study Document Mapping and docs/risks-and-open-questions.md fallback rule when Gospel verses appear in Section 8 headers."
   },
   {

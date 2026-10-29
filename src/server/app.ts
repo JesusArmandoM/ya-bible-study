@@ -3,6 +3,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import express, { type Express } from 'express';
+import multer from 'multer';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { HealthResponse } from '../shared/health.js';
 import {
@@ -11,6 +12,9 @@ import {
 } from '../shared/session.js';
 import { LiveSessionStore } from './sessionStore.js';
 import { getDefaultStudyDocument } from './studies/greatIsYourFaithSeed.js';
+import { parseMarkdownStudy } from './studies/markdownParser.js';
+
+export const MAX_STUDY_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export interface AppServerOptions {
   staticDir?: string | false;
@@ -58,7 +62,25 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
 
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '1mb' }));
+
+  app.use('/api/studies/parse', (req, res, next) => {
+    const contentLength = req.headers['content-length'];
+    if (contentLength && Number(contentLength) > MAX_STUDY_PAYLOAD_BYTES) {
+      res.status(413).json({ error: 'File size exceeds 10MB limit' });
+      return;
+    }
+    next();
+  });
+
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.text({ type: ['text/plain', 'text/markdown'], limit: '10mb' }));
+
+  const studyUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: MAX_STUDY_PAYLOAD_BYTES,
+    },
+  });
 
   app.get('/api/health', (_req, res) => {
     const payload: HealthResponse = {
@@ -76,9 +98,121 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
     res.status(200).json(getDefaultStudyDocument());
   });
 
+  app.post('/api/studies/parse', (req, res) => {
+    const contentLength = req.headers['content-length'];
+    if (contentLength && Number(contentLength) > MAX_STUDY_PAYLOAD_BYTES) {
+      res.status(413).json({ error: 'File size exceeds 10MB limit' });
+      return;
+    }
+
+    const contentType = req.headers['content-type'] ?? '';
+    if (contentType.includes('multipart/form-data')) {
+      studyUpload.single('file')(req, res, (err) => {
+        if (err) {
+          if (
+            (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') ||
+            (err as { code?: unknown }).code === 'LIMIT_FILE_SIZE'
+          ) {
+            res.status(413).json({ error: 'File size exceeds 10MB limit' });
+            return;
+          }
+          res.status(400).json({
+            error: 'Study validation failed',
+            errors: [err.message || 'File upload error.'],
+          });
+          return;
+        }
+
+        const file = req.file;
+        if (!file || !file.buffer) {
+          res.status(400).json({
+            error: 'Study validation failed',
+            errors: ['No file uploaded in form field "file".'],
+          });
+          return;
+        }
+
+        const markdownContent = file.buffer.toString('utf-8');
+        const fileName = file.originalname || 'uploaded-study.md';
+        const result = parseMarkdownStudy(markdownContent, { fileName });
+
+        if (!result.valid) {
+          res.status(400).json({
+            error: 'Study validation failed',
+            errors: result.errors,
+          });
+          return;
+        }
+
+        res.status(200).json(result.value);
+      });
+      return;
+    }
+
+    // Raw text or JSON
+    let markdownContent = '';
+    let fileName = 'uploaded-study.md';
+
+    if (typeof req.body === 'string') {
+      markdownContent = req.body;
+    } else if (typeof req.body === 'object' && req.body !== null) {
+      const rawContent =
+        (req.body as { content?: unknown; markdown?: unknown }).content ??
+        (req.body as { content?: unknown; markdown?: unknown }).markdown;
+      if (typeof rawContent === 'string') {
+        markdownContent = rawContent;
+      }
+      const reqFileName = (req.body as { fileName?: unknown }).fileName;
+      if (typeof reqFileName === 'string' && reqFileName.trim().length > 0) {
+        fileName = reqFileName.trim();
+      }
+    }
+
+    if (markdownContent.trim().length === 0) {
+      res.status(400).json({
+        error: 'Study validation failed',
+        errors: ['Study document markdown content is empty.'],
+      });
+      return;
+    }
+
+    const result = parseMarkdownStudy(markdownContent, { fileName });
+    if (!result.valid) {
+      res.status(400).json({
+        error: 'Study validation failed',
+        errors: result.errors,
+      });
+      return;
+    }
+
+    res.status(200).json(result.value);
+  });
+
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' });
   });
+
+  app.use(
+    (
+      err: unknown,
+      _req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      if (
+        err &&
+        typeof err === 'object' &&
+        (('type' in err && (err as { type: unknown }).type === 'entity.too.large') ||
+          ('status' in err && (err as { status: unknown }).status === 413) ||
+          ('statusCode' in err && (err as { statusCode: unknown }).statusCode === 413) ||
+          ('code' in err && (err as { code: unknown }).code === 'LIMIT_FILE_SIZE'))
+      ) {
+        res.status(413).json({ error: 'File size exceeds 10MB limit' });
+        return;
+      }
+      next(err);
+    },
+  );
 
   const resolvedStaticDir =
     options.staticDir === false
