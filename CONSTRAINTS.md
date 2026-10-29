@@ -13,7 +13,8 @@ Future specifications, implementations, and validations MUST obey these reposito
 4. **Gospel-Only Main Reading in Section 3**:
    - Section 3 (`Gospel Reading`) MUST present **only** the Gospel passage (e.g., *Matthew 15:21–28*) for the interactive reading turn—MUST NOT render multi-reading Mass tabs (Old Testament / Psalm / Epistle) in the reading flow.
 5. **Server-Side Role & Turn Gating**:
-   - The `/ws` server MUST enforce `leaderToken` checks on every leader-exclusive command (`load_study`, `start_study`, volunteer selection/randomization/override, active question switching, section advancement, `finish_study`) and MUST verify `memberId === volunteerTurn.selectedMemberId` before accepting `Done` / `Done Reading`. Client-only button hiding is insufficient.
+   - The `/ws` server MUST enforce `leaderToken` checks on every leader-exclusive command (`open_lobby`, `load_study`, `start_study`, volunteer selection/randomization/override, active question switching, section advancement, `finish_study`, `close_session`) and MUST verify `memberId === volunteerTurn.selectedMemberId` before accepting `Done` / `Done Reading`. Client-only button hiding is insufficient.
+   - `leaderPin`, `leaderToken`, and per-member `reconnectToken` secrets MUST NEVER appear in `PublicLiveSessionSnapshot`, `PublicSessionMember`, or public broadcasts (`roster_updated`, `session_updated`), and `WebSocketServer` MUST enforce an explicit `maxPayload` cap (`64 KiB` default).
 6. **Ephemeral Privacy & Local Prayer Cards**:
    - Personal `"Lord, Help Me"` `PrayerCard` drafts MUST stay local to the `Participant`'s browser unless the user explicitly shares a single line, and server-held `LiveReflections` MUST remain ephemeral in memory and be purged on session completion or 4-hour inactivity TTL.
 7. **Mobile iOS/Android Ergonomics (`>= 16px` Inputs & `100dvh`)**:
