@@ -1,6 +1,6 @@
 ---
 name: github-flow
-description: Orchestrate multi-feature GitHub delivery on top of feature-flow using isolated git worktrees and gh issues/PRs. Enforces the 7-pillar lifecycle contract across plan (planificar, read-only), execute (ejecutar), and publish (publicar) modes: accepted-dependency gating, common base SHA, one worktree/port/session per feature, idempotent reuse, acceptance + push permission gates before PRs, clean pushed-only worktree teardown, and never merging.
+description: Orchestrate multi-feature GitHub delivery on top of feature-flow using isolated git worktrees and gh issues/PRs. Enforces the 7-pillar lifecycle contract across plan (planificar, read-only), execute (ejecutar), and publish (publicar) modes: accepted-dependency gating, common base SHA, one worktree/port/session per feature, idempotent reuse, acceptance + push permission gates, PR creation + merge into main, and clean worktree teardown.
 ---
 
 # GitHub Flow
@@ -15,8 +15,8 @@ It delegates each feature's `planner -> implementer -> validator` loop to `../fe
 2. **Antes de ejecutar** — Precondition gate: accepted dependencies, clean base checkout, `gh` + explicit push permissions, and independent worktree environments.
 3. **Por feature** — Single common `base_sha`, issue reuse/creation, `feature/<id>` branch + isolated worktree + dedicated `.env` ports, and **strictly one session per feature**.
 4. **Si se repite** — Idempotent reuse of existing issues, branches, worktrees, and PRs; zero duplicates and zero deletion of in-progress work.
-5. **Publicar** — *Sin aceptación (`accepted`) no se publica*; *sin permiso explícito no hay push*; push + PR creation/update against `base_branch`; *el merge queda fuera*.
-6. **Al terminar** — Remove a worktree only when it is both completely clean and pushed to `origin/feature/<id>`; otherwise preserve it intact.
+5. **Publicar** — *Sin aceptación (`accepted`) no se publica*; *sin permiso explícito no hay push*; push + PR creation/update against `base_branch` (`main`), followed by merging the verified PR into `main` and syncing the local `main` branch so downstream dependent features unlock immediately.
+6. **Al terminar** — Remove a worktree once it is clean, pushed, and merged into `main`; otherwise preserve it intact.
 7. **Salida** — Deterministic header + per-feature report (`feature`, `worktree`, `session`, `branch`, `status`, `commit`, `evidence`, `pr`).
 
 ---
@@ -89,18 +89,23 @@ Rules:
 2. **Push Permission Gate (*Sin permiso no hay push*)**:
    - If the user did not explicitly grant push permission for this run, return `status: refused` citing `push permission denied`—no push and no PR.
 3. **Push & PR Creation/Update**:
+   - If multiple parallel features are being published in the same wave, integrate them sequentially: before pushing/merging the next feature branch, rebase/merge the latest `origin/<base_branch>` into `../ya-bible-study-worktrees/<id>` (preserving all `accepted` entries in `feature_list.json` and `PROGRESS.md`) and verify `./init.sh` exits `0`.
    - Push branch: `git -C "../ya-bible-study-worktrees/<id>" push -u origin "feature/<id>"`.
    - Reuse existing PR or create via `gh pr create --base <base_branch> --head "feature/<id>" --title "[<id>] <title>" --body-file /tmp/yabs-pr-<id>.md` including summary, validator acceptance evidence, `Cómo probarlo`, and `Closes #<issue-number>`.
-4. **No-Merge Hard Rule (*El merge queda fuera*)**:
-   - Never run `gh pr merge`, never merge locally into `main`, and never enable auto-merge.
+4. **Merge to `main` & Local Sync**:
+   - Once the PR is open and verified (`status: accepted` + `./init.sh` green), merge the feature branch into `<base_branch>` (`main`):
+     ```bash
+     gh pr merge <pr-number> --merge --delete-branch
+     ```
+   - Sync the local base checkout (`git checkout <base_branch> && git pull --ff-only origin <base_branch>`) so `main` immediately reflects the accepted feature and unlocks downstream dependent features.
 
 ---
 
 ## 6. Al terminar (Clean Worktree Teardown)
 
-After `publish` completes for `<id>`, remove `../ya-bible-study-worktrees/<id>` **only** if both hold:
+After `publish` and merge into `main` complete for `<id>`, remove `../ya-bible-study-worktrees/<id>` **only** if both hold:
 1. `git -C "../ya-bible-study-worktrees/<id>" status --porcelain` is empty (clean).
-2. `HEAD` matches `origin/feature/<id>` (all local commits pushed).
+2. All work from `feature/<id>` is pushed and merged into `origin/<base_branch>`.
 
 If dirty, unpushed, or running in `plan` / local-only `execute`, retain the worktree untouched and report its path.
 
@@ -110,10 +115,10 @@ If dirty, unpushed, or running in `plan` / local-only `execute`, retain the work
 
 - **`plan` (`planificar`) — Strictly Read-Only**:
   - Allowed reads only: `feature_list.json`, `PROGRESS.md`, `git remote get-url origin`, `git status --porcelain`, `git rev-parse <base_branch>`, `git worktree list`, `git branch --list`, `gh auth status`, and (if `origin` slug resolves) `gh issue list` / `gh pr list`.
-  - Forbidden in `plan`: `git fetch`, `git push`, `git commit`, `git checkout`, `git stash`, `git worktree add/remove`, `gh issue/pr create/edit/close`, or any file writes.
+  - Forbidden in `plan`: `git fetch`, `git push`, `git commit`, `git checkout`, `git stash`, `git worktree add/remove`, `gh issue/pr create/edit/close/merge`, or any file writes.
   - Ready features report `status: planned` with their deterministic `worktree`, `session`, and `branch @ <base_sha>`; blocked features report `status: blocked` with `none` for planned artifacts.
 - **`execute` (`ejecutar`)**: Runs precondition gate, fixes `base_sha`, reuses/creates issues + worktrees + `.env` ports, launches one `opencode` `feature-flow` session per ready feature, and collects local acceptance commits (push remains gated).
-- **`publish` (`publicar`)**: Enforces Acceptance Gate (`accepted` only) + Push Permission Gate, pushes `feature/<id>`, creates/updates PRs without merging, and performs conditional clean teardown.
+- **`publish` (`publicar`)**: Enforces Acceptance Gate (`accepted` only) + Push Permission Gate, pushes `feature/<id>`, creates/updates PRs, merges the PR into `main`, syncs local `main`, and performs conditional clean worktree teardown.
 
 ---
 
