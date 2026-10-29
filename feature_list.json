@@ -131,11 +131,16 @@
     "depends_on": [
       "app-shell-single-port-bootstrap"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Unit/component tests verifying Sacred3DScene stage variant state transitions, zustand transient impulse triggering without React re-renders, prefers-reduced-motion behavior, and clean fallback rendering when WebGL is mocked as unavailable."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: npm ci exited 0 with 0 vulnerabilities and clean React 19 peer resolution for three@^0.186.1, @react-three/fiber@^9.8.2, zustand@^5.0.16, motion@^14.8.0, and @types/three@^0.186.0.",
+      "2026-10-29: ./init.sh exited 0 — npm run typecheck passed across tsconfig.client.json, tsconfig.server.json, and tsconfig.json; npm test passed 5 Vitest suites / 26 tests (including tests/unit/sacred-stage-store-and-math.test.ts [7] and tests/unit/sacred-3d-scene.test.tsx [5] proving 6 stage transitions, 0 React Profiler commits in Sacred3DScene and App during triggerImpulse bursts, prefers-reduced-motion clamping, document.hidden pause/resume, unavailable-WebGL fallback with zero jsdom stderr noise, and webglcontextlost/webglcontextrestored recovery); npm run build emitted dist/client and dist/server.",
+      "2026-10-29: PLAYWRIGHT_PORT=3303 npm run test:e2e exited 0 (4 passed in 14.0s on mobile-chromium 390x844 across tests/e2e/app-shell-bootstrap.spec.ts and tests/e2e/sacred-3d-stage.spec.ts), verifying <= 1 persistent <canvas> DOM element across all 6 canonical stage variants, dpr <= 2, zero external .glb/.hdr/.exr requests, live useFrame zustand impulse consumption, pointer drag tilt + spring return to rest, prefers-reduced-motion: reduce demand rendering, webglcontextlost -> fallback -> webglcontextrestored recovery, non-WebGL SVG/CSS fallback, >= 44px pill targets, zero horizontal overflow, and Study Leader / Participant labels with zero 'Assistant'.",
+      "2026-10-29: Independent validator verdict: accept — reran CI=true PORT=3103 ./init.sh (exit 0, 5 Vitest suites / 26 tests), PLAYWRIGHT_PORT=3303 npm run test:e2e (exit 0, 4/4 mobile-chromium 390x844: single persistent canvas across 6 stages, dpr <= 2, reduced-motion + webglcontextlost/restored, forced no-WebGL SVG fallback), npm ci --dry-run with no peer/ERESOLVE errors, and 0 'Assistant' matches in src; 0 blocking findings (non-blocking: ~1.3 MB three.js client chunk to code-split later)."
+    ],
     "notes": "Follow DESIGN.md Motion, Micro-Interactions & 3D Reactivity and docs/technical-discovery.md GPU budget (dpr <= 2, pause when document hidden)."
   },
   {

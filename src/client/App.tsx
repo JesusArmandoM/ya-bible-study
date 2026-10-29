@@ -1,6 +1,15 @@
+import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { SANCTUARY_ROLES, type HealthResponse } from '../shared/health';
+import { Sacred3DScene } from './components/stage/Sacred3DScene';
 import { resolveApiUrl } from './lib/runtimeUrl';
+import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion';
+import {
+  SACRED_STAGE_METADATA,
+  SACRED_STAGE_VARIANTS,
+  useSacredStageStore,
+  type SacredStageVariant,
+} from './state/sacredStageStore';
 
 export type SanctuaryHealthState = 'loading' | 'ok' | 'degraded';
 
@@ -22,8 +31,25 @@ function SanctuaryStarIcon() {
   );
 }
 
+function triggerTactileHaptic(reducedMotion: boolean): void {
+  if (reducedMotion || typeof navigator === 'undefined') {
+    return;
+  }
+  if (typeof navigator.vibrate === 'function') {
+    try {
+      navigator.vibrate(12);
+    } catch {
+      // Ignore unsupported or restricted vibration calls.
+    }
+  }
+}
+
 export function App() {
   const [healthState, setHealthState] = useState<SanctuaryHealthState>('loading');
+  const activeStage = useSacredStageStore((s) => s.stage);
+  const setStage = useSacredStageStore((s) => s.setStage);
+  const triggerImpulse = useSacredStageStore((s) => s.triggerImpulse);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,6 +87,15 @@ export function App() {
       controller.abort();
     };
   }, []);
+
+  const handleStageSelect = (variantId: SacredStageVariant) => {
+    const metadata = SACRED_STAGE_METADATA[variantId];
+    setStage(variantId);
+    triggerImpulse(metadata.defaultImpulse);
+    triggerTactileHaptic(reducedMotion);
+  };
+
+  const activeStageMeta = SACRED_STAGE_METADATA[activeStage];
 
   const footerLabel =
     healthState === 'ok'
@@ -101,7 +136,53 @@ export function App() {
           data-health={healthState}
           aria-label="Sanctuary readiness"
         >
-          <span className="sanctuary-stage-eyebrow">MIDNIGHT SANCTUARY</span>
+          <div className="sanctuary-stage-header">
+            <span className="sanctuary-stage-eyebrow">MIDNIGHT SANCTUARY</span>
+            <span
+              className="sanctuary-stage-moment"
+              data-testid="sacred-active-moment"
+              aria-live="polite"
+            >
+              {activeStageMeta.eyebrow}
+            </span>
+          </div>
+
+          <Sacred3DScene />
+
+          <div
+            className="sacred-stage-pill-grid"
+            role="group"
+            aria-label="Sacred stage emblems"
+          >
+            {SACRED_STAGE_VARIANTS.map((variantId) => {
+              const meta = SACRED_STAGE_METADATA[variantId];
+              const isActive = activeStage === variantId;
+              return (
+                <motion.button
+                  key={variantId}
+                  type="button"
+                  className="sacred-stage-pill"
+                  data-active={isActive ? 'true' : 'false'}
+                  data-stage-pill={variantId}
+                  data-testid={`stage-pill-${variantId}`}
+                  aria-pressed={isActive}
+                  whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                  onClick={() => handleStageSelect(variantId)}
+                >
+                  <span
+                    className="sacred-stage-pill-dot"
+                    aria-hidden="true"
+                    style={{
+                      backgroundColor: isActive ? '#11131F' : meta.primaryColor,
+                    }}
+                  />
+                  <span className="sacred-stage-pill-label">{meta.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+
           <p className="sanctuary-stage-copy">{stageSummary}</p>
           <div className="sanctuary-role-tags" aria-label="Supported session roles">
             {SANCTUARY_ROLES.map((role) => (

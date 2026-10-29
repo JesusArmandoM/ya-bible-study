@@ -5,11 +5,44 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `markdown-study-deterministic-parser` (`preloaded-great-is-your-faith-seed` and `ws-live-session-room-lifecycle` accepted; `welcome-role-selection-flow` and `sacred-3d-persistent-stage` also dependency-ready)
+- Current next ready feature: `markdown-study-deterministic-parser` (Wave 1 complete: `preloaded-great-is-your-faith-seed`, `ws-live-session-room-lifecycle`, and `sacred-3d-persistent-stage` accepted; `welcome-role-selection-flow` also dependency-ready)
 - Current blocker: `none`
 - Last verified at: `2026-10-29`
 
 ## Session Log
+
+### Session 009
+
+- Date: `2026-10-29`
+- Goal: Independent validation and acceptance persistence for `sacred-3d-persistent-stage`.
+- Completed: Independent `validator` subagent audited `docs/specs/sacred-3d-persistent-stage.md` and the full diff, reran `CI=true PORT=3103 ./init.sh`, `PLAYWRIGHT_PORT=3303 npm run test:e2e`, `npm ci --dry-run`, and a static `Assistant` scan, returning verdict `accept` with `0` blocking findings. Updated `feature_list.json` status to `accepted`.
+- Verification run: `./init.sh`, `PLAYWRIGHT_PORT=3303 npm run test:e2e`, `npm ci --dry-run`, `grep -rn Assistant src`.
+- Evidence captured: All gates exited `0` (`5` Vitest suites / `26` tests, `4/4` Playwright specs); no React 19 peer conflicts.
+- Files or artifacts updated: `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: three.js produces a ~1.3 MB client chunk (consider lazy-loading `Sacred3DScene`); per-frame `canvas.dataset` test hooks ship in production (negligible cost).
+- Next best step: Run `$feature-flow` (`planner`) on `markdown-study-deterministic-parser` (also ready: `welcome-role-selection-flow`). Integrated on top of accepted `preloaded-great-is-your-faith-seed` and `ws-live-session-room-lifecycle` via `github-flow` rebase.
+
+### Session 008
+
+- Date: `2026-10-29`
+- Goal: Implement `sacred-3d-persistent-stage` per `docs/specs/sacred-3d-persistent-stage.md`.
+- Completed:
+  - Added `three@^0.186.1`, `@react-three/fiber@^9.8.2`, `zustand@^5.0.16`, `motion@^14.8.0`, and `@types/three@^0.186.0` with clean React 19 peer resolution (`npm ci` exit `0`).
+  - Implemented `src/client/state/sacredStageStore.ts` (`SACRED_STAGE_VARIANTS`, `SACRED_STAGE_METADATA`, `resolveSacredStage`, `createSacredStageStore`, and `useSacredStageStore`) providing a 60fps transient `impulse` channel read inside `useFrame` with `0` React component re-renders.
+  - Implemented `src/client/lib/usePrefersReducedMotion.ts`, `src/client/components/stage/webglSupport.ts` (`jsdom`-quiet `detectWebGLSupport`), `src/client/components/stage/sacredStageMath.ts` (pure 60fps stage morphing, pointer spring inertia, impulse decay, and `<= 0.05s` delta clamping), `src/client/components/stage/SacredFallbackEmblem.tsx` (stage-matched SVG/CSS fallback), `src/client/components/stage/SacredStageRig.tsx` (offline `RoomEnvironment` PBR lighting + 6 procedural stage geometries + `frameloop="demand"` invalidation), and `src/client/components/stage/Sacred3DScene.tsx` (persistent single-`<Canvas>` stage with `dpr={[1, 2]}`, `touch-action: pan-y`, `visibilitychange` frame pause, error boundary, and `webglcontextlost`/`webglcontextrestored` recovery).
+  - Integrated `<Sacred3DScene />` and `motion/react` `2x3` tactile stage preview pills (`>= 44px` targets) into `src/client/App.tsx` and `src/client/styles/global.css`, preserving all bootstrap shell copy, `Study Leader` & `Participant` role pills (zero `Assistant`), and `sanctuary-health-pill`.
+  - Added Vitest suites (`tests/unit/sacred-stage-store-and-math.test.ts`, `tests/unit/sacred-3d-scene.test.tsx`) and Playwright mobile E2E suite (`tests/e2e/sacred-3d-stage.spec.ts`), and updated `ARCHITECTURE.md`.
+- Verification run:
+  - `npm ci`
+  - `./init.sh` (`npm run typecheck`, `npm test`, `npm run build`)
+  - `PLAYWRIGHT_PORT=3303 npm run test:e2e`
+- Evidence captured:
+  - `npm ci` exited `0` (`230` packages audited, `0` vulnerabilities).
+  - `./init.sh` exited `0`: `tsc --noEmit` clean across all 3 tsconfigs; Vitest `5 passed` files / `26 passed` tests (`1.63s`); Vite + server build emitted `dist/client` and `dist/server`.
+  - `PLAYWRIGHT_PORT=3303 npm run test:e2e` exited `0`: `4 passed (14.0s)` on `mobile-chromium` (`390x844`) verifying single persistent `<canvas>` across all 6 stages, `zustand` transient impulses inside `useFrame`, pointer drag tilt & spring return, `prefers-reduced-motion: reduce` demand rendering, `webglcontextlost`/`webglcontextrestored` recovery, and non-WebGL SVG/CSS fallback.
+- Files or artifacts updated: `package.json`, `package-lock.json`, `src/client/state/sacredStageStore.ts`, `src/client/lib/usePrefersReducedMotion.ts`, `src/client/components/stage/webglSupport.ts`, `src/client/components/stage/sacredStageMath.ts`, `src/client/components/stage/SacredFallbackEmblem.tsx`, `src/client/components/stage/SacredStageRig.tsx`, `src/client/components/stage/Sacred3DScene.tsx`, `src/client/App.tsx`, `src/client/styles/global.css`, `tests/unit/sacred-stage-store-and-math.test.ts`, `tests/unit/sacred-3d-scene.test.tsx`, `tests/e2e/sacred-3d-stage.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: Vite reports a chunk-size advisory (>500 kB minified due to bundled `three`); code-splitting Three.js into a dedicated chunk can be refined if bundle startup metrics warrant it without affecting single-canvas persistence.
+- Next best step: Run independent `$feature-validator` on `sacred-3d-persistent-stage`.
 
 ### Session 007
 

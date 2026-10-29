@@ -49,7 +49,7 @@ button {
   min-height: 100dvh;
   width: 100%;
   background-color: var(--color-bg);
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .sanctuary-ambient {
@@ -71,14 +71,14 @@ button {
   max-width: var(--sanctuary-max-width);
   min-height: 100dvh;
   margin: 0 auto;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 2.75rem);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.85rem);
   padding-right: var(--sanctuary-gutter);
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.75rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
   padding-left: var(--sanctuary-gutter);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: var(--space-xl);
+  gap: var(--space-md);
 }
 
 .sanctuary-hero {
@@ -93,8 +93,8 @@ button {
 }
 
 .sanctuary-emblem-badge {
-  width: 58px;
-  height: 58px;
+  width: 54px;
+  height: 54px;
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, #F0BF5A 0%, #E2A83E 52%, #C88B26 100%);
   border: 1px solid rgba(255, 238, 199, 0.48);
@@ -133,7 +133,7 @@ button {
 }
 
 .hero-title {
-  margin: 2.25rem 0 0.85rem;
+  margin: 1.35rem 0 0.55rem;
   font-family: var(--font-serif);
   font-size: var(--text-display-size);
   font-weight: 700;
@@ -159,10 +159,10 @@ button {
   );
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 0.7rem;
   backdrop-filter: blur(14px);
 }
 
@@ -175,6 +175,14 @@ button {
   );
 }
 
+.sanctuary-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
 .sanctuary-stage-eyebrow {
   font-family: var(--font-sans);
   font-size: var(--text-eyebrow-size);
@@ -182,6 +190,146 @@ button {
   letter-spacing: var(--text-eyebrow-tracking);
   text-transform: uppercase;
   color: var(--color-primary);
+}
+
+.sanctuary-stage-moment {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Persistent Sacred3DScene Hero Viewport (DESIGN.md: 176px mobile height, touch-action: pan-y) */
+.sacred-stage-container {
+  position: relative;
+  width: 100%;
+  height: 176px;
+  border-radius: var(--radius-md);
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(31, 36, 66, 0.62) 0%,
+    rgba(11, 13, 23, 0.88) 78%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sacred-stage-ambient {
+  position: absolute;
+  inset: -16%;
+  pointer-events: none;
+  z-index: 0;
+  transition: background var(--section-transition-ms) ease;
+}
+
+.sacred-stage-canvas-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.sacred-stage-canvas-layer[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sacred-stage-canvas-layer canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.sacred-fallback-emblem {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sacred-fallback-glow {
+  position: absolute;
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  filter: blur(16px);
+}
+
+.sacred-fallback-svg {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+}
+
+/* Tactile 2x3 Liturgical Stage Preview Pills (>= 44px touch targets) */
+.sacred-stage-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.sacred-stage-pill {
+  min-height: var(--touch-target-min);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-subtle);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.sacred-stage-pill:hover {
+  border-color: rgba(226, 168, 62, 0.42);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.sacred-stage-pill:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.sacred-stage-pill[data-active='true'] {
+  background: linear-gradient(145deg, #EEB852 0%, #E2A83E 100%);
+  border-color: rgba(255, 238, 199, 0.65);
+  color: var(--color-primary-fg);
+  box-shadow: 0 6px 18px rgba(226, 168, 62, 0.24);
+}
+
+.sacred-stage-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sacred-stage-pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sanctuary-stage-copy {
@@ -195,7 +343,7 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
-  margin-top: 0.25rem;
+  margin-top: 0.1rem;
 }
 
 .sanctuary-role-pill {
@@ -226,7 +374,7 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-top: var(--space-sm);
+  padding-top: 0.25rem;
 }
 
 .sanctuary-status-pill {
