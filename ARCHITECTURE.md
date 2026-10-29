@@ -30,6 +30,9 @@ src/client/  ──imports──▶  src/shared/  ◀──imports──  src/se
   - `src/client/styles/tokens.css` & `src/client/styles/global.css`: Sacred Midnight Sanctuary design tokens (`DESIGN.md`), `440px` mobile-first safe-area column (`100dvh`), ambient radial glows, and `>= 16px` form control baseline.
   - `src/client/lib/runtimeUrl.ts`: Dynamic same-origin `/api/*` and `ws://` / `wss://` URL resolution derived from `window.location`.
   - `src/client/lib/sessionSocket.ts`: Typed `/ws` session client and role-scoped `sessionStorage` reconnect credential helpers built on `resolveWebSocketUrl`.
+  - `src/client/lib/usePrefersReducedMotion.ts`: Media-query hook synchronizing `(prefers-reduced-motion: reduce)` across 3D and UI motion layers.
+  - `src/client/state/sacredStageStore.ts`: Scoped + default `zustand` stage store (`createSacredStageStore`, `useSacredStageStore`, `resolveSacredStage`) with a zero-React-rerender 60fps transient `impulse` channel read directly inside `useFrame`.
+  - `src/client/components/stage/`: Persistent single-canvas Three.js PBR hero stage (`Sacred3DScene`, `SacredStageRig`, `sacredStageMath`, `webglSupport`) with offline `RoomEnvironment` studio lighting, 6 procedural stage geometries, pointer tilt spring inertia, background-tab frame pausing, and automatic `SacredFallbackEmblem` SVG/CSS fallback on unavailable or lost WebGL contexts.
   - `src/client/App.tsx`: Root Midnight Sanctuary application shell.
   - **Allowed imports**: Browser/React packages, `src/client/*`, and `src/shared/*`. Never `src/server/*`.
 
