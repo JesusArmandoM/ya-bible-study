@@ -1,0 +1,310 @@
+[
+  {
+    "id": "app-shell-single-port-bootstrap",
+    "area": "foundation",
+    "title": "Single-port TypeScript React server shell serves health check",
+    "user_visible_behavior": "Starting the project serves the Midnight Sanctuary React application shell with DESIGN.md color/typography tokens alongside GET /api/health returning JSON { status: 'ok' } on a single unified port with allowedHosts enabled for public HTTPS tunnels.",
+    "depends_on": [],
+    "status": "not_started",
+    "verification": [
+      "Provisional until bootstrap: run ./init.sh to verify install, typecheck, unit tests, and production build pass.",
+      "Start the server and assert GET /api/health returns HTTP 200 with status 'ok' and GET / serves the React HTML shell on the same port."
+    ],
+    "evidence": [],
+    "notes": "Initialize TypeScript, React, Vite (with /api and /ws proxy + allowedHosts: true), Node HTTP server, Vitest, Playwright config, and update init.sh to the bootstrapped variant. Follow docs/technical-discovery.md and DESIGN.md."
+  },
+  {
+    "id": "preloaded-great-is-your-faith-seed",
+    "area": "study-content",
+    "title": "Preloaded Great Is Your Faith study exposes complete structured payload",
+    "user_visible_behavior": "Fetching GET /api/studies/default returns the complete structured 'Great Is Your Faith' (Matthew 15:21-28) StudyDocument including metadata, Opening Prayer, Icebreaker prompts/examples, full Matthew 15:21-28 Gospel text, A-J commentary, Catholic doctrine notes, all 12 reflection questions, Prayer Card prompts, weekly challenges, and Closing Prayer.",
+    "depends_on": [
+      "app-shell-single-port-bootstrap"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit test validating the default StudyDocument schema, non-empty full Matthew 15:21-28 Gospel text, 12 reflection questions, A-J analysis points, and Opening/Closing prayers.",
+      "Integration test asserting GET /api/studies/default returns HTTP 200 with all 5 interactive section payloads."
+    ],
+    "evidence": [],
+    "notes": "Source exact content from docs/domain-model.md Seed Content Reference. Section 3 main reading must contain only the Gospel (Matthew 15:21-28), keeping Isaiah/Psalm/Romans in liturgical context notes."
+  },
+  {
+    "id": "markdown-study-deterministic-parser",
+    "area": "study-content",
+    "title": "Markdown study upload parses structured sections deterministically",
+    "user_visible_behavior": "Uploading a structured .md Bible study file to POST /api/studies/parse deterministically extracts title, metadata, and all 5 Study Sections (Opening Prayer, Icebreaker, Gospel Reading, Deep Analysis, Closing Prayer) with section detection counts, or returns actionable validation errors without calling any external AI API.",
+    "depends_on": [
+      "preloaded-great-is-your-faith-seed"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Vitest parser suite testing canonical 'Great Is Your Faith' Markdown plus a second distinct weekly Bible study Markdown following the same numbered heading structure.",
+      "Integration test verifying POST /api/studies/parse rejects malformed/oversized (>10 MB) payloads cleanly."
+    ],
+    "evidence": [],
+    "notes": "See docs/domain-model.md Canonical Study Document Mapping and docs/risks-and-open-questions.md fallback rule when Gospel verses appear in Section 8 headers."
+  },
+  {
+    "id": "pdf-study-deterministic-parser",
+    "area": "study-content",
+    "title": "PDF study upload extracts structured sections into study model",
+    "user_visible_behavior": "Uploading a text-based .pdf Bible study file (<= 10 MB) to POST /api/studies/parse extracts and normalizes text into the deterministic study parser, returning the structured 5-section StudyDocument preview and detected item summary.",
+    "depends_on": [
+      "markdown-study-deterministic-parser"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Automated test generating or loading a text-based PDF fixture with the standard weekly study headings and asserting POST /api/studies/parse returns all 5 populated sections.",
+      "Negative test verifying non-PDF/non-MD files and files > 10 MB return HTTP 400/413 with human-readable error messages."
+    ],
+    "evidence": [],
+    "notes": "Parse PDF buffers in memory without writing uploaded files to public disk; normalize page breaks and ligatures before heading extraction."
+  },
+  {
+    "id": "ws-live-session-room-lifecycle",
+    "area": "realtime-session",
+    "title": "WebSocket room creation issues leader lock with joinable session code",
+    "user_visible_behavior": "Connecting to /ws lets a Study Leader create an ephemeral LiveSession (issuing a 6-character sessionCode, 4-digit leaderPin, and leaderToken), blocks unauthorized second leaders unless claiming via leaderPin, and lets Participants join with sessionCode plus displayName with unique memberIds.",
+    "depends_on": [
+      "app-shell-single-port-bootstrap"
+    ],
+    "status": "not_started",
+    "verification": [
+      "WebSocket integration tests verifying room creation, Participant join roster broadcast, duplicate displayName disambiguation, rejection of Participant attempts to run leader commands, and leaderPin handoff.",
+      "Verify client WebSocket helper resolves ws:// vs wss:// dynamically from window.location."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/user-and-access-model.md and docs/technical-discovery.md. Enforce 4-hour inactivity TTL cleanup on the in-memory session map."
+  },
+  {
+    "id": "welcome-role-selection-flow",
+    "area": "onboarding-ui",
+    "title": "Welcome screen routes Study Leader or Participant into live session",
+    "user_visible_behavior": "Opening the app renders the Sacred Midnight Welcome screen (ux/1. Welcome.png) with 'Study Leader' and 'Participant' cards (never 'Assistant'), tactile motion/react spring press feedback, Leader room creation or PIN claim sheet, and Participant sessionCode + displayName join form with >= 16px inputs.",
+    "depends_on": [
+      "ws-live-session-room-lifecycle"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Component/Playwright test verifying Welcome screen renders 'Study Leader' and 'Participant' labels (asserting 'Assistant' does not appear), enforces >= 16px input font-size, creates a leader session, and joins a second browser context as Participant."
+    ],
+    "evidence": [],
+    "notes": "Match ux/1. Welcome.png palette (#0B0D17, #E2A83E, #6E75F5), Playfair Display + Plus Jakarta Sans typography, and CONTEXT.md terminology rules."
+  },
+  {
+    "id": "leader-load-study-setup-screen",
+    "area": "onboarding-ui",
+    "title": "Load Your Study screen previews default or uploaded study structure",
+    "user_visible_behavior": "After selecting Study Leader, the Load Your Study setup screen (ux/2. Leader Setup.png) displays the drag-and-tap .pdf/.md dropzone, defaults to the analyzed 'Great Is Your Faith' study with '5 sections detected' summary, updates live when a custom .pdf/.md is uploaded, and transitions the session to the Title Lobby on 'Continue'.",
+    "depends_on": [
+      "pdf-study-deterministic-parser",
+      "welcome-role-selection-flow"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright test verifying Study Leader sees 'Great Is Your Faith' pre-analyzed by default, can upload a valid custom .md/.pdf to update the preview card, and clicks 'Continue' to enter the Title Lobby."
+    ],
+    "evidence": [],
+    "notes": "Follow ux/2. Leader Setup.png gold-glow dropzone, emerald 'Analyzed' pill, and spring CTA button styling in DESIGN.md."
+  },
+  {
+    "id": "sacred-3d-persistent-stage",
+    "area": "3d-motion",
+    "title": "Persistent Sacred3DScene canvas morphs emblems across session stages",
+    "user_visible_behavior": "A single persistent @react-three/fiber Canvas per viewport renders procedural PBR sacred geometries (sanctuary emblem, violet prayer orb, golden chosen aura, indigo Gospel codex, randomizing polyhedron, golden Star of Faith) with finger/pointer tilt inertia, 60fps zustand action impulses, prefers-reduced-motion compliance, and automatic SVG/CSS fallback on webglcontextlost or unavailable WebGL.",
+    "depends_on": [
+      "app-shell-single-port-bootstrap"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit/component tests verifying Sacred3DScene stage variant state transitions, zustand transient impulse triggering without React re-renders, prefers-reduced-motion behavior, and clean fallback rendering when WebGL is mocked as unavailable."
+    ],
+    "evidence": [],
+    "notes": "Follow DESIGN.md Motion, Micro-Interactions & 3D Reactivity and docs/technical-discovery.md GPU budget (dpr <= 2, pause when document hidden)."
+  },
+  {
+    "id": "title-lobby-qr-join-start",
+    "area": "session-lobby",
+    "title": "Title lobby syncs live attendee count with localhost-safe QR sharing",
+    "user_visible_behavior": "In the Title Lobby (ux/3. Title - Leader.png), both roles see the study title, Gospel citation, Sacred3DScene sanctuary emblem, and live connected attendee count; the Study Leader can open a QR/Room Code join sheet (which warns or uses PUBLIC_URL when opened on localhost alongside npm run share helper script) and exclusively clicks 'Start Study' to enter Section 1.",
+    "depends_on": [
+      "leader-load-study-setup-screen",
+      "sacred-3d-persistent-stage"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright test with Leader + Participant contexts verifying live attendee count increments on join, Participant sees waiting state without 'Start Study' button, QR modal guards against raw localhost links, and Leader clicking 'Start Study' transitions both clients to Section 1."
+    ],
+    "evidence": [],
+    "notes": "Include npm run share convenience script documented for cloudflared tunnel --url http://localhost:<port> and PUBLIC_URL support."
+  },
+  {
+    "id": "section-1-opening-prayer-hand-raise",
+    "area": "section-1-prayer",
+    "title": "Opening Prayer synchronizes Participant hand raises to Study Leader queue",
+    "user_visible_behavior": "In Section 1 of 5 (20%, Opening Prayer), Participants tap the luminous violet 'Raise Hand' orb (ux/5. Prayer - Assistant.png) with 0ms ripple + 3D pulse feedback to toggle their hand, while the Study Leader sees animated raised-hand rows with centered avatar initials, relative timestamps, 'Choose' buttons, 'Pick Randomly', and a locked bottom advance bar (ux/4. Prayer - Leader waiting.png).",
+    "depends_on": [
+      "title-lobby-qr-join-start"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright multi-client test verifying two Participants raising hands appear in real time on the Leader's queue with centered avatar initials, live count updates on Participant screens, and Leader cannot advance sections while the turn is unfinished."
+    ],
+    "evidence": [],
+    "notes": "Fix avatar initial clipping noted in DESIGN.md override #4 and animate queue entries with motion/react AnimatePresence + layout."
+  },
+  {
+    "id": "section-1-chosen-volunteer-prayer-gate",
+    "area": "section-1-prayer",
+    "title": "Chosen Opening Prayer volunteer unlocks leader advance via Done button",
+    "user_visible_behavior": "When the Study Leader clicks 'Choose' on a volunteer in Section 1, ONLY that selected Participant receives the 'YOU WERE CHOSEN — It's your turn to pray' screen (ux/6. Prayer - Selected.png) with the full suggested Opening Prayer and exclusive 'Done' button; tapping 'Done' morphs the Leader's locked bar into the active gold CTA to advance to Section 2 (with a discreet Leader override if the volunteer disconnects).",
+    "depends_on": [
+      "section-1-opening-prayer-hand-raise"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright 3-client test (1 Leader + 2 Participants) asserting only the chosen Participant sees 'Done', non-chosen Participant cannot complete the turn over UI or /ws, clicking 'Done' unlocks the Leader CTA, and Leader disconnect-override works if the chosen client closes."
+    ],
+    "evidence": [],
+    "notes": "Ensure 'YOU WERE CHOSEN' pill has proper horizontal padding without border overflow per DESIGN.md override #4."
+  },
+  {
+    "id": "random-volunteer-picker-countdown",
+    "area": "volunteer-selection",
+    "title": "Random Selection picks eligible Participant with 30-second countdown",
+    "user_visible_behavior": "When no one raises a hand (or at Leader discretion) in Section 1 or Section 3, clicking 'Pick Randomly' / 'Random' spins the Sacred3DScene polyhedron (ux/9. Randomizing.png), highlights a randomly selected connected Participant with a 30-second acceptance countdown alert, and lets the Study Leader click 'Retry' (re-rolling another participant) or 'Confirm selection' to assign the turn.",
+    "depends_on": [
+      "section-1-chosen-volunteer-prayer-gate"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit + Playwright tests verifying random candidate selection among connected Participants, 30-second countdown tick/expiry handling, 'Retry' re-selection, 'Confirm selection' transitioning to the 'YOU WERE CHOSEN' state, and graceful disabled state when 0 Participants are connected."
+    ],
+    "evidence": [],
+    "notes": "Match ux/9. Randomizing.png terracotta notification card, Retry secondary pill, and Confirm selection gold primary pill."
+  },
+  {
+    "id": "section-2-icebreaker-flow",
+    "area": "section-2-icebreaker",
+    "title": "Icebreaker displays Outsiders Wanted prompt with live hand-raise count",
+    "user_visible_behavior": "Advancing to Section 2 of 5 (40%, 'Outsiders Wanted') displays the main outsider question, italic follow-up prompt, and facilitator-only 'Examples to Listen For' card on the Study Leader screen (ux/7. Ice Breaker - Leader.png), while Participants see the warm bronze 'Tap to raise your hand' orb and live hand count (ux/8. Ice Breaker - Assistant.png) until the Leader taps 'Begin Reading'.",
+    "depends_on": [
+      "section-1-chosen-volunteer-prayer-gate"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright test verifying Section 2 renders main + follow-up questions, hides 'Examples to Listen For' from Participants, syncs live hand-raise counts, and lets only the Study Leader advance via 'Begin Reading'."
+    ],
+    "evidence": [],
+    "notes": "Follow ux/7. Ice Breaker - Leader.png and ux/8. Ice Breaker - Assistant.png."
+  },
+  {
+    "id": "section-3-gospel-reading-turn",
+    "area": "section-3-reading",
+    "title": "Gospel Reading presents sole Gospel passage with gated Done Reading turn",
+    "user_visible_behavior": "In Section 3 of 5 (60%, Gospel Reading), both roles view ONLY the Gospel Reading (scrollable full Matthew 15:21-28 passage, never overlapping the action orb); Participants tap the indigo 'Read aloud' orb, the Study Leader picks a volunteer from raised hands, roster strip, or 'Random', only the chosen reader receives 'Done Reading', and tapping 'Done Reading' unlocks the Leader's button to enter Section 4.",
+    "depends_on": [
+      "random-volunteer-picker-countdown",
+      "section-2-icebreaker-flow"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright test asserting Section 3 shows only Matthew 15:21-28 as main reading without multi-reading Mass tabs, verifies non-overlapping layout between Scripture card and 'Read aloud' orb on a 375x812 mobile viewport, and verifies exclusive 'Done Reading' gating before advancing to Section 4."
+    ],
+    "evidence": [],
+    "notes": "Follow ux/7. Reading - Leader.png, ux/8. Reading - Assistant.png, CONTEXT.md Gospel-only rule, and DESIGN.md override #2 & #4."
+  },
+  {
+    "id": "section-4-leader-question-queue-notes",
+    "area": "section-4-discussion",
+    "title": "Deep Analysis lets Study Leader switch active prompts with pastoral notes",
+    "user_visible_behavior": "In Section 4 of 5 (80%, 'Lord, Help Me Pray'), the Study Leader sees the 3 default curated questions (ux/10. Discussion - Leader.png), switches the active question ('Next question' or card tap), opens '+ Add' to promote any of the 12 study reflection questions or a custom prompt, views facilitator-only A-J Gospel commentary and Catholic doctrine notes, and advances to Section 5 when ready.",
+    "depends_on": [
+      "section-3-gospel-reading-turn"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright test verifying Study Leader switching active questions immediately updates the active prompt on Participant screens, '+ Add' appends questions from the 12-question bank, and pastoral notes/sample answers remain hidden from Participants."
+    ],
+    "evidence": [],
+    "notes": "Include the Romans 11:29 fidelity-to-Israel doctrinal guardrail and A-J patristic notes (Augustine, Chrysostom, Jerome) in the leader pastoral drawer."
+  },
+  {
+    "id": "section-4-live-participant-reflections",
+    "area": "section-4-discussion",
+    "title": "Participants submit named or anonymous reflections to live Sharing feed",
+    "user_visible_behavior": "On the active Section 4 question (ux/11. Discussion - Assistant.png), Participants tap 'I want to respond', type a reflection (>= 16px textarea) with an optional 'Share anonymously' toggle, and submit it so it animates into the live 'Sharing' feed and updates response counts on both Participant and Study Leader screens.",
+    "depends_on": [
+      "section-4-leader-question-queue-notes"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright multi-client test submitting one named reflection and one anonymous reflection, asserting real-time feed updates, 'Anonymous' author masking on wire broadcasts, and accurate per-question response counters on the Leader screen."
+    ],
+    "evidence": [],
+    "notes": "Ensure server broadcasts 'Anonymous' without leaking authorDisplayName when anonymous mode is selected."
+  },
+  {
+    "id": "section-4-lord-help-me-prayer-card",
+    "area": "section-4-discussion",
+    "title": "Participant builds downloadable Lord Help Me prayer card privately",
+    "user_visible_behavior": "In Section 4, Participants open the 'Lord, Help Me' Prayer Card builder to write their three short prayers (For myself, For someone I love, For the Church/world), keep drafts strictly local on their device, export/share the styled keepsake card as a PNG image on mobile/desktop, and optionally share one chosen prayer line to the live group feed.",
+    "depends_on": [
+      "section-4-live-participant-reflections"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright test verifying filling the 3 Prayer Card inputs triggers zero /ws network frames until voluntary single-prayer sharing is clicked, and verifying PNG image export generates a valid downloadable/shareable blob."
+    ],
+    "evidence": [],
+    "notes": "Use Web Share API navigator.share({ files }) when supported on mobile with automatic PNG download fallback per docs/risks-and-open-questions.md."
+  },
+  {
+    "id": "section-5-closing-prayer-completion",
+    "area": "section-5-closing",
+    "title": "Closing Prayer summarizes session metrics before Study Leader finishes study",
+    "user_visible_behavior": "In Section 5 of 5 (100%, 'Closing Prayer', ux/12. Closing Prayer.png), all clients see the Sacred3DScene Star of Faith, live session stats (5 sections, elapsed minutes, participant count), weekly practical challenge options (1-4), 'Next Week at Church' card ('Faith that Endures' — James 1:2-4), and full Closing Prayer text; Study Leader tapping 'Finish study' completes the session and purges ephemeral server reflections.",
+    "depends_on": [
+      "section-4-lord-help-me-prayer-card"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright end-to-end test advancing into Section 5, asserting metrics, Next Week card, challenges, and Closing Prayer render, and verifying 'Finish study' closes the live room and purges server-stored reflections."
+    ],
+    "evidence": [],
+    "notes": "Match ux/12. Closing Prayer.png layout and gold Star of Faith hero stage."
+  },
+  {
+    "id": "mobile-wake-lock-foreground-resync",
+    "area": "mobile-resilience",
+    "title": "Mobile clients hold screen wake lock with instant foreground state resync",
+    "user_visible_behavior": "During an active LiveSession on iOS Safari or Android Chrome, the client requests Screen Wake Lock (re-acquiring on visibilitychange), displays live connection status, and immediately reconnects /ws and re-hydrates exact role, section, active question, and 'YOU WERE CHOSEN' volunteer state after simulated tab backgrounding or brief network drop.",
+    "depends_on": [
+      "ws-live-session-room-lifecycle",
+      "section-1-chosen-volunteer-prayer-gate"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Automated Vitest + Playwright tests mocking navigator.wakeLock, forcing WebSocket close + visibilitychange ('visible') while a Participant holds 'YOU WERE CHOSEN', and asserting automatic reconnect restores the exact 'Done' turn screen within 2 seconds."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/technical-discovery.md iOS & Android 90-Minute Session Hardening."
+  },
+  {
+    "id": "desktop-dual-side-by-side-mode",
+    "area": "dual-mode",
+    "title": "Desktop Dual Side-by-Side Mode synchronizes Leader frame with Participant switcher",
+    "user_visible_behavior": "On desktop viewports (>= 1024px), launching Dual Side-by-Side Mode creates an isolated sandbox LiveSession displaying a Study Leader mobile frame alongside a Participant mobile frame with a participant switcher ('Mary Lopez', 'Daniel Reyes', 'Sara Castillo', plus '+ Add Participant'), synchronizing every hand raise, random pick, 'Done' gate, reflection, and section transition live over /ws.",
+    "depends_on": [
+      "section-5-closing-prayer-completion",
+      "mobile-wake-lock-foreground-resync"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright desktop (1440x900) end-to-end test walking an entire 5-section study inside Dual Side-by-Side Mode, switching between sample Participants to raise hands, get chosen, click 'Done', submit reflections, and finish the study with <= 2 active WebGL contexts."
+    ],
+    "evidence": [],
+    "notes": "Ensure Dual Mode spins up an isolated sessionCode so rehearsal never interferes with another active room."
+  }
+]
