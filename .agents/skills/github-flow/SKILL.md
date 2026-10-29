@@ -1,97 +1,142 @@
 ---
 name: github-flow
-description: "Orchestrate multi-feature GitHub delivery on top of feature-flow using git worktrees and gh issues/PRs. Use when the user asks to plan, execute, or publish feature ids in a GitHub repository, to run features in parallel isolated worktrees with independent opencode sessions, to reuse or create issues, branches, worktrees, or PRs for features, or to publish accepted features as PRs. Modes: plan (planificar, read-only), execute (ejecutar), publish (publicar). Never merges."
+description: Orchestrate multi-feature GitHub delivery on top of feature-flow using isolated git worktrees and gh issues/PRs. Enforces the 7-pillar lifecycle contract across plan (planificar, read-only), execute (ejecutar), and publish (publicar) modes: accepted-dependency gating, common base SHA, one worktree/port/session per feature, idempotent reuse, acceptance + push permission gates before PRs, clean pushed-only worktree teardown, and never merging.
 ---
 
 # GitHub Flow
 
-Coordinate one or more `feature_list.json` features across a GitHub repository. This skill owns repository topology: issues, branches, worktrees, sessions, pushes, and PRs. It delegates each feature's planner/implementer/validator loop to `../feature-flow/SKILL.md` inside an isolated worktree session and never implements product code itself.
+Coordinate one or more `feature_list.json` features across a GitHub repository. This skill owns repository topology: issues, branches, isolated worktrees (`../ya-bible-study-worktrees/<feature-id>`), per-worktree runtime ports, independent `feature-flow` sessions, pushes, Pull Requests, and safe worktree teardown.
 
-## Inputs
+It delegates each feature's `planner -> implementer -> validator` loop to `../feature-flow/SKILL.md` inside its isolated worktree session and never implements product code in the orchestrator.
 
-All four inputs are required. If any is missing, ask before doing anything.
+## Contrato (7-Pillar Lifecycle Contract)
 
-1. `feature_ids`: one or more feature ids from `feature_list.json`.
-2. `repository`: GitHub slug (`owner/repo`) or a local checkout path. Resolve the slug from `git remote get-url origin` and confirm it.
-3. `base_branch`: branch that all work is based on and that PRs target.
-4. `mode`: `plan` | `execute` | `publish` (aliases: planificar | ejecutar | publicar).
+1. **Entrada** — Explicit or auto-selected `feature_ids`, repository resolution, `base_branch` (`main`), and `mode` (`plan` | `execute` | `publish`).
+2. **Antes de ejecutar** — Precondition gate: accepted dependencies, clean base checkout, `gh` + explicit push permissions, and independent worktree environments.
+3. **Por feature** — Single common `base_sha`, issue reuse/creation, `feature/<id>` branch + isolated worktree + dedicated `.env` ports, and **strictly one session per feature**.
+4. **Si se repite** — Idempotent reuse of existing issues, branches, worktrees, and PRs; zero duplicates and zero deletion of in-progress work.
+5. **Publicar** — *Sin aceptación (`accepted`) no se publica*; *sin permiso explícito no hay push*; push + PR creation/update against `base_branch`; *el merge queda fuera*.
+6. **Al terminar** — Remove a worktree only when it is both completely clean and pushed to `origin/feature/<id>`; otherwise preserve it intact.
+7. **Salida** — Deterministic header + per-feature report (`feature`, `worktree`, `session`, `branch`, `status`, `commit`, `evidence`, `pr`).
 
-## Hard Rules
+---
 
-- Plan mode is read-only. It must not mutate git, GitHub, or files: no fetch, push, commit, checkout, stash, or worktree add; no issue/PR create, comment, or edit; no file writes.
-- Without acceptance there is no publish. `publish` requires each feature's status to be `accepted` in `feature_list.json` (independent validator `accept`). `passing` is not accepted.
-- Without explicit push permission there is no push. Push permission is granted per run by the user; the default is denied. `execute` keeps commits local; `publish` pushes and opens PRs only with that permission.
-- Merge is always out of scope. Never merge a PR and never enable auto-merge.
-- If a request repeats, reuse the existing issue, worktree, and PR. Never duplicate them. Never delete or rewrite existing work: no worktree removal, branch deletion, force push, or issue/PR closing.
-- One feature per session. Never two features in the same session. One independent session per worktree via `opencode run --dir <worktree>`.
-- All worktrees branch from one common base SHA fixed at the start of `execute`.
-- A blocked feature is reported with its blocking dependency ids. Never silently skip it and never substitute a later feature.
-- `feature-flow` owns the role loop and acceptance inside a worktree session; its commit and validation rules still apply there.
+## 1. Entrada (Inputs & Defaults)
 
-## Preconditions
+- **`feature_ids`**: Array of one or more feature IDs from `feature_list.json`.
+  - When omitted, select one feature using `feature-flow` priority order (`in_progress` -> first `passing` -> first dependency-ready with spec -> first dependency-ready without spec).
+- **`repository`**: Current checkout; resolve GitHub slug via `git remote get-url origin`.
+  - If `origin` is not configured yet: in `plan` mode, report `local:<checkout-path> (origin not configured)` read-only and skip remote `gh` issue/PR queries without failing local planning; in `publish` (or `execute` when GitHub issue creation is required), stop and ask the user to configure `origin`.
+- **`base_branch`**: Defaults to `main`.
+- **`mode`**: `plan` (`planificar`) | `execute` (`ejecutar`) | `publish` (`publicar`).
 
-Checked before `execute` is allowed to mutate anything. `plan` runs the same checks read-only. Every feature to execute must pass all four:
+---
 
-1. Dependencies accepted: every id in `depends_on` has status `accepted` in `feature_list.json`.
-2. Clean base: the base checkout has no staged, modified, or deleted tracked files (`git status --porcelain` has no tracked entries; untracked files are allowed and reported), no merge/rebase in progress, and `base_branch` resolves.
-3. Permissions: `gh auth status` shows an account that can manage issues and PRs in the repository, and the user explicitly granted push permission (otherwise work stays local and `publish` cannot push or open PRs).
-4. Independent environments: one worktree per feature outside the base checkout, one session per worktree, no shared mutable state between features (each worktree runs its own `./init.sh` and local database).
+## 2. Antes de ejecutar (Preconditions & Gating)
 
-If any precondition fails, report the failing features and stop before mutating anything.
+Evaluated before any mutation (`plan` runs the exact same checks strictly read-only):
 
-## Deterministic Identities (reuse keys)
+1. **Dependencias aceptadas**: Every ID in the feature's `depends_on` array must have `"status": "accepted"` in `feature_list.json` (`passing` does not qualify). If any dependency is not `accepted`, mark that feature `blocked`, list the missing `accepted` dependency IDs, and plan/create **zero** artifacts (no issue, branch, worktree, session, or PR) for it. Never silently skip or substitute another feature.
+2. **Base limpia**: `git status --porcelain` in the base checkout must have no staged, modified, or deleted tracked files, no merge/rebase in progress, and `git rev-parse <base_branch>` must resolve.
+3. **Permisos**:
+   - Check `gh auth status` (read-only) to verify GitHub CLI authentication.
+   - **Push permission**: Granted per run **only** by explicit user instruction; default is `denied`.
+4. **Entornos independientes**: One isolated worktree per feature outside the base checkout (`../ya-bible-study-worktrees/<feature-id>`), dedicated ports (`PORT`, `API_PORT`) so concurrent Node/`/ws`/Vite/Playwright processes never collide, and **one session per worktree**.
 
-- Branch: `feature/<feature-id>`.
-- Worktree: `<worktrees-root>/<feature-id>` where `<worktrees-root>` is `../<base-checkout-dirname>-worktrees`, outside the base checkout.
-- Issue title: `[<feature-id>] <feature title from feature_list.json>`.
-- PR: head `feature/<feature-id>` into `base_branch`, title `[<feature-id>] <feature title>`.
+---
 
-Reuse lookup before any creation (read-only):
+## 3. Por feature (Deterministic Identities & Isolation)
 
-- Issue: `gh issue list --state all --search "<feature-id>"`; reuse the issue whose title starts with `[<feature-id>]`; create only if none exists.
-- Worktree and branch: `git worktree list` and `git branch --list "feature/<feature-id>"`; reuse when present; `git worktree add` only if absent.
-- PR: `gh pr list --state all --head "feature/<feature-id>" --base <base_branch>`; reuse when present; create only in `publish` and only if absent.
+Fix a single **common `base_sha`** once per run so every ready feature branches from the exact same commit:
+- In `plan` mode (read-only, never `git fetch`): `base_sha=$(git rev-parse <base_branch>)`.
+- In `execute` mode: `git fetch origin <base_branch>` + `base_sha=$(git rev-parse origin/<base_branch>)` when `origin` exists, otherwise `git rev-parse <base_branch>`.
 
-## Mode: plan (planificar)
+Deterministic reuse keys for each ready feature `<id>` (index `k = 1..N`):
 
-Read-only. Produce the plan report only.
+- **Issue title**: `[<id>] <title from feature_list.json>`
+- **Branch**: `feature/<id>`
+- **Worktree path**: `../ya-bible-study-worktrees/<id>`
+- **Dedicated environment (`../ya-bible-study-worktrees/<id>/.env`)**: `PORT=$((3100 + k))` and `API_PORT=$((3200 + k))` (isolated in-memory `/ws` room state per process).
+- **Independent session command** (**never two features in one session**):
+  ```bash
+  opencode run --dir "../ya-bible-study-worktrees/<id>" "Use feature-flow for <id> only, until accepted."
+  ```
+- **PR**: `feature/<id>` -> `<base_branch>`, title `[<id>] <title from feature_list.json>`.
 
-1. Resolve inputs; read `feature_list.json`, `PROGRESS.md`, git state (`git status --porcelain`, `git rev-parse <base_branch>`, `git worktree list`, `git branch --list`) and gh state (`gh auth status`, issue and PR lookups). Never `git fetch`.
-2. Evaluate the four preconditions per feature. For blocked features, report the missing `accepted` dependency ids.
-3. Planned base SHA = current `git rev-parse <base_branch>`.
-4. For each ready feature, resolve reuse targets (issue, worktree, branch, PR) and the planned session command `opencode run --dir <worktree> ...`.
-5. Emit the output report with status `planned` and `pr: none`. Nothing is created.
+---
 
-## Mode: execute (ejecutar)
+## 4. Si se repite (Idempotency & Work Preservation)
 
-1. Run the precondition gate. Split the request into ready and blocked features and report both lists; continue with ready features only.
-2. Fix the common base SHA: `git fetch origin <base_branch>` then `base_sha=$(git rev-parse origin/<base_branch>)`. Every worktree branches from this exact SHA.
-3. Record whether the user granted push permission. Without it, do not push anything.
-4. For each ready feature, independently:
-   1. Reuse or create the issue (lookup first).
-   2. Reuse or create the worktree and branch from `base_sha`: `git worktree add <worktrees-root>/<feature-id> -b feature/<feature-id> <base_sha>`.
-   3. Launch exactly one session: `opencode run --dir <worktrees-root>/<feature-id> "Use feature-flow for <feature-id> only, until accepted."` Never two features in one session. Different features use different worktrees and different sessions; they may run concurrently because the environments are independent.
-   4. Collect the `feature-flow` outcome (validator `accept` / `revise` / `block`) and the local commit created on accept.
-   5. Keep the issue body updated with status and evidence (GitHub writes are allowed here; push is still gated).
-5. Emit the output report.
+Always run read-only reuse lookups before planning or creating artifacts:
+- **Issue**: `gh issue list --state all --search "<id>" --json number,title,url` (match title prefix `[<id>]`, when `origin` slug exists).
+- **Worktree & Branch**: `git worktree list` and `git branch --list "feature/<id>"`.
+- **PR**: `gh pr list --state all --head "feature/<id>" --base <base_branch> --json number,url` (when `origin` slug exists).
 
-## Mode: publish (publicar)
+Rules:
+- Reuse existing issue, branch, worktree, and PR targets whenever present.
+- Never create duplicate issues, branches, worktrees, or PRs.
+- Never delete, reset, force-push, or overwrite existing work (`no git reset --hard`, `no git branch -D`, `no git worktree remove --force`, `no git push --force`).
+- Repeating the exact same `plan` request against unchanged repo state must return the **exact same identity set with zero delta**.
 
-1. Acceptance gate: every feature must be `accepted` in `feature_list.json`. If any is not, refuse that feature: without acceptance there is no publish. `passing` does not qualify.
-2. Push gate: if push permission was not explicitly granted, refuse: without permission there is no push, and therefore no PR.
-3. Push `feature/<feature-id>` and reuse or create the PR into `base_branch` with acceptance evidence in the body.
-4. Never merge. Report the PR URL per published feature.
+---
 
-## Output Report
+## 5. Publicar (Publishing Gate & PR)
 
-Header: mode, repository, base branch, base SHA, push permission (granted/denied), reused vs created artifacts.
+1. **Acceptance Gate (*Sin aceptación no se publica*)**:
+   - Inspect `feature_list.json` (in the feature's worktree if present, otherwise base checkout).
+   - Every target feature **must** have `"status": "accepted"` (independent validator `accept`).
+   - If status is `not_started`, `in_progress`, `blocked`, or `passing`, immediately return `status: refused` citing the non-`accepted` status, with **zero** git/GitHub mutations.
+2. **Push Permission Gate (*Sin permiso no hay push*)**:
+   - If the user did not explicitly grant push permission for this run, return `status: refused` citing `push permission denied`—no push and no PR.
+3. **Push & PR Creation/Update**:
+   - Push branch: `git -C "../ya-bible-study-worktrees/<id>" push -u origin "feature/<id>"`.
+   - Reuse existing PR or create via `gh pr create --base <base_branch> --head "feature/<id>" --title "[<id>] <title>" --body-file /tmp/yabs-pr-<id>.md` including summary, validator acceptance evidence, `Cómo probarlo`, and `Closes #<issue-number>`.
+4. **No-Merge Hard Rule (*El merge queda fuera*)**:
+   - Never run `gh pr merge`, never merge locally into `main`, and never enable auto-merge.
 
-Per feature, one row/block with exactly these fields:
+---
 
-- `feature`: feature id.
-- `session`: the `opencode run --dir ...` command, or `none` in plan mode.
-- `branch`: `feature/<id> @ <base_sha>`.
-- `status`: gate verdict or feature status: `blocked`, `planned`, `in_progress`, `passing`, `accepted`, `published`, `refused`.
-- `commit`: hash and subject, or `none`.
-- `evidence`: verification or acceptance summary.
-- `pr`: PR URL when a PR exists or was published, otherwise `none`.
+## 6. Al terminar (Clean Worktree Teardown)
+
+After `publish` completes for `<id>`, remove `../ya-bible-study-worktrees/<id>` **only** if both hold:
+1. `git -C "../ya-bible-study-worktrees/<id>" status --porcelain` is empty (clean).
+2. `HEAD` matches `origin/feature/<id>` (all local commits pushed).
+
+If dirty, unpushed, or running in `plan` / local-only `execute`, retain the worktree untouched and report its path.
+
+---
+
+## 7. Phased Modes Summary
+
+- **`plan` (`planificar`) — Strictly Read-Only**:
+  - Allowed reads only: `feature_list.json`, `PROGRESS.md`, `git remote get-url origin`, `git status --porcelain`, `git rev-parse <base_branch>`, `git worktree list`, `git branch --list`, `gh auth status`, and (if `origin` slug resolves) `gh issue list` / `gh pr list`.
+  - Forbidden in `plan`: `git fetch`, `git push`, `git commit`, `git checkout`, `git stash`, `git worktree add/remove`, `gh issue/pr create/edit/close`, or any file writes.
+  - Ready features report `status: planned` with their deterministic `worktree`, `session`, and `branch @ <base_sha>`; blocked features report `status: blocked` with `none` for planned artifacts.
+- **`execute` (`ejecutar`)**: Runs precondition gate, fixes `base_sha`, reuses/creates issues + worktrees + `.env` ports, launches one `opencode` `feature-flow` session per ready feature, and collects local acceptance commits (push remains gated).
+- **`publish` (`publicar`)**: Enforces Acceptance Gate (`accepted` only) + Push Permission Gate, pushes `feature/<id>`, creates/updates PRs without merging, and performs conditional clean teardown.
+
+---
+
+## 8. Salida (Structured Output Report)
+
+Header:
+- `mode`: `plan` | `execute` | `publish`
+- `repository`: `<owner/repo>` or `local:<path> (origin not configured)`
+- `base_branch`: `<branch>`
+- `base_sha`: `<40-char sha>`
+- `clean_base`: `yes` | `no`
+- `gh_auth`: `authenticated (<account>)` | `unauthenticated`
+- `push_permission`: `granted` | `denied`
+- `artifacts`: `reused: <count>, to_create/created: <count>, side_effects: <none | summary>`
+
+Per feature (exact fields):
+- `feature`: `<feature-id>`
+- `worktree`: `../ya-bible-study-worktrees/<feature-id>` | `none`
+- `session`: `opencode run --dir "../ya-bible-study-worktrees/<feature-id>" "Use feature-flow for <feature-id> only, until accepted."` | `none`
+- `branch`: `feature/<feature-id> @ <base_sha>` | `none`
+- `status`: `blocked` | `planned` | `in_progress` | `passing` | `accepted` | `published` | `refused`
+- `commit`: `<hash> <subject>` | `none`
+- `evidence`: gate/dependency verdict, verification, or acceptance summary
+- `pr`: `<PR URL>` | `none`
+
+See `references/evals.md` for the four read-only contract verification scenarios.

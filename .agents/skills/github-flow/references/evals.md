@@ -1,42 +1,47 @@
-# github-flow evals
+# github-flow Contract Evals (YA Bible Study)
 
-Contract evals for `../SKILL.md`. Every run uses mode `plan` (planificar) and must finish with zero side effects: no git mutations, no GitHub mutations, no file writes. Publish gating in Eval 4 is exercised through the same read-only gate evaluation.
+Read-only contract evals for `../SKILL.md` against this repository's `feature_list.json`. Every run executes strictly without side effects: zero git mutations, zero GitHub mutations, and zero file writes. Publish gating in Eval 4 exercises the read-only acceptance & push gates directly.
 
-Common inputs for all evals:
+## Common Inputs
 
-- `repository`: this checkout; resolve the slug from `git remote get-url origin`.
-- `base_branch`: the branch where `bootstrap-seed` is `accepted` (for example `main`).
+- `repository`: `/Users/armando/Documents/YA Bible Study` (resolved via `git remote get-url origin` when configured, or `local:/Users/armando/Documents/YA Bible Study (origin not configured)`).
+- `base_branch`: `main` (where `app-shell-single-port-bootstrap` has `"status": "accepted"`).
+- `push_permission`: `denied` (default when not explicitly granted).
 - Feature source: `feature_list.json` as it stands at eval time.
-- Allowed reads only: `feature_list.json`, `PROGRESS.md`, `git status --porcelain`, `git rev-parse <base_branch>`, `git worktree list`, `git branch --list`, `gh auth status`, `gh issue list`, `gh pr list`.
+- Allowed reads only: `feature_list.json`, `PROGRESS.md`, `git remote get-url origin`, `git status --porcelain`, `git rev-parse main`, `git worktree list`, `git branch --list`, `gh auth status`, and (if `origin` exists) `gh issue list`, `gh pr list`.
 
-Record per eval: verdict `pass`/`fail` and the observed report lines that prove it.
+Record per eval: verdict `pass` / `fail`, observed structured report lines, and before/after zero-side-effect check.
 
-## Eval 1 — blocked feature: missing accepted dependency
+---
 
-- Input: mode `plan`, `feature_ids = ["product-detail"]`.
-- State: `product-detail` depends_on `["catalog-list"]`; `catalog-list` status is `not_started`.
-- Expected: blocked — missing accepted dependency `catalog-list`. No issue, worktree, branch, session, or PR is planned. Zero side effects.
-- Pass criteria: the report names `product-detail` and `catalog-list` and states the dependency is not `accepted`; planned artifact count is zero.
+## Eval 1 — Blocked feature: missing accepted dependency
 
-## Eval 2 — two ready features, one base SHA, two worktrees
+- **Input**: `mode = "plan"`, `feature_ids = ["markdown-study-deterministic-parser"]`.
+- **Repo state**: `markdown-study-deterministic-parser` declares `depends_on: ["preloaded-great-is-your-faith-seed"]`, whose status in `feature_list.json` is `"not_started"` (not `"accepted"`).
+- **Expected**: `status: blocked` — missing accepted dependency `preloaded-great-is-your-faith-seed`. No issue, worktree, branch, session, or PR is planned (`worktree: none`, `session: none`, `branch: none`, `pr: none`, `to_create: 0`). Zero side effects.
+- **Pass criteria**: Report names both `markdown-study-deterministic-parser` and `preloaded-great-is-your-faith-seed`, states the dependency is not `accepted`, plans `0` artifacts, and leaves git/filesystem state untouched.
 
-- Input: mode `plan`, `feature_ids = ["ai-provider-config", "catalog-list"]`.
-- State: `ai-provider-config` depends_on `["bootstrap-stack"]` (`accepted`); `catalog-list` depends_on `["bootstrap-seed"]` (`accepted`).
-- Expected: both features available; one common base SHA shared by both; two independent worktrees (one per feature) and one planned session per worktree (`opencode run --dir <worktree> ...`); never two features in the same session. Per feature the report includes session, branch, status, commit, evidence, and PR URL.
-- Pass criteria: both features report status `planned`; the base SHA is identical for both; the two worktree paths differ; no session is shared; zero side effects.
+---
 
-## Eval 3 — repeated request is idempotent
+## Eval 2 — Two ready features, one common base SHA, two independent worktrees & sessions
 
-- Input: the exact same request as Eval 2, issued a second time.
-- Expected: same plan — same base SHA, worktree paths, branches, issue and PR reuse targets, and session commands — and nothing new to create: the delta against the first run is empty. No duplicate artifacts and no deletions are planned.
-- Pass criteria: run 2 identity set equals run 1 identity set; run 2 plans zero additional artifacts relative to run 1; zero side effects.
+- **Input**: `mode = "plan"`, `feature_ids = ["preloaded-great-is-your-faith-seed", "ws-live-session-room-lifecycle"]`.
+- **Repo state**: Both `preloaded-great-is-your-faith-seed` and `ws-live-session-room-lifecycle` declare `depends_on: ["app-shell-single-port-bootstrap"]`, whose status in `feature_list.json` is `"accepted"`.
+- **Expected**: Both features report `status: planned`; one identical `base_sha` (`git rev-parse main`) is shared by both; two distinct worktrees (`../ya-bible-study-worktrees/preloaded-great-is-your-faith-seed` and `../ya-bible-study-worktrees/ws-live-session-room-lifecycle`) and two distinct `opencode run --dir ...` session commands (never two features in one session); per feature includes `worktree`, `session`, `branch`, `status`, `commit`, `evidence`, and `pr`. Zero side effects.
+- **Pass criteria**: Both features report `status: planned`; `base_sha` is identical; worktree paths differ; session commands are separate single-feature invocations; zero side effects.
 
-## Eval 4 — publish without acceptance is refused
+---
 
-- Input: mode `publish`, `feature_ids = ["catalog-list"]` (status `not_started`), evaluated without effects.
-- Expected: refused — without acceptance there is no publish. No push, no PR, no issue, worktree, branch, or file changes.
-- Pass criteria: verdict `refused` citing that the status is not `accepted`; zero side effects.
+## Eval 3 — Repeated request is idempotent
 
-## Running
+- **Input**: Exact same request as Eval 2 (`mode = "plan"`, `feature_ids = ["preloaded-great-is-your-faith-seed", "ws-live-session-room-lifecycle"]`), issued a second time.
+- **Expected**: Identical plan output — same `base_sha`, worktree paths, `feature/<id>` branches, issue/PR lookup targets, and `opencode run --dir ...` session commands — with an empty delta (`0` duplicate artifacts, `0` deletions) relative to Eval 2. Zero side effects.
+- **Pass criteria**: Run 2 identity set equals Run 1 identity set byte-for-byte; zero additional or duplicate artifacts planned; zero side effects.
 
-Run each eval through the skill in `plan` mode against the live read-only state listed above. Never run these evals in `execute` or `publish` mode for real: Eval 4 checks the refusal verdict only.
+---
+
+## Eval 4 — Publish without acceptance is refused
+
+- **Input**: `mode = "publish"`, `feature_ids = ["preloaded-great-is-your-faith-seed"]` (`status: "not_started"` in `feature_list.json`), evaluated read-only through the publishing gate.
+- **Expected**: `status: refused` — *sin aceptación no se publica* (`preloaded-great-is-your-faith-seed` has status `not_started`, not `accepted`; additionally `push_permission: denied`). Zero push, zero PR, zero issue/worktree/branch/file mutations.
+- **Pass criteria**: Verdict `status: refused` explicitly citing that status is not `accepted`; `to_create: 0`; zero side effects.
