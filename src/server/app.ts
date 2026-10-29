@@ -5,6 +5,7 @@ import path from 'node:path';
 import express, { type Express } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { HealthResponse } from '../shared/health.js';
+import { getDefaultStudyDocument } from './studies/greatIsYourFaithSeed.js';
 
 export interface AppServerOptions {
   staticDir?: string | false;
@@ -59,6 +60,10 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
     };
 
     res.status(200).json(payload);
+  });
+
+  app.get('/api/studies/default', (_req, res) => {
+    res.status(200).json(getDefaultStudyDocument());
   });
 
   app.use('/api', (_req, res) => {

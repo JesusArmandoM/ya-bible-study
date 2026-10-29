@@ -11,14 +11,15 @@ src/client/  ──imports──▶  src/shared/  ◀──imports──  src/se
 ```
 
 - `src/shared/`
-  - Pure TypeScript types, constants, and validation contracts shared between browser and server (`src/shared/health.ts` and upcoming study/session/WS schemas).
+  - Pure TypeScript types, constants, and validation contracts shared between browser and server (`src/shared/health.ts`, `src/shared/study.ts`, and upcoming session/WS schemas).
   - **Allowed imports**: `src/shared/*` only (no DOM globals, no Node built-ins, no `src/client/*` or `src/server/*`).
 - `src/server/`
   - Express + Node `http.Server` + `ws` (`WebSocketServer` in `noServer` mode handling HTTP `upgrade` exclusively for `/ws`).
+  - `src/server/studies/` holds server-side study curriculum providers (`src/server/studies/greatIsYourFaithSeed.ts` exposing immutable preloaded `StudyDocument` clones via `getDefaultStudyDocument()`) and upcoming deterministic `.md`/`.pdf` parsers.
   - `src/server/app.ts` exports `createAppServer(options)` with deterministic `start(port, host)` and `close()` lifecycle helpers so integration tests bind ephemeral port `0` cleanly.
   - `src/server/index.ts` is the production/dev CLI entrypoint binding `PORT` (default `3000`, or `API_PORT=3001` behind Vite in dev).
   - Routing order on the unified port:
-    1. Explicit `/api/*` handlers (`GET /api/health`, future study endpoints).
+    1. Explicit `/api/*` handlers (`GET /api/health`, `GET /api/studies/default`, and upcoming study upload endpoints).
     2. `/api` JSON `404` fallback (`{ "error": "Not found" }`) so mistyped API calls never receive HTML.
     3. Built `dist/client` static assets + SPA `index.html` fallback for non-`/api`, non-`/ws` `GET`/`HEAD` requests.
     4. HTTP `upgrade` listener routing `/ws` to `WebSocketServer` and rejecting other upgrade paths with `404`.
