@@ -106,11 +106,16 @@
     "depends_on": [
       "ws-live-session-room-lifecycle"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Component/Playwright test verifying Welcome screen renders 'Study Leader' and 'Participant' labels (asserting 'Assistant' does not appear), enforces >= 16px input font-size, creates a leader session, and joins a second browser context as Participant."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: ./init.sh exited 0 — npm run typecheck passed cleanly across tsconfig.client.json, tsconfig.server.json, and root tsconfig.json; npm test passed 11 Vitest test files / 58 tests including tests/unit/url-helpers.test.ts [5] (path/query join code extraction and normalization) and tests/unit/welcome-role-selection.test.tsx [7] (WelcomeRoleCards, zero 'Assistant' copy, LeaderAccessSheet creation & PIN claim validation, ParticipantJoinSheet auto-uppercasing and name validation, ActiveSessionBanner leaderPin visibility gating, and single-tap back navigation); Vite + server build emitted production dist/client and dist/server bundles.",
+      "2026-10-29: PLAYWRIGHT_PORT=3302 npm run test:e2e exited 0 (8 passed in 55.2s on mobile-chromium 390x844), verifying all suites: tests/e2e/app-shell-bootstrap.spec.ts, tests/e2e/sacred-3d-stage.spec.ts, tests/e2e/studies-default.spec.ts, tests/e2e/ws-room-lifecycle.spec.ts, and tests/e2e/welcome-role-selection.spec.ts (Scenario 1 & 5: brand lockup, Playfair Display typography, zero Assistant copy, persistent 3D canvas, >= 16px inputs, single-tap back navigation; Scenario 2, 3, 4, 6: Study Leader room creation, 6-char sessionCode + 4-digit leaderPin display, Participant join via /join/:sessionCode URL prefill, live roster counter sync, 4-digit PIN claim handoff with leader_replaced role update to Participant, and sessionStorage reconnect persistence across reload).",
+      "2026-10-29: Static invariant verification confirmed grep -rn 'Assistant' src/ returned 0 matches, and all form controls enforce font-size >= 16px (1rem) on mobile viewports.",
+      "2026-10-29: Independent validator verdict: accept — reran CI=true PORT=3102 ./init.sh (exit 0, 11 Vitest suites / 58 tests), PLAYWRIGHT_PORT=3302 npm run test:e2e (exit 0, 8/8 mobile-chromium 390x844 specs), static terminology scan (0 Assistant occurrences), mobile input font-size verification (>= 16px), and live single-port production smoke check on PORT=3102 with 0 Critical/High/Medium/Low findings."
+    ],
     "notes": "Match ux/1. Welcome.png palette (#0B0D17, #E2A83E, #6E75F5), Playfair Display + Plus Jakarta Sans typography, and CONTEXT.md terminology rules."
   },
   {

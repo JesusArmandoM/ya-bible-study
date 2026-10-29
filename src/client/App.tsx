@@ -1,8 +1,15 @@
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
-import { SANCTUARY_ROLES, type HealthResponse } from '../shared/health';
+import type { HealthResponse } from '../shared/health';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
+import { ActiveSessionBanner } from './components/welcome/ActiveSessionBanner';
+import { LeaderAccessSheet } from './components/welcome/LeaderAccessSheet';
+import { ParticipantJoinSheet } from './components/welcome/ParticipantJoinSheet';
+import { WelcomeRoleCards } from './components/welcome/WelcomeRoleCards';
 import { resolveApiUrl } from './lib/runtimeUrl';
+import type { SessionSocketClient } from './lib/sessionSocket';
+import { extractJoinCodeFromLocation } from './lib/urlHelpers';
+import { useLiveSession } from './lib/useLiveSession';
 import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion';
 import {
   SACRED_STAGE_METADATA,
@@ -12,6 +19,10 @@ import {
 } from './state/sacredStageStore';
 
 export type SanctuaryHealthState = 'loading' | 'ok' | 'degraded';
+
+export interface AppProps {
+  sessionClient?: SessionSocketClient;
+}
 
 function SanctuaryStarIcon() {
   return (
@@ -44,12 +55,20 @@ function triggerTactileHaptic(reducedMotion: boolean): void {
   }
 }
 
-export function App() {
+export function App({ sessionClient }: AppProps = {}) {
   const [healthState, setHealthState] = useState<SanctuaryHealthState>('loading');
   const activeStage = useSacredStageStore((s) => s.stage);
   const setStage = useSacredStageStore((s) => s.setStage);
   const triggerImpulse = useSacredStageStore((s) => s.triggerImpulse);
   const reducedMotion = usePrefersReducedMotion();
+
+  const liveSession = useLiveSession({ client: sessionClient });
+  const [urlJoinCode] = useState<string | null>(() =>
+    extractJoinCodeFromLocation(),
+  );
+  const [activeSheet, setActiveSheet] = useState<
+    'leader' | 'participant' | null
+  >(() => (urlJoinCode ? 'participant' : null));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -184,18 +203,51 @@ export function App() {
           </div>
 
           <p className="sanctuary-stage-copy">{stageSummary}</p>
-          <div className="sanctuary-role-tags" aria-label="Supported session roles">
-            {SANCTUARY_ROLES.map((role) => (
-              <span
-                key={role}
-                className="sanctuary-role-pill"
-                data-role={role === 'Study Leader' ? 'leader' : 'participant'}
-              >
-                {role}
-              </span>
-            ))}
-          </div>
         </section>
+
+        {liveSession.session ? (
+          <ActiveSessionBanner
+            session={liveSession.session}
+            role={liveSession.role}
+            leaderPin={liveSession.leaderPin}
+            onLeave={() => {
+              if (
+                typeof window !== 'undefined' &&
+                window.location.pathname.startsWith('/join/')
+              ) {
+                window.history.replaceState({}, '', '/');
+              }
+              setActiveSheet(null);
+              liveSession.leaveRoom();
+            }}
+          />
+        ) : activeSheet === 'leader' ? (
+          <LeaderAccessSheet
+            isSubmitting={liveSession.isSubmitting}
+            errorMessage={liveSession.error}
+            onCreateRoom={(displayName) => liveSession.createRoom(displayName)}
+            onClaimLeadership={(code, pin, name) =>
+              liveSession.claimLeadership(code, pin, name)
+            }
+            onBack={() => setActiveSheet(null)}
+            onClearError={liveSession.clearError}
+          />
+        ) : activeSheet === 'participant' ? (
+          <ParticipantJoinSheet
+            initialSessionCode={urlJoinCode}
+            isSubmitting={liveSession.isSubmitting}
+            errorMessage={liveSession.error}
+            onJoinRoom={(code, name) => liveSession.joinRoom(code, name)}
+            onBack={() => setActiveSheet(null)}
+            onClearError={liveSession.clearError}
+          />
+        ) : (
+          <WelcomeRoleCards
+            onSelectRole={(role) =>
+              setActiveSheet(role === 'Study Leader' ? 'leader' : 'participant')
+            }
+          />
+        )}
 
         <footer className="sanctuary-footer">
           <div

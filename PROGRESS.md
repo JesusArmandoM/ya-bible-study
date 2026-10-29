@@ -5,11 +5,48 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `pdf-study-deterministic-parser` (also ready: `welcome-role-selection-flow`)
+- Current next ready feature: `pdf-study-deterministic-parser` (Wave 2 complete: `markdown-study-deterministic-parser` and `welcome-role-selection-flow` accepted)
 - Current blocker: `none`
 - Last verified at: `2026-10-29`
 
 ## Session Log
+
+### Session 013
+
+- Date: `2026-10-29`
+- Goal: Independent validation and acceptance persistence for `welcome-role-selection-flow`.
+- Completed: Independent `validator` subagent audited `docs/specs/welcome-role-selection-flow.md` and the full diff, reran `CI=true PORT=3102 ./init.sh`, `PLAYWRIGHT_PORT=3302 npm run test:e2e`, static terminology scan (`grep -rn Assistant src/`), mobile input font-size check (`>= 16px`), client/server boundary verification, and live single-port HTTP + WebSocket smoke check on `PORT=3102`, returning verdict `accept` with `0` Critical/High/Medium/Low findings. Updated `feature_list.json` status to `accepted`.
+- Verification run: `CI=true PORT=3102 ./init.sh`, `PLAYWRIGHT_PORT=3302 npm run test:e2e`, `grep -rn Assistant src/`, single-port production smoke on `PORT=3102`.
+- Evidence captured: All gates exited `0` (`11` Vitest suites / `58` tests, `8/8` Playwright mobile E2E specs); zero `Assistant` occurrences; input font-sizes verified `>= 16px`.
+- Files or artifacts updated: `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: none.
+- Next best step: Run `$feature-flow` on `pdf-study-deterministic-parser` (Wave 2 complete: both `markdown-study-deterministic-parser` and `welcome-role-selection-flow` accepted).
+
+### Session 012
+
+- Date: `2026-10-29`
+- Goal: Implement `welcome-role-selection-flow` according to `docs/specs/welcome-role-selection-flow.md`.
+- Completed:
+  - Created `src/client/lib/urlHelpers.ts` extracting and normalizing 6-character uppercase join codes from `/join/:code` and `?code=` / `?join=`.
+  - Created `src/client/lib/useLiveSession.ts` wrapping `createSessionSocketClient` with reactive React state (`connectionStatus`, `session`, `credentials`, `role`, `leaderPin`, `error`, `isSubmitting`), automatic `sessionStorage` re-hydration, and room action dispatches (`createRoom`, `joinRoom`, `claimLeadership`, `leaveRoom`).
+  - Created `src/client/components/welcome/WelcomeRoleCards.tsx` matching `ux/1. Welcome.png` with tactile `motion/react` spring press feedback (`stiffness: 420, damping: 26, scale: 0.96`), gold crown icon for `Study Leader`, and periwinkle group icon for `Participant` (zero occurrences of `Assistant`).
+  - Created `src/client/components/welcome/LeaderAccessSheet.tsx` supporting "Create Room" and "Claim Room" tabs with 4-digit PIN support, `>= 16px` inputs, inline accessible alert, and single-tap Back button.
+  - Created `src/client/components/welcome/ParticipantJoinSheet.tsx` with auto-uppercasing `sessionCode`, display name input, URL prefill support, `>= 16px` inputs, and single-tap Back button.
+  - Created `src/client/components/welcome/ActiveSessionBanner.tsx` displaying live session status (`● LIVE ROOM`), room code, role badge, connected count, and leader PIN display with device recovery guidance for leaders.
+  - Integrated the dynamic Welcome flow into `src/client/App.tsx` and `src/client/styles/global.css`, ensuring the single persistent `<Sacred3DScene />` canvas stays mounted throughout all sheet and role state transitions.
+  - Added Vitest unit test suites (`tests/unit/url-helpers.test.ts`, `tests/unit/welcome-role-selection.test.tsx`) and Playwright E2E suite (`tests/e2e/welcome-role-selection.spec.ts`).
+  - Updated `ARCHITECTURE.md` client modules documentation.
+- Verification run:
+  - `./init.sh` (`npm run typecheck`, `npm test`, `npm run build`)
+  - `PLAYWRIGHT_PORT=3302 npm run test:e2e`
+  - `grep -rn "Assistant" src/`
+- Evidence captured:
+  - `./init.sh` exited `0`: `tsc --noEmit` clean across client, server, and root configs; Vitest 11 test files / 58 tests passed (`1.77s`); Vite + server build emitted `dist/client` and `dist/server`.
+  - `PLAYWRIGHT_PORT=3302 npm run test:e2e` exited `0` (8 passed in `55.2s` on `mobile-chromium` `390x844`), verifying app shell bootstrap, Sacred3DScene persistence/recovery, GET /api/studies/default, multi-context WebSocket lifecycle, and welcome role selection flow.
+  - `grep -rn "Assistant" src/` returned 0 matches.
+- Files or artifacts updated: `src/client/lib/urlHelpers.ts`, `src/client/lib/useLiveSession.ts`, `src/client/components/welcome/WelcomeRoleCards.tsx`, `src/client/components/welcome/LeaderAccessSheet.tsx`, `src/client/components/welcome/ParticipantJoinSheet.tsx`, `src/client/components/welcome/ActiveSessionBanner.tsx`, `src/client/App.tsx`, `src/client/styles/global.css`, `tests/unit/url-helpers.test.ts`, `tests/unit/welcome-role-selection.test.tsx`, `tests/e2e/welcome-role-selection.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: none.
+- Next best step: Run independent `$feature-validator` on `welcome-role-selection-flow`.
 
 ### Session 011
 
