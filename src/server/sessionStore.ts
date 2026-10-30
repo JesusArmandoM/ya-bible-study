@@ -7,6 +7,7 @@ import {
   PARTICIPANT_AVATAR_PALETTES,
   SESSION_CODE_ALPHABET,
   SESSION_CODE_LENGTH,
+  SESSION_PROTOCOL_VERSION,
   STUDY_SECTION_IDS,
   deriveInitials,
   isValidDisplayName,
@@ -15,6 +16,7 @@ import {
   normalizeDisplayName,
   normalizeLeaderPin,
   normalizeSessionCode,
+  normalizeSessionStudySummary,
   type AvatarPalette,
   type LeaderCommandType,
   type LiveSessionStatus,
@@ -24,6 +26,7 @@ import {
   type ServerWsMessage,
   type SessionCloseReason,
   type SessionErrorCode,
+  type SessionStudySummary,
   type StudySectionId,
 } from '../shared/session.js';
 
@@ -60,6 +63,7 @@ interface InternalLiveSession {
   endedAt: string | null;
   lastActivityAt: number;
   nextParticipantPaletteIndex: number;
+  study: SessionStudySummary | null;
   members: Map<string, InternalSessionMember>;
 }
 
@@ -158,6 +162,8 @@ function toPublicSnapshot(
     connectedMemberCount,
     connectedParticipantCount,
     members,
+    study: session.study ? { ...session.study } : null,
+    protocolVersion: SESSION_PROTOCOL_VERSION,
   };
 }
 
@@ -306,6 +312,7 @@ export class LiveSessionStore {
         this.handleReconnectSession(socket, record, requestId);
         return;
       case 'open_lobby':
+      case 'load_study':
       case 'start_study':
       case 'next_section':
       case 'close_session':
@@ -377,6 +384,7 @@ export class LiveSessionStore {
       endedAt: null,
       lastActivityAt: currentNow,
       nextParticipantPaletteIndex: 0,
+      study: null,
       members,
     };
 
@@ -836,6 +844,34 @@ export class LiveSessionStore {
         return;
       }
       session.status = 'lobby';
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
+    if (command === 'load_study') {
+      if (session.status !== 'setup' && session.status !== 'lobby') {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          `Cannot load a study while session status is "${session.status}".`,
+          requestId,
+        );
+        return;
+      }
+
+      const summary = normalizeSessionStudySummary(record.study);
+      if (!summary) {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'Study summary must include non-empty title, subtitle, liturgical eyebrow, Gospel citation, and Gospel summary label fields, sectionCount 5, and estimatedMinutes (1-180).',
+          requestId,
+        );
+        return;
+      }
+
+      session.study = summary;
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
       return;

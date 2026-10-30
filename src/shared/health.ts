@@ -11,4 +11,9 @@ export interface HealthResponse {
   activeSessionCount: number;
   wsReady: boolean;
   timestamp: string;
+  /**
+   * Sanitized `http(s)` origin from `PUBLIC_URL` when configured (used for
+   * localhost-safe QR join URLs); `null` when unset or invalid.
+   */
+  publicUrl?: string | null;
 }

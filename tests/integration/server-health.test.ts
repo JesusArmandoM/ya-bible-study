@@ -44,7 +44,30 @@ describe('Unified single-port HTTP + WebSocket server', () => {
     expect(healthBody.uptimeSeconds).toBeGreaterThanOrEqual(0);
     expect(healthBody.activeSessionCount).toBe(0);
     expect(healthBody.wsReady).toBe(true);
+    expect(healthBody.publicUrl ?? null).toBeNull();
     expect(Number.isNaN(Date.parse(healthBody.timestamp))).toBe(false);
+  });
+
+  it('exposes the sanitized PUBLIC_URL origin on GET /api/health when configured', async () => {
+    const priorPublicUrl = process.env.PUBLIC_URL;
+    try {
+      process.env.PUBLIC_URL = 'https://example-tunnel.trycloudflare.com/join';
+      const healthy = await fetch(`${baseUrl}/api/health`);
+      expect(healthy.status).toBe(200);
+      const body = (await healthy.json()) as HealthResponse;
+      expect(body.publicUrl).toBe('https://example-tunnel.trycloudflare.com');
+
+      process.env.PUBLIC_URL = 'not-a-valid-url';
+      const invalid = await fetch(`${baseUrl}/api/health`);
+      const invalidBody = (await invalid.json()) as HealthResponse;
+      expect(invalidBody.publicUrl ?? null).toBeNull();
+    } finally {
+      if (priorPublicUrl === undefined) {
+        delete process.env.PUBLIC_URL;
+      } else {
+        process.env.PUBLIC_URL = priorPublicUrl;
+      }
+    }
 
     const shellRes = await fetch(`${baseUrl}/`);
     expect(shellRes.status).toBe(200);

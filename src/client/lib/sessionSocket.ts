@@ -7,6 +7,7 @@ import {
   type PublicLiveSessionSnapshot,
   type ServerWsMessage,
   type SessionErrorCode,
+  type SessionStudySummary,
 } from '../../shared/session';
 import { resolveWebSocketUrl, type LocationLike } from './runtimeUrl';
 
@@ -236,6 +237,8 @@ export interface LeaderCommandInput {
   leaderToken?: string;
   memberId?: string;
   reason?: string;
+  /** Sanitized study summary; required for `load_study` commands. */
+  study?: SessionStudySummary;
 }
 
 export interface SessionSocketClient {
@@ -645,6 +648,23 @@ export function createSessionSocketClient(
             ...(input.reason ? { reason: input.reason } : {}),
           },
           ['session_closed'],
+        );
+      }
+
+      if (input.type === 'load_study') {
+        const study = input.study;
+        if (!study) {
+          throw new Error('load_study leader commands require a study summary.');
+        }
+        return await sendRequest(
+          {
+            type: 'load_study',
+            sessionCode,
+            leaderToken,
+            ...(memberId ? { memberId } : {}),
+            study,
+          },
+          ['session_updated'],
         );
       }
 
