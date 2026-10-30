@@ -69,12 +69,18 @@
     "depends_on": [
       "markdown-study-deterministic-parser"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Automated test generating or loading a text-based PDF fixture with the standard weekly study headings and asserting POST /api/studies/parse returns all 5 populated sections.",
       "Negative test verifying non-PDF/non-MD files and files > 10 MB return HTTP 400/413 with human-readable error messages."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-29: ./init.sh exited 0 — npm run typecheck passed across tsconfig.client.json, tsconfig.server.json, and tsconfig.json; npm test passed 14 Vitest suites / 86 tests including tests/unit/pdf-parser.test.ts (7 tests validating canonical Great Is Your Faith PDF parse into 5-section StudyDocument, second study Peace! Be Still Mark 4:35-41, ligature and page-number normalization, textless/empty PDF rejection, corrupt PDF rejection, zero-byte rejection, and zero Assistant occurrences) and tests/integration/studies-parse.test.ts (15 tests validating multipart .pdf upload, raw binary application/pdf body, second distinct PDF, unsupported file type rejection for .docx/.txt/.png with HTTP 400, oversized >10MB rejection with HTTP 413, and zero Assistant occurrences); npm run build cleanly emitted dist/client and dist/server.",
+      "2026-10-29: PLAYWRIGHT_PORT=3301 npm run test:e2e exited 0 (15 passed in 44.2s on mobile-chromium 390x844) including tests/e2e/studies-parse.spec.ts verifying POST /api/studies/parse on the single production port across canonical .pdf multipart upload, raw binary application/pdf body, second study peace-be-still-mark-4.pdf, unsupported .docx HTTP 400 rejection, and >10MB HTTP 413 rejection.",
+      "2026-10-29: Direct CLI smoke check on PORT=3101 node dist/server/index.js confirmed curl -F 'file=@tests/fixtures/great-is-your-faith.pdf' returned HTTP 200 JSON, curl -H 'Content-Type: application/pdf' -H 'X-File-Name: peace-be-still-mark-4.pdf' --data-binary @tests/fixtures/peace-be-still-mark-4.pdf returned HTTP 200 JSON, curl -F 'file=@package.json;filename=study.docx' returned HTTP 400 JSON {\"error\":\"Study validation failed\",\"errors\":[\"Unsupported file type: only .pdf and .md study files are supported.\"]}, and curl -H 'Content-Length: 11500000' returned HTTP 413 {\"error\":\"File size exceeds 10MB limit\"}.",
+      "2026-10-29: Static scan confirmed 0 occurrences of 'Assistant' across src/ and test suites, preserving strict Study Leader and Participant domain terminology.",
+      "2026-10-29: Independent validator verdict: accept — reran ./init.sh (exit 0, 14 Vitest suites / 86 tests), PLAYWRIGHT_PORT=3301 npm run test:e2e (exit 0, 15/15 mobile-chromium 390x844 tests), live single-port HTTP smoke check on PORT=3101 (HTTP 200 for canonical 'Great Is Your Faith' PDF and second study 'Peace! Be Still', HTTP 413 for >10MB payload, HTTP 400 for unsupported .docx with actionable error message), zero 'Assistant' matches in src/, zero external AI API calls, zero disk writes (in-memory extraction), and clean SIGTERM shutdown with 0 Critical/High/Medium/Low findings."
+    ],
     "notes": "Parse PDF buffers in memory without writing uploaded files to public disk; normalize page breaks and ligatures before heading extraction."
   },
   {

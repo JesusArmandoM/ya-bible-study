@@ -26,6 +26,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.186.1",
+    "unpdf": "^2.0.1",
     "ws": "^8.18.1",
     "zustand": "^5.0.16"
   },
@@ -43,6 +44,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.6",
     "jsdom": "^26.1.0",
+    "pdf-lib": "^1.17.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^8.3.5",
