@@ -42,6 +42,7 @@ export interface UseLiveSessionResult {
     leaderPin: string,
     displayName?: string,
   ) => Promise<Extract<ServerWsMessage, { type: 'leader_claimed' }>>;
+  openLobby: () => Promise<void>;
   leaveRoom: () => void;
   clearError: () => void;
 }
@@ -278,6 +279,30 @@ export function useLiveSession(
     [client],
   );
 
+  const openLobby = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'open_lobby',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to open the title lobby';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
   const leaveRoom = useCallback(() => {
     client.disconnect();
     clearStoredSessionCredentials();
@@ -304,6 +329,7 @@ export function useLiveSession(
     createRoom,
     joinRoom,
     claimLeadership,
+    openLobby,
     leaveRoom,
     clearError,
   };
