@@ -239,13 +239,15 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
         );
       }
 
-      // Study Leader stays the only one controlling progression; the
-      // participant copy waits for the leader.
+      // Study Leader stays the only one controlling progression; each role
+      // shows its Opening Prayer subtitle copy.
+      // Compat edit 2 of 2 (section-1-opening-prayer-hand-raise): the two
+      // `section-one-copy` text assertions track the new role copy.
       await expect(pageA.getByTestId('section-one-copy')).toContainText(
-        'Waiting for the Study Leader',
+        'Tap Raise Hand',
       );
       await expect(pageLeader.getByTestId('section-one-copy')).toContainText(
-        'Opening Prayer is ready',
+        'Waiting for someone to volunteer to pray',
       );
 
       // Invariants: single Sacred3DScene canvas, zero Assistant occurrences.

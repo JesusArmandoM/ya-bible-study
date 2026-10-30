@@ -339,6 +339,99 @@ describe('createSessionSocketClient dynamic ws(s):// resolution and sessionStora
   });
 });
 
+describe('sessionSocket turn commands (protocol v3 hand-raise framing)', () => {
+  it('frames raise_hand / lower_hand with the participant memberId and resolves on session_updated', async () => {
+    const store = new LiveSessionStore({ sweepIntervalMs: false });
+    const leaderClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+    const participantClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+
+    const created = await leaderClient.createSession({ displayName: 'Claire' });
+    const joined = await participantClient.joinSession({
+      sessionCode: created.sessionCode,
+      displayName: 'Daniel',
+    });
+    await leaderClient.sendLeaderCommand({ type: 'start_study' });
+
+    if (!participantClient.sendTurnCommand) {
+      throw new Error('sendTurnCommand must be implemented by the client.');
+    }
+
+    const raised = await participantClient.sendTurnCommand({
+      type: 'raise_hand',
+    });
+    expect(raised.command).toBe('raise_hand');
+    expect(raised.session.volunteerTurn?.mode).toBe('gated_prayer');
+    expect(raised.session.volunteerTurn?.raisedHands).toEqual([
+      { memberId: joined.memberId, raisedAt: expect.any(String) },
+    ]);
+    // Reserved follow-up fields stay null in this feature.
+    expect(raised.session.volunteerTurn?.candidateMemberId).toBeNull();
+    expect(raised.session.volunteerTurn?.candidateExpiresAt).toBeNull();
+    expect(raised.session.volunteerTurn?.selectedMemberId).toBeNull();
+    expect(raised.session.volunteerTurn?.completedAt).toBeNull();
+
+    // Idempotent re-raise keeps a single row with the original raisedAt.
+    const raisedAgain = await participantClient.sendTurnCommand({
+      type: 'raise_hand',
+    });
+    expect(raisedAgain.session.volunteerTurn?.raisedHands).toHaveLength(1);
+    expect(raisedAgain.session.volunteerTurn?.raisedHands[0]?.raisedAt).toBe(
+      raised.session.volunteerTurn?.raisedHands[0]?.raisedAt,
+    );
+
+    const lowered = await participantClient.sendTurnCommand({
+      type: 'lower_hand',
+    });
+    expect(lowered.command).toBe('lower_hand');
+    expect(lowered.session.volunteerTurn?.raisedHands).toEqual([]);
+
+    // clear_hands with a target frames targetMemberId and clears just that hand.
+    await participantClient.sendTurnCommand({ type: 'raise_hand' });
+    const cleared = await leaderClient.sendLeaderCommand({
+      type: 'clear_hands',
+      targetMemberId: joined.memberId,
+    });
+    if (cleared.type !== 'session_updated') {
+      throw new Error('clear_hands must resolve on session_updated.');
+    }
+    expect(cleared.command).toBe('clear_hands');
+    expect(cleared.session.volunteerTurn?.raisedHands).toEqual([]);
+
+    await leaderClient.sendLeaderCommand({ type: 'close_session' });
+    leaderClient.disconnect();
+    participantClient.disconnect();
+    store.dispose();
+  });
+
+  it('rejects turn commands without a resolvable participant memberId', async () => {
+    const store = new LiveSessionStore({ sweepIntervalMs: false });
+    const unboundClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+
+    if (!unboundClient.sendTurnCommand) {
+      throw new Error('sendTurnCommand must be implemented by the client.');
+    }
+
+    await expect(
+      unboundClient.sendTurnCommand({ type: 'raise_hand' }),
+    ).rejects.toThrow(/memberId/);
+
+    unboundClient.disconnect();
+    store.dispose();
+  });
+});
+
 describe('LiveSessionStore deterministic collision, reconnect guard, and 4-hour TTL behavior', () => {
   it('retries colliding sessionCode values until allocating a unique code', () => {
     const sequence = ['FAITH2', 'FAITH2', 'GRACE7'];

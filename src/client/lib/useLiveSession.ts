@@ -46,6 +46,12 @@ export interface UseLiveSessionResult {
   loadStudy: (summary: SessionStudySummary) => Promise<void>;
   openLobby: () => Promise<void>;
   startStudy: () => Promise<void>;
+  /** Participant self-service: raise (`true`) or lower (`false`) own hand. */
+  setHandRaised: (raised: boolean) => Promise<void>;
+  /** Study Leader: lower one participant's hand. */
+  lowerHand: (targetMemberId: string) => Promise<void>;
+  /** Study Leader: lower every raised hand. */
+  clearRaisedHands: () => Promise<void>;
   leaveRoom: () => void;
   clearError: () => void;
 }
@@ -358,6 +364,89 @@ export function useLiveSession(
     }
   }, [client]);
 
+  const setHandRaised = useCallback(
+    async (raised: boolean) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const stored = client.getCredentials();
+        if (!client.sendTurnCommand) {
+          throw new Error(
+            'The live session connection does not support hand-raise commands.',
+          );
+        }
+        const response = await client.sendTurnCommand({
+          type: raised ? 'raise_hand' : 'lower_hand',
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to update your hand';
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
+  const lowerHand = useCallback(
+    async (targetMemberId: string) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const stored = client.getCredentials();
+        const response = await client.sendLeaderCommand({
+          type: 'clear_hands',
+          targetMemberId,
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to lower the hand";
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
+  const clearRaisedHands = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'clear_hands',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to lower all hands';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
   const leaveRoom = useCallback(() => {
     client.disconnect();
     clearStoredSessionCredentials();
@@ -387,6 +476,9 @@ export function useLiveSession(
     loadStudy,
     openLobby,
     startStudy,
+    setHandRaised,
+    lowerHand,
+    clearRaisedHands,
     leaveRoom,
     clearError,
   };
