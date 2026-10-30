@@ -5,11 +5,47 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `leader-load-study-setup-screen` (both `pdf-study-deterministic-parser` and `welcome-role-selection-flow` accepted)
+- Current next ready feature: `title-lobby-qr-join-start` (`leader-load-study-setup-screen` accepted; both its dependencies `pdf-study-deterministic-parser` and `welcome-role-selection-flow` remain accepted)
 - Current blocker: `none`
 - Last verified at: `2026-10-29`
 
 ## Session Log
+
+### Session 017
+
+- Date: `2026-10-29`
+- Goal: Independent validation and acceptance persistence for `leader-load-study-setup-screen`.
+- Completed: Independent `validator` subagent audited `docs/specs/leader-load-study-setup-screen.md` and the full diff in worktree `../ya-bible-study-worktrees/leader-load-study-setup-screen`, reran `./init.sh` (16 Vitest files / 104 tests exit 0), `PLAYWRIGHT_PORT=3301 npm run test:e2e` twice (19/19 mobile-chromium 390x844 exit 0 both runs), static `Assistant` scan (0 matches), and a live single-port smoke on `PORT=3101` (`GET /api/studies/default`, `GET /`, `POST /api/studies/parse` 400 malformed + 400 unsupported `.docx`, `/ws` `open_lobby` gating with wrong vs valid `leaderToken`, clean SIGTERM shutdown), returning verdict `accept` with 0 Critical/High/Medium findings and 3 Low notes. Updated `feature_list.json` status to `accepted` and appended validator evidence.
+- Verification run: `./init.sh`, `PLAYWRIGHT_PORT=3301 npm run test:e2e` (x2), `grep -rn "Assistant" src/`, live single-port HTTP + `/ws` smoke on `PORT=3101`.
+- Evidence captured: All gates exited `0` (16 Vitest files / 104 tests, 19 Playwright E2E specs); `leader-load-study-setup-screen` marked `accepted` in `feature_list.json`; all 6 spec scenarios verified including Gospel-only Section 3 preview and server-gated `open_lobby`.
+- Files or artifacts updated: `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: Pre-existing Playwright full-suite flakiness (Session 016) retained as a risk; validator could not reproduce it in two consecutive runs. Low note: `StudyStructureList` may render a custom Section 3 `section.title`; revisit in `title-lobby-qr-join-start` if stricter "citation only" rendering is wanted. Participants cannot see the study title until `title-lobby-qr-join-start` (spec Non-Goal).
+- Next best step: Publish `feature/leader-load-study-setup-screen` (push + PR + merge into `main`), then run `$feature-flow` on `title-lobby-qr-join-start`.
+
+### Session 016
+
+- Date: `2026-10-29`
+- Goal: Implement `leader-load-study-setup-screen` per `docs/specs/leader-load-study-setup-screen.md`.
+- Completed:
+  - Created `src/client/lib/useStudySetup.ts` (`status` (`loading`/`ready`/`uploading`/`error`), `study`, `errorMessages`, `analyzeFile`, `resetError`, `uploadedFileSize`) fetching `GET /api/studies/default` and analyzing uploaded `.pdf`/`.md` files via multipart `POST /api/studies/parse` with client-side extension rejection (`Unsupported file type: only .pdf and .md study files are supported.`), 400 `errors[]`/413 `error` mapping, and retention of the last valid preview across failed uploads.
+  - Created `src/client/components/setup/` (`LeaderStudySetupScreen`, `StudyUploadDropzone`, `StudyPreviewCard`, `StudyStructureList`) matching `ux/2. Leader Setup.png`: gold-glow drag-and-tap dropzone (hidden-but-focusable file input keeps `>= 16px` computed font-size), `✓ Analyzed` emerald pill, `5 sections detected` summary card, 5-row structure list with canonical section names and Gospel-only Section 3 (`Matthew 15:21–28`), `role="alert"` + `aria-live="polite"` regions, 56px gold `Continue` CTA, and `>= 44px` back/resume tap targets.
+  - Added `openLobby()` to `src/client/lib/useLiveSession.ts` dispatching server-gated `sendLeaderCommand({ type: 'open_lobby', ... })` from stored credentials.
+  - Created `src/client/components/lobby/TitleLobbyPlaceholder.tsx` and wired `src/client/App.tsx` routing (leader + `setup` → banner + setup screen; leader + `lobby` → banner + placeholder; participants/no-session unchanged) with back-chevron collapse to `study-setup-resume` and restore; styled everything in `src/client/styles/global.css`.
+  - Added `tests/unit/use-study-setup.test.ts` (9 tests), `tests/unit/leader-study-setup.test.tsx` (9 tests, incl. App-level `openLobby` dispatch via stub `SessionSocketClient` and Scenario 6 collapse/resume), `tests/e2e/leader-load-study-setup.spec.ts` (Acceptance Scenarios 1, 2, 3, 5; each test closes its live session via raw `/ws` `close_session` in `finally`), and `tests/fixtures/malformed-study.md`.
+  - Updated `ARCHITECTURE.md` client module overview (new `setup/`, `lobby/`, `useStudySetup.ts`, `openLobby` action).
+- Verification run:
+  - `./init.sh` (`npm run typecheck`, `npm test`, `npm run build`)
+  - `PLAYWRIGHT_PORT=3301 npm run test:e2e`
+  - Static scan: `grep -rn "Assistant" src/`
+- Evidence captured:
+  - `./init.sh` exited `0`: `tsc --noEmit` clean across client/server/root configs (strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`); Vitest 16 files / 104 tests passed incl. `tests/unit/use-study-setup.test.ts` [9] and `tests/unit/leader-study-setup.test.tsx` [9]; production build emitted `dist/client` and `dist/server`.
+  - `PLAYWRIGHT_PORT=3301 npm run test:e2e` exited `0`: `19 passed (1.3m)` on mobile-chromium (`390x844`), including new `tests/e2e/leader-load-study-setup.spec.ts` [4] (Scenarios 1, 2, 3, 5 with Gospel-only Section 3, preview retention on malformed upload, and `open_lobby` → Title Lobby transition with single persistent canvas) and the untouched `tests/e2e/welcome-role-selection.spec.ts` [2] with zero assertion changes.
+  - Pre-existing E2E flakiness documented: intermittent full-run failures of `sacred-3d-stage` reduced-motion first-frame assertion, `welcome-role-selection` Scenario 2/3/4/6 roster timing, and the `ws-room-lifecycle` `activeSessionCount` cascade reproduce identically with this feature's changes stashed (git-stash baseline runs) and all affected suites pass in isolation and in the recorded green run — not introduced by this feature.
+  - Static scan confirmed 0 occurrences of `Assistant` in `src/`; `>= 16px` input font-size and `>= 44px`/56px tap targets asserted in unit tests over `global.css` and in E2E computed styles.
+  - Implementation deviation: `useStudySetup` is enabled-gated to active Study Leader sessions (`enabled: Boolean(session && isLeader)`) instead of an unconditional on-mount fetch — unconditional fetching would churn network/state for Participants and break the accepted `tests/unit/sacred-3d-scene.test.tsx` zero-App-re-render invariant; spec scenarios are unaffected.
+- Files or artifacts updated: `src/client/lib/useStudySetup.ts`, `src/client/lib/useLiveSession.ts`, `src/client/App.tsx`, `src/client/styles/global.css`, `src/client/components/setup/LeaderStudySetupScreen.tsx`, `src/client/components/setup/StudyUploadDropzone.tsx`, `src/client/components/setup/StudyPreviewCard.tsx`, `src/client/components/setup/StudyStructureList.tsx`, `src/client/components/lobby/TitleLobbyPlaceholder.tsx`, `tests/unit/use-study-setup.test.ts`, `tests/unit/leader-study-setup.test.tsx`, `tests/e2e/leader-load-study-setup.spec.ts`, `tests/fixtures/malformed-study.md`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: Pre-existing Playwright full-suite flakiness (see evidence) may intermittently fail `sacred-3d-stage`/`welcome-role-selection`/`ws-room-lifecycle` regardless of feature changes; Participants cannot see the study title until `title-lobby-qr-join-start` (tracked in spec Non-Goals).
+- Next best step: Run independent `$feature-validator` on `leader-load-study-setup-screen`, then persist `accepted` and advance to `title-lobby-qr-join-start`.
 
 ### Session 015
 

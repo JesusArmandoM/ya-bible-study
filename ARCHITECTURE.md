@@ -34,11 +34,14 @@ src/client/  ──imports──▶  src/shared/  ◀──imports──  src/se
   - `src/client/lib/runtimeUrl.ts`: Dynamic same-origin `/api/*` and `ws://` / `wss://` URL resolution derived from `window.location`.
   - `src/client/lib/urlHelpers.ts`: Pure URL join code extractor parsing `/join/:code` pathnames and `?code=` / `?join=` query parameters into validated uppercase session codes.
   - `src/client/lib/sessionSocket.ts`: Typed `/ws` session client and role-scoped `sessionStorage` reconnect credential helpers built on `resolveWebSocketUrl`.
-  - `src/client/lib/useLiveSession.ts`: Reactive React hook bridging `createSessionSocketClient` with state management, automatic credential re-hydration, and room actions (`createRoom`, `joinRoom`, `claimLeadership`, `leaveRoom`).
+  - `src/client/lib/useLiveSession.ts`: Reactive React hook bridging `createSessionSocketClient` with state management, automatic credential re-hydration, and room actions (`createRoom`, `joinRoom`, `claimLeadership`, `leaveRoom`, `openLobby`).
+  - `src/client/lib/useStudySetup.ts`: Study setup hook fetching the default `StudyDocument` from `GET /api/studies/default`, analyzing uploaded `.pdf` / `.md` study files via multipart `POST /api/studies/parse`, retaining the last valid preview across failed uploads, and surfacing actionable validation errors.
   - `src/client/lib/usePrefersReducedMotion.ts`: Media-query hook synchronizing `(prefers-reduced-motion: reduce)` across 3D and UI motion layers.
   - `src/client/state/sacredStageStore.ts`: Scoped + default `zustand` stage store (`createSacredStageStore`, `useSacredStageStore`, `resolveSacredStage`) with a zero-React-rerender 60fps transient `impulse` channel read directly inside `useFrame`.
   - `src/client/components/stage/`: Persistent single-canvas Three.js PBR hero stage (`Sacred3DScene`, `SacredStageRig`, `sacredStageMath`, `webglSupport`) with offline `RoomEnvironment` studio lighting, 6 procedural stage geometries, pointer tilt spring inertia, background-tab frame pausing, and automatic `SacredFallbackEmblem` SVG/CSS fallback on unavailable or lost WebGL contexts.
   - `src/client/components/welcome/`: Welcome & Role Selection flow components (`WelcomeRoleCards`, `LeaderAccessSheet`, `ParticipantJoinSheet`, `ActiveSessionBanner`) matching `ux/1. Welcome.png` with tactile `motion/react` spring feedback, `>= 16px` inputs, 4-digit PIN claim, and zero "Assistant" copy.
+  - `src/client/components/setup/`: Leader Load Your Study setup screen (`LeaderStudySetupScreen`, `StudyUploadDropzone`, `StudyPreviewCard`, `StudyStructureList`) matching `ux/2. Leader Setup.png`, with drag-and-drop / tap file selection, live study preview (Gospel-only Section 3 citation), and `Continue` dispatching the server-gated `open_lobby` leader command.
+  - `src/client/components/lobby/`: Title Lobby placeholder (`TitleLobbyPlaceholder`) shown after `open_lobby` transitions the session from `setup` to `lobby`, pending full lobby implementation.
   - `src/client/App.tsx`: Root Midnight Sanctuary application shell.
   - **Allowed imports**: Browser/React packages, `src/client/*`, and `src/shared/*`. Never `src/server/*`.
 

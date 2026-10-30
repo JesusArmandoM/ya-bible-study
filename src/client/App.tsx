@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import type { HealthResponse } from '../shared/health';
+import { TitleLobbyPlaceholder } from './components/lobby/TitleLobbyPlaceholder';
+import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
 import { ActiveSessionBanner } from './components/welcome/ActiveSessionBanner';
 import { LeaderAccessSheet } from './components/welcome/LeaderAccessSheet';
@@ -11,6 +13,7 @@ import type { SessionSocketClient } from './lib/sessionSocket';
 import { extractJoinCodeFromLocation } from './lib/urlHelpers';
 import { useLiveSession } from './lib/useLiveSession';
 import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion';
+import { useStudySetup } from './lib/useStudySetup';
 import {
   SACRED_STAGE_METADATA,
   SACRED_STAGE_VARIANTS,
@@ -69,6 +72,13 @@ export function App({ sessionClient }: AppProps = {}) {
   const [activeSheet, setActiveSheet] = useState<
     'leader' | 'participant' | null
   >(() => (urlJoinCode ? 'participant' : null));
+  const [setupPanelOpen, setSetupPanelOpen] = useState(true);
+
+  const isLeader = liveSession.role === 'Study Leader';
+  const sessionStatus = liveSession.session?.status ?? null;
+  const studySetup = useStudySetup({
+    enabled: Boolean(liveSession.session && isLeader),
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -206,21 +216,65 @@ export function App({ sessionClient }: AppProps = {}) {
         </section>
 
         {liveSession.session ? (
-          <ActiveSessionBanner
-            session={liveSession.session}
-            role={liveSession.role}
-            leaderPin={liveSession.leaderPin}
-            onLeave={() => {
-              if (
-                typeof window !== 'undefined' &&
-                window.location.pathname.startsWith('/join/')
-              ) {
-                window.history.replaceState({}, '', '/');
-              }
-              setActiveSheet(null);
-              liveSession.leaveRoom();
-            }}
-          />
+          <>
+            <ActiveSessionBanner
+              session={liveSession.session}
+              role={liveSession.role}
+              leaderPin={liveSession.leaderPin}
+              onLeave={() => {
+                if (
+                  typeof window !== 'undefined' &&
+                  window.location.pathname.startsWith('/join/')
+                ) {
+                  window.history.replaceState({}, '', '/');
+                }
+                setActiveSheet(null);
+                setSetupPanelOpen(true);
+                liveSession.leaveRoom();
+              }}
+            />
+
+            {isLeader && sessionStatus === 'setup' ? (
+              setupPanelOpen ? (
+                <LeaderStudySetupScreen
+                  study={studySetup.study}
+                  status={studySetup.status}
+                  errorMessages={studySetup.errorMessages}
+                  uploadedFileSize={studySetup.uploadedFileSize}
+                  actionErrorMessage={liveSession.error}
+                  isContinuing={liveSession.isSubmitting}
+                  onFileSelected={(file) => {
+                    void studySetup.analyzeFile(file);
+                  }}
+                  onContinue={() => {
+                    void liveSession.openLobby().catch(() => {
+                      // Failure is surfaced via actionErrorMessage on the screen.
+                    });
+                  }}
+                  onBack={() => setSetupPanelOpen(false)}
+                />
+              ) : (
+                <motion.button
+                  type="button"
+                  className="study-setup-resume"
+                  data-testid="study-setup-resume"
+                  whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                  onClick={() => {
+                    triggerTactileHaptic(reducedMotion);
+                    setSetupPanelOpen(true);
+                  }}
+                >
+                  Set up your study
+                </motion.button>
+              )
+            ) : isLeader && sessionStatus === 'lobby' ? (
+              <TitleLobbyPlaceholder
+                study={studySetup.study}
+                connectedMemberCount={liveSession.session.connectedMemberCount}
+              />
+            ) : null}
+          </>
         ) : activeSheet === 'leader' ? (
           <LeaderAccessSheet
             isSubmitting={liveSession.isSubmitting}
