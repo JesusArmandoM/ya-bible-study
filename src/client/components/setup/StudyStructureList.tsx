@@ -41,8 +41,11 @@ export function StudyStructureList({ study }: StudyStructureListProps) {
       {sections.map((section, index) => {
         const rowNumber = index + 1;
         const canonicalName = CANONICAL_SECTION_NAMES[section.sectionId];
-        const showStudyTitle = section.title !== canonicalName;
         const isGospelRow = section.sectionId === 'section_3_reading';
+        // Handoff note 2: the Gospel row renders citation-only — never a
+        // custom `section.title` line that could surface non-Gospel wording.
+        const showStudyTitle =
+          section.title !== canonicalName && !isGospelRow;
 
         return (
           <motion.li

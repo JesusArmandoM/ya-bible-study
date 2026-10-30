@@ -200,7 +200,7 @@ test.describe('Leader Load Your Study Setup Screen', () => {
     }
   });
 
-  test('Scenario 5: Continue transitions the session to the Title Lobby placeholder', async ({
+  test('Scenario 5: Continue transitions the session to the Title Lobby', async ({
     page,
   }) => {
     try {
@@ -211,11 +211,11 @@ test.describe('Leader Load Your Study Setup Screen', () => {
 
       await page.getByTestId('study-setup-continue').click();
 
-      const placeholder = page.getByTestId('title-lobby-placeholder');
-      await expect(placeholder).toBeVisible();
-      await expect(placeholder).toContainText('Great Is Your Faith');
-      await expect(placeholder).toContainText('Matthew 15:21–28');
-      await expect(placeholder).toContainText('STEP 2 OF 2 · TITLE LOBBY');
+      const lobby = page.getByTestId('title-lobby');
+      await expect(lobby).toBeVisible();
+      await expect(lobby).toContainText('Great Is Your Faith');
+      await expect(lobby).toContainText('Matthew 15:21–28');
+      await expect(lobby).toContainText('YA BIBLE STUDY · LIVE SESSION');
 
       // Banner session view and single persistent canvas survive the transition
       await expect(page.getByTestId('active-session-banner')).toBeVisible();

@@ -3,6 +3,7 @@ import type { SanctuaryRole } from '../../shared/health';
 import type {
   PublicLiveSessionSnapshot,
   ServerWsMessage,
+  SessionStudySummary,
 } from '../../shared/session';
 import {
   clearStoredSessionCredentials,
@@ -42,7 +43,9 @@ export interface UseLiveSessionResult {
     leaderPin: string,
     displayName?: string,
   ) => Promise<Extract<ServerWsMessage, { type: 'leader_claimed' }>>;
+  loadStudy: (summary: SessionStudySummary) => Promise<void>;
   openLobby: () => Promise<void>;
+  startStudy: () => Promise<void>;
   leaveRoom: () => void;
   clearError: () => void;
 }
@@ -279,6 +282,34 @@ export function useLiveSession(
     [client],
   );
 
+  const loadStudy = useCallback(
+    async (summary: SessionStudySummary) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const stored = client.getCredentials();
+        const response = await client.sendLeaderCommand({
+          type: 'load_study',
+          study: summary,
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to sync the study title';
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
   const openLobby = useCallback(async () => {
     setIsSubmitting(true);
     setError(null);
@@ -296,6 +327,30 @@ export function useLiveSession(
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to open the title lobby';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
+  const startStudy = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'start_study',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to start the study';
       setError(message);
       throw err;
     } finally {
@@ -329,7 +384,9 @@ export function useLiveSession(
     createRoom,
     joinRoom,
     claimLeadership,
+    loadStudy,
     openLobby,
+    startStudy,
     leaveRoom,
     clearError,
   };

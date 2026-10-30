@@ -17,4 +17,7 @@ else
 fi
 
 echo "Opening public HTTPS/WSS tunnel to ${TARGET_URL}..."
+echo "Tip: once the public https://<subdomain>.trycloudflare.com URL appears, restart"
+echo "the server with PUBLIC_URL=https://<subdomain>.trycloudflare.com so Title Lobby"
+echo "QR codes and join links use the public URL instead of localhost."
 exec "${CLOUDFLARED_BIN}" tunnel --url "${TARGET_URL}"

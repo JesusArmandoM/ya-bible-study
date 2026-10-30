@@ -17,6 +17,30 @@ import { parsePdfStudy } from './studies/pdfParser.js';
 
 export const MAX_STUDY_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
+/**
+ * Sanitizes the optional `PUBLIC_URL` environment variable into a bare
+ * `http(s)` origin (path stripped) for localhost-safe QR join URLs.
+ * Returns `null` when unset or not a valid `http(s)` URL.
+ */
+export function resolvePublicUrlOrigin(raw: string | undefined): string | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.origin;
+    }
+  } catch {
+    // Not a parsable URL; treated as unconfigured.
+  }
+  return null;
+}
+
 export interface AppServerOptions {
   staticDir?: string | false;
   sessionStore?: LiveSessionStore;
@@ -91,6 +115,7 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
       activeSessionCount: getActiveSessionCount(),
       wsReady: !isClosing,
       timestamp: new Date().toISOString(),
+      publicUrl: resolvePublicUrlOrigin(process.env.PUBLIC_URL),
     };
 
     res.status(200).json(payload);

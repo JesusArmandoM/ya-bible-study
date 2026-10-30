@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import type { HealthResponse } from '../shared/health';
-import { TitleLobbyPlaceholder } from './components/lobby/TitleLobbyPlaceholder';
+import { toSessionStudySummary, type SessionStudySummary } from '../shared/session';
+import { SectionOneHandoff } from './components/lobby/SectionOneHandoff';
+import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
 import { ActiveSessionBanner } from './components/welcome/ActiveSessionBanner';
@@ -60,6 +62,7 @@ function triggerTactileHaptic(reducedMotion: boolean): void {
 
 export function App({ sessionClient }: AppProps = {}) {
   const [healthState, setHealthState] = useState<SanctuaryHealthState>('loading');
+  const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const activeStage = useSacredStageStore((s) => s.stage);
   const setStage = useSacredStageStore((s) => s.setStage);
   const triggerImpulse = useSacredStageStore((s) => s.triggerImpulse);
@@ -79,6 +82,9 @@ export function App({ sessionClient }: AppProps = {}) {
   const studySetup = useStudySetup({
     enabled: Boolean(liveSession.session && isLeader),
   });
+  const lobbyStudySummary: SessionStudySummary | null =
+    liveSession.session?.study ??
+    (studySetup.study ? toSessionStudySummary(studySetup.study) : null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -97,6 +103,7 @@ export function App({ sessionClient }: AppProps = {}) {
         }
 
         const data = (await response.json()) as Partial<HealthResponse>;
+        setPublicUrl(data.publicUrl ?? null);
         if (data.status === 'ok' && data.wsReady === true) {
           setHealthState('ok');
         } else {
@@ -247,9 +254,19 @@ export function App({ sessionClient }: AppProps = {}) {
                     void studySetup.analyzeFile(file);
                   }}
                   onContinue={() => {
-                    void liveSession.openLobby().catch(() => {
-                      // Failure is surfaced via actionErrorMessage on the screen.
-                    });
+                    const summary = studySetup.study
+                      ? toSessionStudySummary(studySetup.study)
+                      : null;
+                    void (async () => {
+                      try {
+                        if (summary) {
+                          await liveSession.loadStudy(summary);
+                        }
+                        await liveSession.openLobby();
+                      } catch {
+                        // Failure is surfaced via actionErrorMessage on the screen.
+                      }
+                    })();
                   }}
                   onBack={() => setSetupPanelOpen(false)}
                 />
@@ -268,10 +285,23 @@ export function App({ sessionClient }: AppProps = {}) {
                   Set up your study
                 </motion.button>
               )
-            ) : isLeader && sessionStatus === 'lobby' ? (
-              <TitleLobbyPlaceholder
-                study={studySetup.study}
-                connectedMemberCount={liveSession.session.connectedMemberCount}
+            ) : sessionStatus === 'lobby' ? (
+              <TitleLobbyScreen
+                mode={isLeader ? 'leader' : 'participant'}
+                study={lobbyStudySummary}
+                attendeeCount={liveSession.session.connectedParticipantCount}
+                sessionCode={liveSession.session.sessionCode}
+                isStarting={liveSession.isSubmitting}
+                publicUrl={publicUrl}
+                onStartStudy={() => {
+                  void liveSession.startStudy().catch(() => {
+                    // Failure is surfaced via the session error path.
+                  });
+                }}
+              />
+            ) : sessionStatus === 'in_progress' ? (
+              <SectionOneHandoff
+                role={liveSession.role ?? 'Participant'}
               />
             ) : null}
           </>

@@ -1,5 +1,7 @@
 import type { SanctuaryRole } from './health.js';
+import type { StudyDocument } from './study.js';
 
+export const SESSION_PROTOCOL_VERSION = 2;
 export const SESSION_CODE_LENGTH = 6;
 export const SESSION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const LEADER_PIN_LENGTH = 4;
@@ -50,6 +52,26 @@ export interface PublicSessionMember {
   joinedAt: string;
 }
 
+/**
+ * Sanitized, title/meta-only study summary synced to every client via the
+ * leader-gated `load_study` command. Never carries pastoral/facilitator fields
+ * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
+ */
+export interface SessionStudySummary {
+  title: string;
+  subtitle: string;
+  liturgicalEyebrow: string;
+  gospelCitation: string;
+  gospelSummaryLabel: string;
+  sectionCount: 5;
+  estimatedMinutes: number;
+}
+
+export const SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH = 120;
+export const SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH = 200;
+export const SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES = 1;
+export const SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES = 180;
+
 export interface PublicLiveSessionSnapshot {
   sessionCode: string;
   status: LiveSessionStatus;
@@ -61,6 +83,109 @@ export interface PublicLiveSessionSnapshot {
   connectedMemberCount: number;
   connectedParticipantCount: number;
   members: PublicSessionMember[];
+  /** Title/meta-only study summary once the leader dispatched `load_study`. */
+  study?: SessionStudySummary | null;
+  /** Snapshot protocol version (`SESSION_PROTOCOL_VERSION`); additive in v2. */
+  protocolVersion?: number;
+}
+
+/**
+ * Projects a full `StudyDocument` onto the sanitized session study summary
+ * shared with Participants over `/ws` snapshots.
+ */
+export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
+  return {
+    title: doc.title,
+    subtitle: doc.subtitle,
+    liturgicalEyebrow: doc.liturgicalEyebrow,
+    gospelCitation: doc.gospelCitation,
+    gospelSummaryLabel: doc.gospelSummaryLabel,
+    sectionCount: 5,
+    estimatedMinutes: doc.estimatedMinutes,
+  };
+}
+
+function normalizeBoundedSummaryString(
+  raw: unknown,
+  maxLength: number,
+): string | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const trimmed = raw.trim().replace(/\s+/g, ' ');
+  if (trimmed.length === 0 || trimmed.length > maxLength) {
+    return null;
+  }
+  return trimmed;
+}
+
+/**
+ * Validates and normalizes an inbound `load_study` summary. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`.
+ */
+export function normalizeSessionStudySummary(
+  raw: unknown,
+): SessionStudySummary | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const subtitle = normalizeBoundedSummaryString(
+    record.subtitle,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const liturgicalEyebrow = normalizeBoundedSummaryString(
+    record.liturgicalEyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const gospelCitation = normalizeBoundedSummaryString(
+    record.gospelCitation,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const gospelSummaryLabel = normalizeBoundedSummaryString(
+    record.gospelSummaryLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+
+  if (
+    title === null ||
+    subtitle === null ||
+    liturgicalEyebrow === null ||
+    gospelCitation === null ||
+    gospelSummaryLabel === null
+  ) {
+    return null;
+  }
+
+  if (record.sectionCount !== 5) {
+    return null;
+  }
+
+  const estimatedMinutes = record.estimatedMinutes;
+  if (
+    typeof estimatedMinutes !== 'number' ||
+    !Number.isInteger(estimatedMinutes) ||
+    estimatedMinutes < SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES ||
+    estimatedMinutes > SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES
+  ) {
+    return null;
+  }
+
+  return {
+    title,
+    subtitle,
+    liturgicalEyebrow,
+    gospelCitation,
+    gospelSummaryLabel,
+    sectionCount: 5,
+    estimatedMinutes,
+  };
 }
 
 export type SessionErrorCode =
@@ -77,6 +202,7 @@ export type SessionErrorCode =
 
 export type LeaderCommandType =
   | 'open_lobby'
+  | 'load_study'
   | 'start_study'
   | 'next_section'
   | 'close_session';
@@ -119,6 +245,14 @@ export type ClientWsMessage =
       sessionCode: string;
       leaderToken: string;
       memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'load_study';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      study: SessionStudySummary;
       requestId?: string;
     }
   | {

@@ -434,7 +434,7 @@ describe('LeaderStudySetupScreen — CTA and a11y regions', () => {
 });
 
 describe('App — Study Leader setup routing', () => {
-  it('Scenario 5: Continue dispatches open_lobby with the stored leaderToken and renders the Title Lobby placeholder', async () => {
+  it('Scenario 5: Continue dispatches load_study + open_lobby with the stored leaderToken and renders the Title Lobby', async () => {
     const { client, sentCommands } = createStubSessionClient({
       session: createSession('setup'),
       lobbySession: createSession('lobby', { connectedMemberCount: 3 }),
@@ -453,8 +453,14 @@ describe('App — Study Leader setup routing', () => {
 
     fireEvent.click(screen.getByTestId('study-setup-continue'));
 
-    await waitFor(() => expect(sentCommands).toHaveLength(1));
+    await waitFor(() => expect(sentCommands).toHaveLength(2));
     expect(sentCommands[0]).toMatchObject({
+      type: 'load_study',
+      sessionCode: 'TEST99',
+      leaderToken: 'leader-token-abc',
+      memberId: 'member-1',
+    });
+    expect(sentCommands[1]).toMatchObject({
       type: 'open_lobby',
       sessionCode: 'TEST99',
       leaderToken: 'leader-token-abc',
@@ -462,12 +468,12 @@ describe('App — Study Leader setup routing', () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByTestId('title-lobby-placeholder')).toBeInTheDocument(),
+      expect(screen.getByTestId('title-lobby')).toBeInTheDocument(),
     );
-    const placeholder = screen.getByTestId('title-lobby-placeholder');
-    expect(placeholder).toHaveTextContent('Great Is Your Faith');
-    expect(placeholder).toHaveTextContent('Matthew 15:21–28');
-    expect(placeholder).toHaveTextContent('STEP 2 OF 2 · TITLE LOBBY');
+    const lobby = screen.getByTestId('title-lobby');
+    expect(lobby).toHaveTextContent('Great Is Your Faith');
+    expect(lobby).toHaveTextContent('Matthew 15:21–28');
+    expect(lobby).toHaveTextContent('YA BIBLE STUDY · LIVE SESSION');
     expect(screen.getByTestId('active-session-banner')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('Assistant');
   });
