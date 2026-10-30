@@ -15,6 +15,7 @@ import {
   type ReflectionQuestionItem,
   type StudyDetectionSummary,
   type StudyDocument,
+  type StudySourceType,
   type StudyValidationResult,
   type VerseCommentaryId,
   type VerseCommentaryItem,
@@ -24,6 +25,7 @@ import {
 
 export interface ParseMarkdownStudyOptions {
   fileName?: string;
+  sourceType?: StudySourceType;
 }
 
 function cleanMarkdownText(text: string): string {
@@ -951,8 +953,8 @@ export function parseMarkdownStudy(
     sessionGoals,
     oneSentenceMainPoint,
     source: {
-      type: 'markdown',
-      fileName: options.fileName || `${id}.md`,
+      type: options.sourceType ?? 'markdown',
+      fileName: options.fileName || `${id}.${options.sourceType === 'pdf' ? 'pdf' : 'md'}`,
       statusLabel: 'Analyzed',
     },
     detectionSummary,

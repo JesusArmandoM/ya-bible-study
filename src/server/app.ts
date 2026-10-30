@@ -13,6 +13,7 @@ import {
 import { LiveSessionStore } from './sessionStore.js';
 import { getDefaultStudyDocument } from './studies/greatIsYourFaithSeed.js';
 import { parseMarkdownStudy } from './studies/markdownParser.js';
+import { parsePdfStudy } from './studies/pdfParser.js';
 
 export const MAX_STUDY_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -74,6 +75,7 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.text({ type: ['text/plain', 'text/markdown'], limit: '10mb' }));
+  app.use(express.raw({ type: 'application/pdf', limit: '10mb' }));
 
   const studyUpload = multer({
     storage: multer.memoryStorage(),
@@ -98,7 +100,7 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
     res.status(200).json(getDefaultStudyDocument());
   });
 
-  app.post('/api/studies/parse', (req, res) => {
+  app.post('/api/studies/parse', async (req, res) => {
     const contentLength = req.headers['content-length'];
     if (contentLength && Number(contentLength) > MAX_STUDY_PAYLOAD_BYTES) {
       res.status(413).json({ error: 'File size exceeds 10MB limit' });
@@ -107,7 +109,7 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
 
     const contentType = req.headers['content-type'] ?? '';
     if (contentType.includes('multipart/form-data')) {
-      studyUpload.single('file')(req, res, (err) => {
+      studyUpload.single('file')(req, res, async (err) => {
         if (err) {
           if (
             (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') ||
@@ -132,6 +134,47 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
           return;
         }
 
+        const originalName = (file.originalname || '').toLowerCase();
+        const mimeType = (file.mimetype || '').toLowerCase();
+
+        const isPdf =
+          originalName.endsWith('.pdf') || mimeType === 'application/pdf';
+        const isMd =
+          (originalName.endsWith('.md') ||
+            originalName.endsWith('.markdown') ||
+            mimeType === 'text/markdown') &&
+          !originalName.endsWith('.docx') &&
+          !originalName.endsWith('.txt') &&
+          !originalName.endsWith('.png') &&
+          !originalName.endsWith('.jpg') &&
+          !originalName.endsWith('.csv');
+
+        if (!isPdf && !isMd) {
+          res.status(400).json({
+            error: 'Study validation failed',
+            errors: [
+              'Unsupported file type: only .pdf and .md study files are supported.',
+            ],
+          });
+          return;
+        }
+
+        if (isPdf) {
+          const fileName = file.originalname || 'uploaded-study.pdf';
+          const result = await parsePdfStudy(file.buffer, { fileName });
+
+          if (!result.valid) {
+            res.status(400).json({
+              error: 'Study validation failed',
+              errors: result.errors,
+            });
+            return;
+          }
+
+          res.status(200).json(result.value);
+          return;
+        }
+
         const markdownContent = file.buffer.toString('utf-8');
         const fileName = file.originalname || 'uploaded-study.md';
         const result = parseMarkdownStudy(markdownContent, { fileName });
@@ -146,6 +189,31 @@ export function createAppServer(options: AppServerOptions = {}): AppServer {
 
         res.status(200).json(result.value);
       });
+      return;
+    }
+
+    // Raw binary application/pdf
+    if (req.is('application/pdf') || Buffer.isBuffer(req.body)) {
+      const headerFileName = req.headers['x-file-name'];
+      const fileName =
+        typeof headerFileName === 'string' && headerFileName.trim().length > 0
+          ? headerFileName.trim()
+          : 'uploaded-study.pdf';
+
+      const buffer = Buffer.isBuffer(req.body)
+        ? req.body
+        : Buffer.from(req.body as ArrayBuffer);
+
+      const result = await parsePdfStudy(buffer, { fileName });
+      if (!result.valid) {
+        res.status(400).json({
+          error: 'Study validation failed',
+          errors: result.errors,
+        });
+        return;
+      }
+
+      res.status(200).json(result.value);
       return;
     }
 

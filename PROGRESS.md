@@ -5,13 +5,48 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `pdf-study-deterministic-parser` (Wave 2 complete: `markdown-study-deterministic-parser` and `welcome-role-selection-flow` accepted)
+- Current next ready feature: `leader-load-study-setup-screen` (both `pdf-study-deterministic-parser` and `welcome-role-selection-flow` accepted)
 - Current blocker: `none`
 - Last verified at: `2026-10-29`
 
 ## Session Log
 
-### Session 013
+### Session 015
+
+- Date: `2026-10-29`
+- Goal: Independent validation and acceptance persistence for `pdf-study-deterministic-parser`.
+- Completed: Independent `validator` subagent audited `docs/specs/pdf-study-deterministic-parser.md` and the full diff, reran `./init.sh` (14 Vitest suites / 86 tests exit 0), `PLAYWRIGHT_PORT=3301 npm run test:e2e` (15/15 mobile-chromium 390x844 tests exit 0), live single-port HTTP smoke check on `PORT=3101` (HTTP 200 for canonical 'Great Is Your Faith' PDF and second study 'Peace! Be Still', HTTP 413 for >10MB payload, HTTP 400 for unsupported .docx with actionable error message), zero 'Assistant' matches in src/, zero external AI API calls, zero disk writes (in-memory extraction), and clean SIGTERM shutdown with 0 Critical/High/Medium/Low findings. Updated `feature_list.json` status to `accepted`.
+- Verification run: `./init.sh`, `PLAYWRIGHT_PORT=3301 npm run test:e2e`, live single-port HTTP smoke on `PORT=3101`.
+- Evidence captured: All gates exited `0` (14 Vitest suites / 86 tests, 15 Playwright E2E specs); `pdf-study-deterministic-parser` marked `accepted` in `feature_list.json`.
+- Files or artifacts updated: `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: none.
+- Next best step: Run `$feature-flow` on `leader-load-study-setup-screen` (now unblocked with both prerequisites accepted).
+
+### Session 014
+
+- Date: `2026-10-29`
+- Goal: Implement `pdf-study-deterministic-parser` per `docs/specs/pdf-study-deterministic-parser.md`.
+- Completed:
+  - Installed `unpdf` as production dependency for pure JavaScript in-memory PDF text extraction and `pdf-lib` as dev dependency.
+  - Implemented `scripts/generate-pdf-fixtures.ts` compiling `tests/fixtures/great-is-your-faith.md` and `tests/fixtures/peace-be-still-mark-4.md` into text-based PDF test fixtures (`great-is-your-faith.pdf` and `peace-be-still-mark-4.pdf`) with realistic running headers and footers.
+  - Updated `ParseMarkdownStudyOptions` in `src/server/studies/markdownParser.ts` to accept `sourceType?: StudySourceType` (`markdown` or `pdf`).
+  - Implemented `src/server/studies/pdfParser.ts` (`normalizePdfText` and `parsePdfStudy`) extracting in-memory PDF text, stripping page numbers (`Page X of Y`, `- X -`, `[ X ]`, `X / Y`, margin digits) and running headers, expanding ligatures (`fi`, `fl`, `ff`, `ffi`, `ffl`, `oe`, `ae`), normalizing smart quotes/unicode whitespace, de-hyphenating line breaks, ensuring markdown heading formatting (`## ` and `### `), rejecting empty/textless/scanned and corrupt PDFs with actionable error messages, and preserving facilitator privacy.
+  - Wired raw binary `application/pdf` body parsing (`express.raw({ type: 'application/pdf', limit: '10mb' })`) and multipart file validation (allowing `.pdf` and `.md` only, rejecting `.docx`, `.txt`, `.png`, etc. with HTTP 400) into `POST /api/studies/parse` in `src/server/app.ts`.
+  - Added unit test suite `tests/unit/pdf-parser.test.ts` (7 tests), updated integration suite `tests/integration/studies-parse.test.ts` (15 tests), and updated Playwright E2E suite `tests/e2e/studies-parse.spec.ts` (7 tests).
+  - Updated `ARCHITECTURE.md` module boundaries and route routing.
+- Verification run:
+  - `./init.sh` (`npm run typecheck`, `npm test`, `npm run build`)
+  - `PLAYWRIGHT_PORT=3301 npm run test:e2e`
+  - Direct CLI smoke on `PORT=3101` (`curl -F file=@tests/fixtures/great-is-your-faith.pdf`, `curl -H "Content-Type: application/pdf" --data-binary @tests/fixtures/peace-be-still-mark-4.pdf`, `curl -F file=@package.json;filename=study.docx`, `curl -H "Content-Length: 11500000"`)
+  - Static scan: `grep -rn "Assistant" src/`
+- Evidence captured:
+  - `./init.sh` exited `0`: `tsc --noEmit` passed clean; Vitest 14 suites / 86 tests passed (`1.81s`); production build emitted `dist/client` and `dist/server`.
+  - `PLAYWRIGHT_PORT=3301 npm run test:e2e` exited `0`: `15 passed (44.2s)` on mobile-chromium (`390x844`).
+  - CLI smoke on `PORT=3101` confirmed HTTP 200 for canonical PDF multipart and raw binary PDF, HTTP 400 `{"error":"Study validation failed","errors":["Unsupported file type: only .pdf and .md study files are supported."]}` for unsupported `.docx`, and HTTP 413 `{"error":"File size exceeds 10MB limit"}` for oversized payload.
+  - Static scan confirmed 0 occurrences of forbidden legacy role word `Assistant` in `src/`.
+- Files or artifacts updated: `package.json`, `package-lock.json`, `scripts/generate-pdf-fixtures.ts`, `tests/fixtures/great-is-your-faith.pdf`, `tests/fixtures/peace-be-still-mark-4.pdf`, `src/server/studies/markdownParser.ts`, `src/server/studies/pdfParser.ts`, `src/server/app.ts`, `tests/unit/pdf-parser.test.ts`, `tests/integration/studies-parse.test.ts`, `tests/e2e/studies-parse.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: none; PDF parser is deterministic, zero-AI, in-memory only.
+- Next best step: Run independent `$feature-validator` on `pdf-study-deterministic-parser`.
 
 - Date: `2026-10-29`
 - Goal: Independent validation and acceptance persistence for `welcome-role-selection-flow`.
