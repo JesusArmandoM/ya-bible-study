@@ -3,11 +3,14 @@ import { render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { SectionOneHandoff } from '../../src/client/components/lobby/SectionOneHandoff';
+import { OpeningPrayerScreen, type OpeningPrayerScreenProps } from '../../src/client/components/prayer/OpeningPrayerScreen';
 import { TitleLobbyScreen } from '../../src/client/components/lobby/TitleLobbyScreen';
 import { StudyStructureList } from '../../src/client/components/setup/StudyStructureList';
 import { getDefaultStudyDocument } from '../../src/server/studies/greatIsYourFaithSeed';
-import type { SessionStudySummary } from '../../src/shared/session';
+import type {
+  PublicLiveSessionSnapshot,
+  SessionStudySummary,
+} from '../../src/shared/session';
 import { toSessionStudySummary } from '../../src/shared/session';
 
 const SUMMARY: SessionStudySummary = toSessionStudySummary(
@@ -170,9 +173,55 @@ describe('TitleLobbyScreen — participant mode (Scenario 5)', () => {
   });
 });
 
-describe('SectionOneHandoff — minimal Section 1 surface', () => {
-  it('renders SECTION 1 OF 5 / 20% / Opening Prayer with role-appropriate waiting copy', () => {
-    const { rerender } = render(<SectionOneHandoff role="Participant" />);
+// Compat edit 1 of 2 (section-1-opening-prayer-hand-raise): the provisional
+// `SectionOneHandoff` block is migrated to `OpeningPrayerScreen` with the same
+// `section-one-*` testids and the two updated role subtitle copy strings.
+const PRAYER_SESSION: PublicLiveSessionSnapshot = {
+  sessionCode: 'ABC123',
+  status: 'in_progress',
+  currentSectionIndex: 0,
+  currentSectionId: 'section_1_prayer',
+  createdAt: '2026-10-29T19:30:00.000Z',
+  startedAt: '2026-10-29T19:31:00.000Z',
+  endedAt: null,
+  connectedMemberCount: 2,
+  connectedParticipantCount: 1,
+  members: [
+    {
+      memberId: 'participant-1',
+      displayName: 'Daniel',
+      initials: 'DA',
+      avatarPalette: 'indigo',
+      role: 'Participant',
+      connectionStatus: 'connected',
+      joinedAt: '2026-10-29T19:30:30.000Z',
+    },
+  ],
+  study: SUMMARY,
+  volunteerTurn: {
+    sectionId: 'section_1_prayer',
+    mode: 'gated_prayer',
+    raisedHands: [],
+    candidateMemberId: null,
+    candidateExpiresAt: null,
+    selectedMemberId: null,
+    completedAt: null,
+  },
+  protocolVersion: 3,
+};
+
+describe('OpeningPrayerScreen — Section 1 surface', () => {
+  it('renders SECTION 1 OF 5 / 20% / Opening Prayer with role-appropriate subtitle copy', () => {
+    const baseProps: Omit<OpeningPrayerScreenProps, 'role'> = {
+      session: PRAYER_SESSION,
+      memberId: 'participant-1',
+      onToggleHandRaised: () => {},
+      onLowerHand: () => {},
+      onClearRaisedHands: () => {},
+    };
+    const { rerender } = render(
+      <OpeningPrayerScreen {...baseProps} role="Participant" />,
+    );
     expect(screen.getByTestId('section-one-label')).toHaveTextContent(
       'SECTION 1 OF 5',
     );
@@ -181,13 +230,13 @@ describe('SectionOneHandoff — minimal Section 1 surface', () => {
       'Opening Prayer',
     );
     expect(screen.getByTestId('section-one-copy')).toHaveTextContent(
-      'Waiting for the Study Leader',
+      'Tap Raise Hand',
     );
     expect(document.body.textContent).not.toContain('Assistant');
 
-    rerender(<SectionOneHandoff role="Study Leader" />);
+    rerender(<OpeningPrayerScreen {...baseProps} role="Study Leader" />);
     expect(screen.getByTestId('section-one-copy')).toHaveTextContent(
-      'Opening Prayer is ready',
+      'Waiting for someone to volunteer to pray',
     );
   });
 });

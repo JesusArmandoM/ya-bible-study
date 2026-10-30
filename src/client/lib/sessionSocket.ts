@@ -239,6 +239,15 @@ export interface LeaderCommandInput {
   reason?: string;
   /** Sanitized study summary; required for `load_study` commands. */
   study?: SessionStudySummary;
+  /** Optional single-member target for `clear_hands`. */
+  targetMemberId?: string;
+}
+
+/** Participant self-service hand-raise commands (protocol v3). */
+export interface TurnCommandInput {
+  type: 'raise_hand' | 'lower_hand';
+  sessionCode?: string;
+  memberId?: string;
 }
 
 export interface SessionSocketClient {
@@ -268,6 +277,15 @@ export interface SessionSocketClient {
   sendLeaderCommand(
     input: LeaderCommandInput,
   ): Promise<Extract<ServerWsMessage, { type: 'session_updated' | 'session_closed' }>>;
+  /**
+   * Participant self-service hand-raise commands (protocol v3). OPTIONAL so
+   * minimal `SessionSocketClient` test doubles that predate the hand-raise
+   * feature keep typechecking without a breaking interface change; callers
+   * guard with a descriptive error.
+   */
+  sendTurnCommand?(
+    input: TurnCommandInput,
+  ): Promise<Extract<ServerWsMessage, { type: 'session_updated' }>>;
 }
 
 interface PendingRequest {
@@ -668,12 +686,43 @@ export function createSessionSocketClient(
         );
       }
 
+      if (input.type === 'clear_hands') {
+        return await sendRequest(
+          {
+            type: 'clear_hands',
+            sessionCode,
+            leaderToken,
+            ...(memberId ? { memberId } : {}),
+            ...(input.targetMemberId ? { targetMemberId: input.targetMemberId } : {}),
+          },
+          ['session_updated'],
+        );
+      }
+
       return await sendRequest(
         {
           type: input.type,
           sessionCode,
           leaderToken,
           ...(memberId ? { memberId } : {}),
+        },
+        ['session_updated'],
+      );
+    },
+
+    sendTurnCommand: async (input) => {
+      const sessionCode = input.sessionCode ?? credentials?.sessionCode ?? '';
+      const memberId = input.memberId ?? credentials?.memberId ?? '';
+      if (!memberId) {
+        throw new Error(
+          `${input.type} turn commands require the participant memberId.`,
+        );
+      }
+      return await sendRequest(
+        {
+          type: input.type,
+          sessionCode,
+          memberId,
         },
         ['session_updated'],
       );

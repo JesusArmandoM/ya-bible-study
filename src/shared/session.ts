@@ -1,7 +1,7 @@
 import type { SanctuaryRole } from './health.js';
-import type { StudyDocument } from './study.js';
+import type { OpeningPrayerSection, StudyDocument } from './study.js';
 
-export const SESSION_PROTOCOL_VERSION = 2;
+export const SESSION_PROTOCOL_VERSION = 3;
 export const SESSION_CODE_LENGTH = 6;
 export const SESSION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const LEADER_PIN_LENGTH = 4;
@@ -53,6 +53,23 @@ export interface PublicSessionMember {
 }
 
 /**
+ * Sanitized, participant-visible Opening Prayer content synced with the study
+ * summary. Never carries the facilitator-facing `leaderPrompt` (that copy stays
+ * on the locally held `StudyDocument`).
+ */
+export interface SessionOpeningPrayerContent {
+  title: string;
+  eyebrow: string;
+  durationLabel: string;
+  /** Participant-visible suggested prayer text. */
+  suggestedPrayerText: string;
+  /** Participant-visible invitation copy. */
+  participantPrompt: string;
+  /** Participant-visible; RESERVED for the chosen-volunteer Done-gate feature. */
+  chosenVolunteerInstruction: string;
+}
+
+/**
  * Sanitized, title/meta-only study summary synced to every client via the
  * leader-gated `load_study` command. Never carries pastoral/facilitator fields
  * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
@@ -65,12 +82,44 @@ export interface SessionStudySummary {
   gospelSummaryLabel: string;
   sectionCount: 5;
   estimatedMinutes: number;
+  /** Participant-visible Opening Prayer copy (additive in protocol v3). */
+  openingPrayer?: SessionOpeningPrayerContent | null;
 }
 
 export const SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH = 120;
 export const SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH = 200;
+export const SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH = 2000;
 export const SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES = 1;
 export const SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES = 180;
+
+/** One raised hand in the volunteer turn queue (server-clock timestamp). */
+export interface RaisedHandEntry {
+  memberId: string;
+  raisedAt: string;
+}
+
+export type VolunteerTurnMode = 'gated_prayer' | 'open_share' | 'gated_reading';
+
+/**
+ * Per-section volunteer turn state (protocol v3). `raisedHands` is
+ * append-only raise order with at most one entry per member. The
+ * `candidate*` / `selected*` / `completed*` fields are RESERVED for the
+ * random-volunteer picker and chosen-volunteer Done-gate features and stay
+ * `null` while only hand raising is active.
+ */
+export interface VolunteerTurnState {
+  sectionId: StudySectionId;
+  mode: VolunteerTurnMode;
+  raisedHands: RaisedHandEntry[];
+  /** RESERVED: random-volunteer-picker-countdown. */
+  candidateMemberId: string | null;
+  /** RESERVED: 30s random-selection countdown. */
+  candidateExpiresAt: string | null;
+  /** RESERVED: section-1-chosen-volunteer-prayer-gate. */
+  selectedMemberId: string | null;
+  /** RESERVED: Done / turn completion. */
+  completedAt: string | null;
+}
 
 export interface PublicLiveSessionSnapshot {
   sessionCode: string;
@@ -85,8 +134,27 @@ export interface PublicLiveSessionSnapshot {
   members: PublicSessionMember[];
   /** Title/meta-only study summary once the leader dispatched `load_study`. */
   study?: SessionStudySummary | null;
+  /** Per-section volunteer turn state (additive in protocol v3). */
+  volunteerTurn?: VolunteerTurnState | null;
   /** Snapshot protocol version (`SESSION_PROTOCOL_VERSION`); additive in v2. */
   protocolVersion?: number;
+}
+
+/**
+ * Projects the Opening Prayer section onto the participant-visible synced
+ * content. Explicitly excludes the facilitator-facing `leaderPrompt`.
+ */
+export function toSessionOpeningPrayerContent(
+  section: OpeningPrayerSection,
+): SessionOpeningPrayerContent {
+  return {
+    title: section.title,
+    eyebrow: section.eyebrow,
+    durationLabel: section.durationLabel,
+    suggestedPrayerText: section.suggestedPrayerText,
+    participantPrompt: section.participantPrompt,
+    chosenVolunteerInstruction: section.chosenVolunteerInstruction,
+  };
 }
 
 /**
@@ -102,6 +170,7 @@ export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
     gospelSummaryLabel: doc.gospelSummaryLabel,
     sectionCount: 5,
     estimatedMinutes: doc.estimatedMinutes,
+    openingPrayer: toSessionOpeningPrayerContent(doc.openingPrayer),
   };
 }
 
@@ -117,6 +186,81 @@ function normalizeBoundedSummaryString(
     return null;
   }
   return trimmed;
+}
+
+/**
+ * Bounded free-text validation that preserves internal whitespace (prayer
+ * text keeps its line structure); only the ends are trimmed.
+ */
+function normalizeBoundedPrayerText(raw: unknown, maxLength: number): string | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || trimmed.length > maxLength) {
+    return null;
+  }
+  return trimmed;
+}
+
+/**
+ * Allow-list validation for a present `openingPrayer` payload. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`. Unknown keys (e.g. a smuggled
+ * `leaderPrompt`) are dropped by the explicit field projection.
+ */
+export function normalizeSessionOpeningPrayerContent(
+  raw: unknown,
+): SessionOpeningPrayerContent | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const eyebrow = normalizeBoundedSummaryString(
+    record.eyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const durationLabel = normalizeBoundedSummaryString(
+    record.durationLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const suggestedPrayerText = normalizeBoundedPrayerText(
+    record.suggestedPrayerText,
+    SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+  );
+  const participantPrompt = normalizeBoundedSummaryString(
+    record.participantPrompt,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const chosenVolunteerInstruction = normalizeBoundedSummaryString(
+    record.chosenVolunteerInstruction,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+
+  if (
+    title === null ||
+    eyebrow === null ||
+    durationLabel === null ||
+    suggestedPrayerText === null ||
+    participantPrompt === null ||
+    chosenVolunteerInstruction === null
+  ) {
+    return null;
+  }
+
+  return {
+    title,
+    eyebrow,
+    durationLabel,
+    suggestedPrayerText,
+    participantPrompt,
+    chosenVolunteerInstruction,
+  };
 }
 
 /**
@@ -177,6 +321,19 @@ export function normalizeSessionStudySummary(
     return null;
   }
 
+  /**
+   * Protocol v3 (bounded additive): a missing `openingPrayer` stays valid and
+   * normalizes to `null`; a present-but-invalid payload rejects the frame with
+   * `INVALID_MESSAGE`.
+   */
+  let openingPrayer: SessionOpeningPrayerContent | null = null;
+  if (record.openingPrayer !== undefined && record.openingPrayer !== null) {
+    openingPrayer = normalizeSessionOpeningPrayerContent(record.openingPrayer);
+    if (openingPrayer === null) {
+      return null;
+    }
+  }
+
   return {
     title,
     subtitle,
@@ -185,6 +342,102 @@ export function normalizeSessionStudySummary(
     gospelSummaryLabel,
     sectionCount: 5,
     estimatedMinutes,
+    openingPrayer,
+  };
+}
+
+/** Maps a study section onto its volunteer-turn interaction mode. */
+export function volunteerTurnModeForSection(
+  sectionId: StudySectionId,
+): VolunteerTurnMode {
+  switch (sectionId) {
+    case 'section_1_prayer':
+      return 'gated_prayer';
+    case 'section_3_reading':
+      return 'gated_reading';
+    default:
+      return 'open_share';
+  }
+}
+
+/**
+ * Pure reducer: creates the volunteer-turn state for the current section on
+ * `start_study`. Starts with an empty hand-raise queue; reserved candidate /
+ * selected / completion fields stay `null`.
+ */
+export function createVolunteerTurnForSection(
+  sectionId: StudySectionId,
+): VolunteerTurnState {
+  return {
+    sectionId,
+    mode: volunteerTurnModeForSection(sectionId),
+    raisedHands: [],
+    candidateMemberId: null,
+    candidateExpiresAt: null,
+    selectedMemberId: null,
+    completedAt: null,
+  };
+}
+
+/**
+ * Pure reducer: sets one member's hand-raise state on the turn queue.
+ * Raising an already-raised hand keeps the original `raisedAt` and queue
+ * position; lowering is a no-op when the hand is not raised.
+ */
+export function applySetHandRaised(
+  turn: VolunteerTurnState,
+  memberId: string,
+  raised: boolean,
+  isoNow: string,
+): VolunteerTurnState {
+  const isRaised = turn.raisedHands.some((entry) => entry.memberId === memberId);
+  if (raised) {
+    if (isRaised) {
+      return turn;
+    }
+    return {
+      ...turn,
+      raisedHands: [...turn.raisedHands, { memberId, raisedAt: isoNow }],
+    };
+  }
+  if (!isRaised) {
+    return turn;
+  }
+  return {
+    ...turn,
+    raisedHands: turn.raisedHands.filter((entry) => entry.memberId !== memberId),
+  };
+}
+
+/**
+ * Pure reducer: clears one member's hand (`targetMemberId`) or the whole queue
+ * when no target is given. Clearing an already-lowered hand / an empty queue is
+ * a no-op.
+ */
+export function applyClearHands(
+  turn: VolunteerTurnState,
+  targetMemberId?: string,
+): VolunteerTurnState {
+  if (targetMemberId !== undefined) {
+    const isRaised = turn.raisedHands.some(
+      (entry) => entry.memberId === targetMemberId,
+    );
+    if (!isRaised) {
+      return turn;
+    }
+    return {
+      ...turn,
+      raisedHands: turn.raisedHands.filter(
+        (entry) => entry.memberId !== targetMemberId,
+      ),
+    };
+  }
+  if (turn.raisedHands.length === 0) {
+    return turn;
+  }
+  return {
+    ...turn,
+    raisedHands: [],
   };
 }
 
@@ -198,14 +451,26 @@ export type SessionErrorCode =
   | 'FORBIDDEN_LEADER_ONLY'
   | 'UNAUTHORIZED_LEADER'
   | 'UNAUTHORIZED_RECONNECT'
-  | 'INVALID_STATE_TRANSITION';
+  | 'INVALID_STATE_TRANSITION'
+  | 'UNAUTHORIZED_MEMBER';
 
 export type LeaderCommandType =
   | 'open_lobby'
   | 'load_study'
   | 'start_study'
   | 'next_section'
+  | 'clear_hands'
   | 'close_session';
+
+/**
+ * Protocol v3 (additive): `session_updated.command` widens to include the
+ * participant self-service hand-raise commands. `close_session` stays excluded
+ * because it ends the session without broadcasting `session_updated`.
+ */
+export type SessionUpdatedCommand = Exclude<
+  LeaderCommandType | 'raise_hand' | 'lower_hand',
+  'close_session'
+>;
 
 export type SessionCloseReason = 'closed_by_leader' | 'expired_inactivity';
 
@@ -267,6 +532,26 @@ export type ClientWsMessage =
       sessionCode: string;
       leaderToken: string;
       memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'raise_hand';
+      sessionCode: string;
+      memberId: string;
+      requestId?: string;
+    }
+  | {
+      type: 'lower_hand';
+      sessionCode: string;
+      memberId: string;
+      requestId?: string;
+    }
+  | {
+      type: 'clear_hands';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      targetMemberId?: string;
       requestId?: string;
     }
   | {
@@ -340,7 +625,7 @@ export type ServerWsMessage =
   | {
       type: 'session_updated';
       requestId?: string;
-      command: Exclude<LeaderCommandType, 'close_session'>;
+      command: SessionUpdatedCommand;
       sessionCode: string;
       session: PublicLiveSessionSnapshot;
     }

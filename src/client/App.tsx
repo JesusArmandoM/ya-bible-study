@@ -2,7 +2,8 @@ import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import type { HealthResponse } from '../shared/health';
 import { toSessionStudySummary, type SessionStudySummary } from '../shared/session';
-import { SectionOneHandoff } from './components/lobby/SectionOneHandoff';
+import { OpeningPrayerScreen } from './components/prayer/OpeningPrayerScreen';
+import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholderScreen';
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
@@ -300,9 +301,31 @@ export function App({ sessionClient }: AppProps = {}) {
                 }}
               />
             ) : sessionStatus === 'in_progress' ? (
-              <SectionOneHandoff
-                role={liveSession.role ?? 'Participant'}
-              />
+              liveSession.session.currentSectionId === 'section_1_prayer' ? (
+                <OpeningPrayerScreen
+                  role={liveSession.role ?? 'Participant'}
+                  session={liveSession.session}
+                  localStudyDocument={studySetup.study}
+                  memberId={liveSession.credentials?.memberId ?? null}
+                  onToggleHandRaised={(next) =>
+                    liveSession.setHandRaised(next)
+                  }
+                  onLowerHand={(targetMemberId) => {
+                    void liveSession.lowerHand(targetMemberId).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onClearRaisedHands={() => {
+                    void liveSession.clearRaisedHands().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                />
+              ) : (
+                <SectionPlaceholderScreen
+                  sectionIndex={liveSession.session.currentSectionIndex ?? 0}
+                />
+              )
             ) : null}
           </>
         ) : activeSheet === 'leader' ? (

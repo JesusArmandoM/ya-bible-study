@@ -9,6 +9,9 @@ import {
   SESSION_CODE_LENGTH,
   SESSION_PROTOCOL_VERSION,
   STUDY_SECTION_IDS,
+  applyClearHands,
+  applySetHandRaised,
+  createVolunteerTurnForSection,
   deriveInitials,
   isValidDisplayName,
   isValidLeaderPin,
@@ -27,7 +30,9 @@ import {
   type SessionCloseReason,
   type SessionErrorCode,
   type SessionStudySummary,
+  type SessionUpdatedCommand,
   type StudySectionId,
+  type VolunteerTurnState,
 } from '../shared/session.js';
 
 const SOCKET_OPEN_READY_STATE = 1;
@@ -64,6 +69,7 @@ interface InternalLiveSession {
   lastActivityAt: number;
   nextParticipantPaletteIndex: number;
   study: SessionStudySummary | null;
+  volunteerTurn: VolunteerTurnState | null;
   members: Map<string, InternalSessionMember>;
 }
 
@@ -163,7 +169,24 @@ function toPublicSnapshot(
     connectedParticipantCount,
     members,
     study: session.study ? { ...session.study } : null,
+    volunteerTurn: toPublicVolunteerTurn(session.volunteerTurn),
     protocolVersion: SESSION_PROTOCOL_VERSION,
+  };
+}
+
+/**
+ * Deep-copies the volunteer-turn state (including every queue entry) so the
+ * internal append-only queue can never be mutated through a snapshot.
+ */
+function toPublicVolunteerTurn(
+  turn: VolunteerTurnState | null,
+): VolunteerTurnState | null {
+  if (!turn) {
+    return null;
+  }
+  return {
+    ...turn,
+    raisedHands: turn.raisedHands.map((entry) => ({ ...entry })),
   };
 }
 
@@ -315,8 +338,13 @@ export class LiveSessionStore {
       case 'load_study':
       case 'start_study':
       case 'next_section':
+      case 'clear_hands':
       case 'close_session':
         this.handleLeaderCommand(socket, record.type, record, requestId);
+        return;
+      case 'raise_hand':
+      case 'lower_hand':
+        this.handleTurnCommand(socket, record.type, record, requestId);
         return;
       default:
         this.sendError(
@@ -385,6 +413,7 @@ export class LiveSessionStore {
       lastActivityAt: currentNow,
       nextParticipantPaletteIndex: 0,
       study: null,
+      volunteerTurn: null,
       members,
     };
 
@@ -833,6 +862,56 @@ export class LiveSessionStore {
       return;
     }
 
+    if (command === 'clear_hands') {
+      /**
+       * Leader-only clear (protocol v3). Deliberately NOT section-state-gated:
+       * clearing a null turn / empty queue / a non-raised target is an
+       * idempotent no-op that still broadcasts the unchanged snapshot, while
+       * an unknown `targetMemberId` is a malformed request.
+       */
+      let targetMemberId: string | undefined;
+      if (record.targetMemberId !== undefined) {
+        if (typeof record.targetMemberId !== 'string') {
+          this.sendError(
+            socket,
+            'INVALID_MESSAGE',
+            'targetMemberId must be a member ID string when provided.',
+            requestId,
+          );
+          return;
+        }
+        targetMemberId = record.targetMemberId.trim();
+        if (targetMemberId.length === 0) {
+          this.sendError(
+            socket,
+            'INVALID_MESSAGE',
+            'targetMemberId must be a member ID string when provided.',
+            requestId,
+          );
+          return;
+        }
+        if (!session.members.has(targetMemberId)) {
+          this.sendError(
+            socket,
+            'INVALID_MESSAGE',
+            'targetMemberId does not identify a member of this session.',
+            requestId,
+          );
+          return;
+        }
+      }
+
+      if (session.volunteerTurn) {
+        session.volunteerTurn = applyClearHands(
+          session.volunteerTurn,
+          targetMemberId,
+        );
+      }
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
     if (command === 'open_lobby') {
       if (session.status !== 'setup' && session.status !== 'lobby') {
         this.sendError(
@@ -891,6 +970,9 @@ export class LiveSessionStore {
       session.currentSectionIndex = 0;
       session.currentSectionId = STUDY_SECTION_IDS[0];
       session.startedAt = session.startedAt ?? isoNow;
+      session.volunteerTurn = session.currentSectionId
+        ? createVolunteerTurnForSection(session.currentSectionId)
+        : null;
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
       return;
@@ -924,9 +1006,103 @@ export class LiveSessionStore {
 
       session.currentSectionIndex = nextIndex;
       session.currentSectionId = nextSectionId;
+      session.volunteerTurn = null;
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
     }
+  }
+
+  /**
+   * Participant self-service hand-raise commands (protocol v3). Membership is
+   * proven by the live socket binding — the frame's `memberId` must match the
+   * member bound to this socket (unbound, spoofed, or Study Leader callers get
+   * `UNAUTHORIZED_MEMBER`).
+   */
+  private handleTurnCommand(
+    socket: SessionPeerSocket,
+    command: 'raise_hand' | 'lower_hand',
+    record: Record<string, unknown>,
+    requestId?: string,
+  ): void {
+    this.sweepExpiredSessions();
+
+    const sessionCode = normalizeSessionCode(record.sessionCode);
+    if (!isValidSessionCode(sessionCode)) {
+      this.sendError(
+        socket,
+        'INVALID_SESSION_CODE',
+        'Enter a valid 6-character session code.',
+        requestId,
+      );
+      return;
+    }
+
+    const session = this.sessions.get(sessionCode);
+    if (!session) {
+      this.sendError(
+        socket,
+        'SESSION_NOT_FOUND',
+        `No active Bible study session found for code "${sessionCode}".`,
+        requestId,
+      );
+      return;
+    }
+
+    const rawMemberId =
+      typeof record.memberId === 'string' ? record.memberId.trim() : '';
+    if (rawMemberId.length === 0) {
+      this.sendError(
+        socket,
+        'INVALID_MESSAGE',
+        'A memberId string is required for hand-raise commands.',
+        requestId,
+      );
+      return;
+    }
+
+    const binding = this.socketBindings.get(socket);
+    const boundMember = binding
+      ? session.members.get(binding.memberId)
+      : undefined;
+    if (
+      !binding ||
+      binding.sessionCode !== session.sessionCode ||
+      !boundMember ||
+      boundMember.role !== 'Participant' ||
+      rawMemberId !== binding.memberId
+    ) {
+      this.sendError(
+        socket,
+        'UNAUTHORIZED_MEMBER',
+        'Only the Participant bound to this connection can raise or lower a hand.',
+        requestId,
+      );
+      return;
+    }
+
+    if (
+      session.status !== 'in_progress' ||
+      session.currentSectionId !== 'section_1_prayer' ||
+      !session.volunteerTurn
+    ) {
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'Hands can only be raised during the Opening Prayer section.',
+        requestId,
+      );
+      return;
+    }
+
+    const isoNow = new Date(this.now()).toISOString();
+    session.volunteerTurn = applySetHandRaised(
+      session.volunteerTurn,
+      binding.memberId,
+      command === 'raise_hand',
+      isoNow,
+    );
+    session.lastActivityAt = this.now();
+    this.broadcastSessionUpdated(session, command, socket, requestId);
   }
 
   private isParticipantCaller(
@@ -1021,7 +1197,7 @@ export class LiveSessionStore {
 
   private broadcastSessionUpdated(
     session: InternalLiveSession,
-    command: Exclude<LeaderCommandType, 'close_session'>,
+    command: SessionUpdatedCommand,
     requesterSocket: SessionPeerSocket,
     requestId?: string,
   ): void {
