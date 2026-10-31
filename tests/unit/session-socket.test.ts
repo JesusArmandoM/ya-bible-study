@@ -676,3 +676,65 @@ describe('LiveSessionStore deterministic collision, reconnect guard, and 4-hour 
     store.dispose();
   });
 });
+
+describe('sessionSocket random-selection leader command framing (protocol v3, additive)', () => {
+  it('frames pick_random / retry_random / confirm_random via the default fall-through and resolves on session_updated', async () => {
+    const store = new LiveSessionStore({
+      sweepIntervalMs: false,
+      pickRandomIndex: () => 0,
+    });
+    const leaderClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+    const participantClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+
+    const created = await leaderClient.createSession({ displayName: 'Claire' });
+    const joined = await participantClient.joinSession({
+      sessionCode: created.sessionCode,
+      displayName: 'Daniel',
+    });
+    await leaderClient.sendLeaderCommand({ type: 'start_study' });
+
+    // pick_random rides the untouched default branch: no target fields, and
+    // the staged candidate + absolute expiry ride back on session_updated.
+    const picked = await leaderClient.sendLeaderCommand({ type: 'pick_random' });
+    if (picked.type !== 'session_updated') {
+      throw new Error('pick_random must resolve on session_updated.');
+    }
+    expect(picked.command).toBe('pick_random');
+    expect(picked.session.volunteerTurn?.candidateMemberId).toBe(joined.memberId);
+    expect(picked.session.volunteerTurn?.candidateExpiresAt).toBeTruthy();
+    expect(picked.session.volunteerTurn?.selectedMemberId).toBeNull();
+
+    // retry_random re-stages (single eligible Participant: same Person again).
+    const retried = await leaderClient.sendLeaderCommand({ type: 'retry_random' });
+    if (retried.type !== 'session_updated') {
+      throw new Error('retry_random must resolve on session_updated.');
+    }
+    expect(retried.command).toBe('retry_random');
+    expect(retried.session.volunteerTurn?.candidateMemberId).toBe(joined.memberId);
+
+    // confirm_random hands the candidate into the frozen chosen-volunteer gate.
+    const confirmed = await leaderClient.sendLeaderCommand({
+      type: 'confirm_random',
+    });
+    if (confirmed.type !== 'session_updated') {
+      throw new Error('confirm_random must resolve on session_updated.');
+    }
+    expect(confirmed.command).toBe('confirm_random');
+    expect(confirmed.session.volunteerTurn?.selectedMemberId).toBe(joined.memberId);
+    expect(confirmed.session.volunteerTurn?.candidateMemberId).toBeNull();
+    expect(confirmed.session.volunteerTurn?.candidateExpiresAt).toBeNull();
+
+    await leaderClient.sendLeaderCommand({ type: 'close_session' });
+    leaderClient.disconnect();
+    participantClient.disconnect();
+    store.dispose();
+  });
+});

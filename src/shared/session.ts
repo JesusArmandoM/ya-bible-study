@@ -13,6 +13,7 @@ export const MAX_DISPLAY_NAME_LENGTH = 48;
 export const DEFAULT_SESSION_TTL_MS = 4 * 60 * 60 * 1000;
 export const DEFAULT_SESSION_SWEEP_INTERVAL_MS = 60 * 1000;
 export const DEFAULT_WS_MAX_PAYLOAD_BYTES = 64 * 1024;
+export const RANDOM_SELECTION_COUNTDOWN_MS = 30_000;
 
 export const AVATAR_PALETTES = [
   'gold',
@@ -127,21 +128,21 @@ export type VolunteerTurnMode = 'gated_prayer' | 'open_share' | 'gated_reading';
 /**
  * Per-section volunteer turn state (protocol v3). `raisedHands` is
  * append-only raise order with at most one entry per member. The
- * `candidate*` / `selected*` / `completed*` fields are RESERVED for the
- * random-volunteer picker and chosen-volunteer Done-gate features and stay
- * `null` while only hand raising is active.
+ * `candidate*` fields carry the random-selection countdown state; the
+ * `selected*` / `completed*` fields carry the chosen-volunteer Done-gate
+ * state. All four stay `null` while only hand raising is active.
  */
 export interface VolunteerTurnState {
   sectionId: StudySectionId;
   mode: VolunteerTurnMode;
   raisedHands: RaisedHandEntry[];
-  /** RESERVED: random-volunteer-picker-countdown. */
+  /** Random-selection candidate staged by `pick_random` / `retry_random`. */
   candidateMemberId: string | null;
-  /** RESERVED: 30s random-selection countdown. */
+  /** Absolute server-clock ISO expiry of the random-selection countdown. */
   candidateExpiresAt: string | null;
-  /** RESERVED: section-1-chosen-volunteer-prayer-gate. */
+  /** Chosen volunteer (chosen-volunteer Done gate). */
   selectedMemberId: string | null;
-  /** RESERVED: Done / turn completion. */
+  /** Done / turn completion timestamp. */
   completedAt: string | null;
 }
 
@@ -482,8 +483,8 @@ export function volunteerTurnModeForSection(
 
 /**
  * Pure reducer: creates the volunteer-turn state for the current section on
- * `start_study`. Starts with an empty hand-raise queue; reserved candidate /
- * selected / completion fields stay `null`.
+ * `start_study`. Starts with an empty hand-raise queue; candidate / selected /
+ * completion fields start `null`.
  */
 export function createVolunteerTurnForSection(
   sectionId: StudySectionId,
@@ -564,11 +565,11 @@ export function applyClearHands(
 /**
  * Derived volunteer-turn phase for the gated Section 1 prayer flow.
  *
- * - `collecting_hands`: nobody selected yet (`candidateMemberId` may still be
- *   set by the reserved, unimplemented random-selection API).
- * - `random_pending`: reserved for the future random-selection countdown —
- *   a candidate is staged while `selectedMemberId`/`completedAt` stay null.
- *   Unreachable in protocol v3 because no command stages candidates yet.
+ * - `collecting_hands`: nobody selected yet (a cleared/expired random
+ *   candidate returns here).
+ * - `random_pending`: a random-selection candidate is staged while
+ *   `selectedMemberId`/`completedAt` stay null (the countdown window is a
+ *   sub-state judged against `candidateExpiresAt` and the server clock).
  * - `assigned`: a volunteer is selected and the turn is not completed.
  * - `turn_completed`: the turn is completed (`completedAt` set), whether or not
  *   a volunteer was ever selected (leader override is allowed with no
@@ -598,7 +599,7 @@ export function volunteerTurnPhase(
 
 /**
  * Pure reducer: assigns the chosen volunteer for the current turn. Only
- * `selectedMemberId` changes — `raisedHands`, `completedAt`, and the reserved
+ * `selectedMemberId` changes — `raisedHands`, `completedAt`, and the
  * `candidateMemberId`/`candidateExpiresAt` fields are left untouched.
  */
 export function applySelectVolunteer(
@@ -630,6 +631,99 @@ export function applyCompleteTurn(
   };
 }
 
+/**
+ * Pure reducer: stages the random-selection candidate and its absolute
+ * countdown expiry (`pick_random` / `retry_random`). Nothing else changes.
+ */
+export function applyStageRandomCandidate(
+  turn: VolunteerTurnState,
+  candidateMemberId: string,
+  isoExpiresAt: string,
+): VolunteerTurnState {
+  return {
+    ...turn,
+    candidateMemberId,
+    candidateExpiresAt: isoExpiresAt,
+  };
+}
+
+/**
+ * Pure reducer: confirms the staged random candidate as the chosen volunteer.
+ * Composes the frozen {@link applySelectVolunteer} with the staged
+ * `candidateMemberId`, then clears the `candidate*` countdown fields. A turn
+ * without a staged candidate is a no-op.
+ */
+export function applyConfirmRandomCandidate(
+  turn: VolunteerTurnState,
+): VolunteerTurnState {
+  if (turn.candidateMemberId === null) {
+    return turn;
+  }
+  const assigned = applySelectVolunteer(turn, turn.candidateMemberId);
+  return {
+    ...assigned,
+    candidateMemberId: null,
+    candidateExpiresAt: null,
+  };
+}
+
+/**
+ * Pure reducer: clears the staged random candidate (countdown expiry). A turn
+ * without staged candidate fields is a no-op.
+ */
+export function applyClearRandomCandidate(
+  turn: VolunteerTurnState,
+): VolunteerTurnState {
+  if (turn.candidateMemberId === null && turn.candidateExpiresAt === null) {
+    return turn;
+  }
+  return {
+    ...turn,
+    candidateMemberId: null,
+    candidateExpiresAt: null,
+  };
+}
+
+/**
+ * Pure helper: the fair-pick pool — connected `Participant` members in join
+ * order. Raised-hand membership is deliberately NOT required: the defining
+ * "Zero volunteers raise hand" scenario must still be pickable.
+ */
+export function eligibleRandomCandidateIds(
+  members: ReadonlyArray<
+    Pick<PublicSessionMember, 'memberId' | 'role' | 'connectionStatus'>
+  >,
+): string[] {
+  const ids: string[] = [];
+  for (const member of members) {
+    if (
+      member.role === 'Participant' &&
+      member.connectionStatus === 'connected'
+    ) {
+      ids.push(member.memberId);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Pure helper: display-only remaining countdown seconds derived from the
+ * absolute `candidateExpiresAt`, clamped to `0..30`. Clients render this —
+ * no client input can set or extend the server-clock window.
+ */
+export function remainingCountdownSeconds(
+  candidateExpiresAt: string,
+  nowMs: number,
+): number {
+  const maxSeconds = RANDOM_SELECTION_COUNTDOWN_MS / 1000;
+  const expiresMs = Date.parse(candidateExpiresAt);
+  if (!Number.isFinite(expiresMs)) {
+    return 0;
+  }
+  const remaining = Math.ceil((expiresMs - nowMs) / 1000);
+  return Math.min(maxSeconds, Math.max(0, remaining));
+}
+
 export type SessionErrorCode =
   | 'INVALID_MESSAGE'
   | 'INVALID_DISPLAY_NAME'
@@ -650,17 +744,25 @@ export type LeaderCommandType =
   | 'next_section'
   | 'choose_volunteer'
   | 'override_turn'
+  | 'pick_random'
+  | 'retry_random'
+  | 'confirm_random'
   | 'clear_hands'
   | 'close_session';
 
 /**
  * Protocol v3 (additive): `session_updated.command` widens to include the
- * participant self-service hand-raise commands and the chosen volunteer's
- * `complete_turn` completion. `close_session` stays excluded because it ends
- * the session without broadcasting `session_updated`.
+ * participant self-service hand-raise commands, the chosen volunteer's
+ * `complete_turn` completion, the random-selection picker commands, and the
+ * server-initiated `random_expired` countdown expiry. `close_session` stays
+ * excluded because it ends the session without broadcasting `session_updated`.
  */
 export type SessionUpdatedCommand = Exclude<
-  LeaderCommandType | 'raise_hand' | 'lower_hand' | 'complete_turn',
+  | LeaderCommandType
+  | 'raise_hand'
+  | 'lower_hand'
+  | 'complete_turn'
+  | 'random_expired',
   'close_session'
 >;
 
@@ -736,6 +838,27 @@ export type ClientWsMessage =
     }
   | {
       type: 'override_turn';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'pick_random';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'retry_random';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'confirm_random';
       sessionCode: string;
       leaderToken: string;
       memberId?: string;
