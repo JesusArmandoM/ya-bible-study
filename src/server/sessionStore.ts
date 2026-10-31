@@ -1354,6 +1354,7 @@ export class LiveSessionStore {
     if (
       session.status !== 'in_progress' ||
       !turn ||
+      turn.mode === 'open_share' ||
       turn.sectionId !== session.currentSectionId ||
       turn.completedAt != null
     ) {
