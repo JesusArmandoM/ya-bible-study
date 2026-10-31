@@ -66,6 +66,12 @@ export interface UseLiveSessionResult {
   switchQuestion: (questionId: string) => Promise<void>;
   /** Study Leader: append discussion question to the queue (`add_question`). */
   addQuestion: (question: SessionDiscussionQuestion) => Promise<void>;
+  /** Participant/Leader: submit reflection to the Section 4 Sharing feed (`submit_reflection`). */
+  submitReflection: (input: {
+    questionId: string;
+    content: string;
+    isAnonymous?: boolean;
+  }) => Promise<void>;
   /** Command of the latest `session_updated` broadcast (motion triggers). */
   lastSessionCommand: SessionUpdatedCommand | null;
   leaveRoom: () => void;
@@ -629,6 +635,44 @@ export function useLiveSession(
     [client],
   );
 
+  const submitReflection = useCallback(
+    async (input: {
+      questionId: string;
+      content: string;
+      isAnonymous?: boolean;
+    }) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        if (!client.submitReflection) {
+          throw new Error(
+            'Reflection submission is not supported on this client.',
+          );
+        }
+        const stored = client.getCredentials();
+        const response = await client.submitReflection({
+          questionId: input.questionId,
+          content: input.content,
+          isAnonymous: input.isAnonymous,
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+          setLastSessionCommand(response.command);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to submit reflection';
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
   const leaveRoom = useCallback(() => {
     client.disconnect();
     clearStoredSessionCredentials();
@@ -667,6 +711,7 @@ export function useLiveSession(
     clearRaisedHands,
     switchQuestion,
     addQuestion,
+    submitReflection,
     lastSessionCommand,
     leaveRoom,
     clearError,

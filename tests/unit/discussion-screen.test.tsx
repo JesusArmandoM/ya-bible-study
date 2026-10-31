@@ -41,6 +41,7 @@ const DEFAULT_DISCUSSION_STATE: SessionDiscussionState = {
       estimatedMinutes: 8,
     },
   ],
+  reflections: [],
 };
 
 function makeSession(
