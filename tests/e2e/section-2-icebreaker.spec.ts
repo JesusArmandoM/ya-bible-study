@@ -397,7 +397,7 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
       );
       await pageLeader.getByTestId('icebreaker-advance-cta').click();
       for (const page of [pageLeader, pageParticipant]) {
-        await expect(page.getByTestId('section-placeholder')).toBeVisible();
+        await expect(page.getByTestId('gospel-reading-screen')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(
           'SECTION 3 OF 5',
         );

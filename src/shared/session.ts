@@ -1,5 +1,7 @@
 import type { SanctuaryRole } from './health.js';
 import type {
+  GospelReadingSection,
+  GospelVerse,
   IcebreakerSection,
   OpeningPrayerSection,
   StudyDocument,
@@ -92,6 +94,22 @@ export interface SessionIcebreakerContent {
 }
 
 /**
+ * Sanitized, participant-visible Gospel Reading content synced with the study
+ * summary. Never carries the facilitator-facing `leaderLiturgicalContextNote`
+ * (that copy stays strictly on the locally held `StudyDocument`).
+ */
+export interface SessionGospelReadingContent {
+  title: string;
+  eyebrow: string;
+  durationLabel: string;
+  citation: string;
+  liturgicalLabel: string;
+  /** Complete Gospel proclamation read aloud by the chosen Participant. */
+  fullText: string;
+  verses: GospelVerse[];
+}
+
+/**
  * Sanitized, title/meta-only study summary synced to every client via the
  * leader-gated `load_study` command. Never carries pastoral/facilitator fields
  * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
@@ -108,12 +126,15 @@ export interface SessionStudySummary {
   openingPrayer?: SessionOpeningPrayerContent | null;
   /** Participant-visible Icebreaker copy (additive in protocol v3). */
   icebreaker?: SessionIcebreakerContent | null;
+  /** Participant-visible Gospel Reading copy (additive in protocol v3). */
+  gospelReading?: SessionGospelReadingContent | null;
 }
 
 export const SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH = 120;
 export const SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH = 200;
 export const SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH = 2000;
 export const SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH = 1000;
+export const SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH = 10_000;
 export const SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES = 1;
 export const SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES = 180;
 
@@ -201,6 +222,27 @@ export function toSessionIcebreakerContent(
 }
 
 /**
+ * Projects the Gospel Reading section onto the participant-visible synced
+ * content. Explicitly excludes the facilitator-facing `leaderLiturgicalContextNote`.
+ */
+export function toSessionGospelReadingContent(
+  section: GospelReadingSection,
+): SessionGospelReadingContent {
+  return {
+    title: section.title,
+    eyebrow: section.eyebrow,
+    durationLabel: section.durationLabel,
+    citation: section.citation,
+    liturgicalLabel: section.liturgicalLabel,
+    fullText: section.fullText,
+    verses: section.verses.map((v) => ({
+      verseNumber: v.verseNumber,
+      text: v.text,
+    })),
+  };
+}
+
+/**
  * Projects a full `StudyDocument` onto the sanitized session study summary
  * shared with Participants over `/ws` snapshots.
  */
@@ -215,6 +257,7 @@ export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
     estimatedMinutes: doc.estimatedMinutes,
     openingPrayer: toSessionOpeningPrayerContent(doc.openingPrayer),
     icebreaker: toSessionIcebreakerContent(doc.icebreaker),
+    gospelReading: toSessionGospelReadingContent(doc.gospelReading),
   };
 }
 
@@ -371,6 +414,96 @@ export function normalizeSessionIcebreakerContent(
 }
 
 /**
+ * Allow-list validation for a present `gospelReading` payload. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`. Unknown keys (e.g. smuggled
+ * `leaderLiturgicalContextNote` / `keyLines`) are dropped by the explicit field
+ * projection.
+ */
+export function normalizeSessionGospelReadingContent(
+  raw: unknown,
+): SessionGospelReadingContent | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const eyebrow = normalizeBoundedSummaryString(
+    record.eyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const durationLabel = normalizeBoundedSummaryString(
+    record.durationLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const citation = normalizeBoundedSummaryString(
+    record.citation,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const liturgicalLabel = normalizeBoundedSummaryString(
+    record.liturgicalLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const fullText = normalizeBoundedPrayerText(
+    record.fullText,
+    SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH,
+  );
+
+  if (
+    title === null ||
+    eyebrow === null ||
+    durationLabel === null ||
+    citation === null ||
+    liturgicalLabel === null ||
+    fullText === null
+  ) {
+    return null;
+  }
+
+  if (!Array.isArray(record.verses) || record.verses.length === 0) {
+    return null;
+  }
+
+  const verses: GospelVerse[] = [];
+  for (const item of record.verses) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return null;
+    }
+    const verseObj = item as Record<string, unknown>;
+    const verseNumber = verseObj.verseNumber;
+    if (
+      typeof verseNumber !== 'number' ||
+      !Number.isInteger(verseNumber) ||
+      verseNumber <= 0
+    ) {
+      return null;
+    }
+    const text = normalizeBoundedPrayerText(
+      verseObj.text,
+      SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH,
+    );
+    if (text === null) {
+      return null;
+    }
+    verses.push({ verseNumber, text });
+  }
+
+  return {
+    title,
+    eyebrow,
+    durationLabel,
+    citation,
+    liturgicalLabel,
+    fullText,
+    verses,
+  };
+}
+
+/**
  * Validates and normalizes an inbound `load_study` summary. Returns `null`
  * when any field is missing, empty, or exceeds its bound so the server can
  * reject the frame with `INVALID_MESSAGE`.
@@ -454,6 +587,19 @@ export function normalizeSessionStudySummary(
     }
   }
 
+  /**
+   * Protocol v3 (bounded additive): a missing `gospelReading` stays valid and
+   * normalizes to `null`; a present-but-invalid payload rejects the frame with
+   * `INVALID_MESSAGE`.
+   */
+  let gospelReading: SessionGospelReadingContent | null = null;
+  if (record.gospelReading !== undefined && record.gospelReading !== null) {
+    gospelReading = normalizeSessionGospelReadingContent(record.gospelReading);
+    if (gospelReading === null) {
+      return null;
+    }
+  }
+
   return {
     title,
     subtitle,
@@ -464,6 +610,7 @@ export function normalizeSessionStudySummary(
     estimatedMinutes,
     openingPrayer,
     icebreaker,
+    gospelReading,
   };
 }
 

@@ -312,7 +312,7 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
         'Continue to Section 2 →',
       );
       await pageLeader.getByTestId('prayer-advance-cta').click();
-      await expect(pageLeader.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 5',
       );

@@ -1064,16 +1064,21 @@ export class LiveSessionStore {
         return;
       }
 
+      const isOpenSection =
+        session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_3_reading';
       if (
         session.status !== 'in_progress' ||
-        session.currentSectionId !== 'section_1_prayer' ||
+        !isOpenSection ||
         !session.volunteerTurn ||
         session.volunteerTurn.completedAt != null
       ) {
         this.sendError(
           socket,
           'INVALID_STATE_TRANSITION',
-          'A volunteer can only be chosen while the Opening Prayer turn is open.',
+          session.currentSectionId === 'section_3_reading'
+            ? 'A volunteer can only be chosen while the Gospel Reading turn is open.'
+            : 'A volunteer can only be chosen while the Opening Prayer turn is open.',
           requestId,
         );
         return;
@@ -1100,15 +1105,20 @@ export class LiveSessionStore {
        * `collecting_hands` and `assigned` alike — it completes the turn but
        * never revokes `selectedMemberId` (which may legitimately stay null).
        */
+      const isOpenSection =
+        session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_3_reading';
       if (
         session.status !== 'in_progress' ||
-        session.currentSectionId !== 'section_1_prayer' ||
+        !isOpenSection ||
         !session.volunteerTurn
       ) {
         this.sendError(
           socket,
           'INVALID_STATE_TRANSITION',
-          'The Opening Prayer turn can only be completed during the Opening Prayer section.',
+          session.currentSectionId === 'section_3_reading'
+            ? 'The Gospel Reading turn can only be completed during the Gospel Reading section.'
+            : 'The Opening Prayer turn can only be completed during the Opening Prayer section.',
           requestId,
         );
         return;
@@ -1117,7 +1127,9 @@ export class LiveSessionStore {
         this.sendError(
           socket,
           'INVALID_STATE_TRANSITION',
-          'The Opening Prayer turn is already completed.',
+          session.currentSectionId === 'section_3_reading'
+            ? 'The Gospel Reading turn is already completed.'
+            : 'The Opening Prayer turn is already completed.',
           requestId,
         );
         return;
@@ -1156,6 +1168,19 @@ export class LiveSessionStore {
         return;
       }
 
+      if (
+        session.currentSectionId === 'section_3_reading' &&
+        session.volunteerTurn?.completedAt == null
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The Gospel Reading turn must be completed before advancing.',
+          requestId,
+        );
+        return;
+      }
+
       const nextIndex = session.currentSectionIndex + 1;
       const nextSectionId = STUDY_SECTION_IDS[nextIndex];
       if (!nextSectionId) {
@@ -1171,13 +1196,14 @@ export class LiveSessionStore {
       session.currentSectionIndex = nextIndex;
       session.currentSectionId = nextSectionId;
       /**
-       * Entering the Icebreaker opens a fresh open-share hand-raise turn
-       * (count-only; reserved `candidate*` / `selected*` / `completed*` seams
-       * stay `null` and untouched). Every other advance clears the turn.
+       * Entering the Icebreaker opens a fresh open-share hand-raise turn.
+       * Entering the Gospel Reading opens a fresh gated-reading turn.
+       * Advancing into Section 4 (or Section 5) clears the turn.
        */
       session.volunteerTurn =
-        nextSectionId === 'section_2_icebreaker'
-          ? createVolunteerTurnForSection('section_2_icebreaker')
+        nextSectionId === 'section_2_icebreaker' ||
+        nextSectionId === 'section_3_reading'
+          ? createVolunteerTurnForSection(nextSectionId)
           : null;
       this.cancelRandomExpiryTimer(session);
       session.lastActivityAt = currentNow;
@@ -1251,7 +1277,9 @@ export class LiveSessionStore {
         socket,
         'UNAUTHORIZED_MEMBER',
         command === 'complete_turn'
-          ? 'Only the Participant bound to this connection can complete the Opening Prayer turn.'
+          ? session.currentSectionId === 'section_3_reading'
+            ? 'Only the Participant bound to this connection can complete the Gospel Reading turn.'
+            : 'Only the Participant bound to this connection can complete the Opening Prayer turn.'
           : 'Only the Participant bound to this connection can raise or lower a hand.',
         requestId,
       );
@@ -1259,16 +1287,21 @@ export class LiveSessionStore {
     }
 
     if (command === 'complete_turn') {
-      // (2) state gate: an open Section 1 volunteer turn must exist.
+      const isTurnSection =
+        session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_3_reading';
+      // (2) state gate: an open Section 1 or Section 3 volunteer turn must exist.
       if (
         session.status !== 'in_progress' ||
-        session.currentSectionId !== 'section_1_prayer' ||
+        !isTurnSection ||
         !session.volunteerTurn
       ) {
         this.sendError(
           socket,
           'INVALID_STATE_TRANSITION',
-          'The Opening Prayer turn can only be completed during the Opening Prayer section.',
+          session.currentSectionId === 'section_3_reading'
+            ? 'The Gospel Reading turn can only be completed during the Gospel Reading section.'
+            : 'The Opening Prayer turn can only be completed during the Opening Prayer section.',
           requestId,
         );
         return;
@@ -1279,7 +1312,9 @@ export class LiveSessionStore {
         this.sendError(
           socket,
           'UNAUTHORIZED_MEMBER',
-          'Only the chosen volunteer can complete the Opening Prayer turn.',
+          session.currentSectionId === 'section_3_reading'
+            ? 'Only the chosen volunteer can complete the Gospel Reading turn.'
+            : 'Only the chosen volunteer can complete the Opening Prayer turn.',
           requestId,
         );
         return;
@@ -1301,14 +1336,15 @@ export class LiveSessionStore {
     }
 
     /**
-     * Hand raising is section-scoped: the Opening Prayer turn or the
-     * Icebreaker open-share turn, and the turn on record must belong to the
-     * section currently in progress.
+     * Hand raising is section-scoped: the Opening Prayer turn, Icebreaker
+     * open-share turn, or Gospel Reading turn, and the turn on record must
+     * belong to the section currently in progress.
      */
     const handRaiseSectionId = session.currentSectionId;
     const isHandRaiseSection =
       handRaiseSectionId === 'section_1_prayer' ||
-      handRaiseSectionId === 'section_2_icebreaker';
+      handRaiseSectionId === 'section_2_icebreaker' ||
+      handRaiseSectionId === 'section_3_reading';
     if (
       session.status !== 'in_progress' ||
       !isHandRaiseSection ||
@@ -1318,7 +1354,7 @@ export class LiveSessionStore {
       this.sendError(
         socket,
         'INVALID_STATE_TRANSITION',
-        'Hands can only be raised during the Opening Prayer or Icebreaker sections.',
+        'Hands can only be raised during the Opening Prayer, Icebreaker, or Gospel Reading sections.',
         requestId,
       );
       return;
