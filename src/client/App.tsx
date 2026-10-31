@@ -7,6 +7,7 @@ import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholder
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
+import { SessionResilienceChip } from './components/session/SessionResilienceChip';
 import { ActiveSessionBanner } from './components/welcome/ActiveSessionBanner';
 import { LeaderAccessSheet } from './components/welcome/LeaderAccessSheet';
 import { ParticipantJoinSheet } from './components/welcome/ParticipantJoinSheet';
@@ -238,6 +239,15 @@ export function App({ sessionClient }: AppProps = {}) {
                 ) {
                   window.history.replaceState({}, '', '/');
                 }
+                setActiveSheet(null);
+                setSetupPanelOpen(true);
+                liveSession.leaveRoom();
+              }}
+            />
+
+            <SessionResilienceChip
+              sessionActive={Boolean(liveSession.session)}
+              onSessionGone={() => {
                 setActiveSheet(null);
                 setSetupPanelOpen(true);
                 liveSession.leaveRoom();
