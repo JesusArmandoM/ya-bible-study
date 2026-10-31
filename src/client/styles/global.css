@@ -2692,3 +2692,44 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/* Session resilience chip (wake lock + foreground resync status) */
+.session-resilience-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  min-height: 28px;
+  padding: 0.35rem 0.95rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-subtle);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-accent-emerald);
+  background: rgba(16, 185, 129, 0.08);
+  white-space: nowrap;
+}
+
+.session-resilience-chip[data-connection='reconnecting'] {
+  color: var(--color-accent-terracotta-icon);
+  background: rgba(154, 74, 56, 0.14);
+  border-color: var(--color-accent-terracotta);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .session-resilience-chip[data-connection='reconnecting'] {
+    animation: session-resilience-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes session-resilience-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
