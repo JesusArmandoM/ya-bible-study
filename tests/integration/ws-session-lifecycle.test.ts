@@ -484,6 +484,20 @@ describe('WebSocket live session room lifecycle integration', () => {
     );
     expect(participantSync.session.currentSectionId).toBe('section_1_prayer');
 
+    // Compat edit (section-1-chosen-volunteer-prayer-gate): the Section 1
+    // next_section gate now requires volunteerTurn.completedAt, so the leader
+    // completes the turn via override_turn first. All assertions unchanged.
+    leader2.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: claimed.leaderToken,
+      requestId: 'advance-sec-2-override',
+    });
+    await leader2.waitFor(
+      'session_updated',
+      (msg) => msg.command === 'override_turn',
+    );
+
     leader2.send({
       type: 'next_section',
       sessionCode: created.sessionCode,

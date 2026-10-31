@@ -441,6 +441,75 @@ export function applyClearHands(
   };
 }
 
+/**
+ * Derived volunteer-turn phase for the gated Section 1 prayer flow.
+ *
+ * - `collecting_hands`: nobody selected yet (`candidateMemberId` may still be
+ *   set by the reserved, unimplemented random-selection API).
+ * - `random_pending`: reserved for the future random-selection countdown —
+ *   a candidate is staged while `selectedMemberId`/`completedAt` stay null.
+ *   Unreachable in protocol v3 because no command stages candidates yet.
+ * - `assigned`: a volunteer is selected and the turn is not completed.
+ * - `turn_completed`: the turn is completed (`completedAt` set), whether or not
+ *   a volunteer was ever selected (leader override is allowed with no
+ *   selection).
+ */
+export type VolunteerTurnPhase =
+  | 'collecting_hands'
+  | 'random_pending'
+  | 'assigned'
+  | 'turn_completed';
+
+/** Pure helper: derives the {@link VolunteerTurnPhase} of a volunteer turn. */
+export function volunteerTurnPhase(
+  turn: VolunteerTurnState,
+): VolunteerTurnPhase {
+  if (turn.completedAt != null) {
+    return 'turn_completed';
+  }
+  if (turn.selectedMemberId != null) {
+    return 'assigned';
+  }
+  if (turn.candidateMemberId != null) {
+    return 'random_pending';
+  }
+  return 'collecting_hands';
+}
+
+/**
+ * Pure reducer: assigns the chosen volunteer for the current turn. Only
+ * `selectedMemberId` changes — `raisedHands`, `completedAt`, and the reserved
+ * `candidateMemberId`/`candidateExpiresAt` fields are left untouched.
+ */
+export function applySelectVolunteer(
+  turn: VolunteerTurnState,
+  memberId: string,
+): VolunteerTurnState {
+  return {
+    ...turn,
+    selectedMemberId: memberId,
+  };
+}
+
+/**
+ * Pure reducer: marks the turn complete (`completedAt` = `isoNow`) while
+ * preserving `selectedMemberId` (including `null` for a leader override with no
+ * selection). Completing an already-completed turn keeps the original
+ * `completedAt` (idempotent).
+ */
+export function applyCompleteTurn(
+  turn: VolunteerTurnState,
+  isoNow: string,
+): VolunteerTurnState {
+  if (turn.completedAt != null) {
+    return turn;
+  }
+  return {
+    ...turn,
+    completedAt: isoNow,
+  };
+}
+
 export type SessionErrorCode =
   | 'INVALID_MESSAGE'
   | 'INVALID_DISPLAY_NAME'
@@ -459,16 +528,19 @@ export type LeaderCommandType =
   | 'load_study'
   | 'start_study'
   | 'next_section'
+  | 'choose_volunteer'
+  | 'override_turn'
   | 'clear_hands'
   | 'close_session';
 
 /**
  * Protocol v3 (additive): `session_updated.command` widens to include the
- * participant self-service hand-raise commands. `close_session` stays excluded
- * because it ends the session without broadcasting `session_updated`.
+ * participant self-service hand-raise commands and the chosen volunteer's
+ * `complete_turn` completion. `close_session` stays excluded because it ends
+ * the session without broadcasting `session_updated`.
  */
 export type SessionUpdatedCommand = Exclude<
-  LeaderCommandType | 'raise_hand' | 'lower_hand',
+  LeaderCommandType | 'raise_hand' | 'lower_hand' | 'complete_turn',
   'close_session'
 >;
 
@@ -535,6 +607,21 @@ export type ClientWsMessage =
       requestId?: string;
     }
   | {
+      type: 'choose_volunteer';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      targetMemberId: string;
+      requestId?: string;
+    }
+  | {
+      type: 'override_turn';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
       type: 'raise_hand';
       sessionCode: string;
       memberId: string;
@@ -552,6 +639,12 @@ export type ClientWsMessage =
       leaderToken: string;
       memberId?: string;
       targetMemberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'complete_turn';
+      sessionCode: string;
+      memberId: string;
       requestId?: string;
     }
   | {

@@ -320,6 +320,27 @@ export function App({ sessionClient }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                  onChooseVolunteer={(targetMemberId) => {
+                    void liveSession.chooseVolunteer(targetMemberId).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onCompleteTurn={() => {
+                    void liveSession.completeTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onOverrideTurn={() => {
+                    void liveSession.overrideTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onNextSection={() => {
+                    void liveSession.nextSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  lastSessionCommand={liveSession.lastSessionCommand}
                 />
               ) : (
                 <SectionPlaceholderScreen

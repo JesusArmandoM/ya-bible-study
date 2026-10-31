@@ -10,6 +10,8 @@ import {
   SESSION_PROTOCOL_VERSION,
   STUDY_SECTION_IDS,
   applyClearHands,
+  applyCompleteTurn,
+  applySelectVolunteer,
   applySetHandRaised,
   createVolunteerTurnForSection,
   deriveInitials,
@@ -338,12 +340,15 @@ export class LiveSessionStore {
       case 'load_study':
       case 'start_study':
       case 'next_section':
+      case 'choose_volunteer':
+      case 'override_turn':
       case 'clear_hands':
       case 'close_session':
         this.handleLeaderCommand(socket, record.type, record, requestId);
         return;
       case 'raise_hand':
       case 'lower_hand':
+      case 'complete_turn':
         this.handleTurnCommand(socket, record.type, record, requestId);
         return;
       default:
@@ -978,6 +983,102 @@ export class LiveSessionStore {
       return;
     }
 
+    if (command === 'choose_volunteer') {
+      /**
+       * Leader-gated chosen-volunteer assignment (Section 1 gate). Target
+       * validation comes first (malformed request), then the turn state gate.
+       * Raised-hand membership is deliberately NOT required server-side so the
+       * future picker / roster-select flows reuse this command unchanged.
+       */
+      const rawTarget =
+        typeof record.targetMemberId === 'string'
+          ? record.targetMemberId.trim()
+          : '';
+      if (rawTarget.length === 0) {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'targetMemberId must be a member ID string.',
+          requestId,
+        );
+        return;
+      }
+      const targetMember = session.members.get(rawTarget);
+      if (!targetMember || targetMember.role !== 'Participant') {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'targetMemberId must identify a Participant member of this session.',
+          requestId,
+        );
+        return;
+      }
+
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionId !== 'section_1_prayer' ||
+        !session.volunteerTurn ||
+        session.volunteerTurn.completedAt != null
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'A volunteer can only be chosen while the Opening Prayer turn is open.',
+          requestId,
+        );
+        return;
+      }
+
+      session.lastActivityAt = currentNow;
+      if (session.volunteerTurn.selectedMemberId === rawTarget) {
+        // Same-target re-choose: idempotent no-op broadcast.
+        this.broadcastSessionUpdated(session, command, socket, requestId);
+        return;
+      }
+      // Different target (or first selection): revoke-then-assign.
+      session.volunteerTurn = applySelectVolunteer(
+        session.volunteerTurn,
+        rawTarget,
+      );
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
+    if (command === 'override_turn') {
+      /**
+       * Leader "mark done" override (the never-deadlock guarantee): valid from
+       * `collecting_hands` and `assigned` alike — it completes the turn but
+       * never revokes `selectedMemberId` (which may legitimately stay null).
+       */
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionId !== 'section_1_prayer' ||
+        !session.volunteerTurn
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The Opening Prayer turn can only be completed during the Opening Prayer section.',
+          requestId,
+        );
+        return;
+      }
+      if (session.volunteerTurn.completedAt != null) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The Opening Prayer turn is already completed.',
+          requestId,
+        );
+        return;
+      }
+
+      session.volunteerTurn = applyCompleteTurn(session.volunteerTurn, isoNow);
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
     if (command === 'next_section') {
       if (
         session.status !== 'in_progress' ||
@@ -987,6 +1088,19 @@ export class LiveSessionStore {
           socket,
           'INVALID_STATE_TRANSITION',
           'Study must be in progress before advancing sections.',
+          requestId,
+        );
+        return;
+      }
+
+      if (
+        session.currentSectionId === 'section_1_prayer' &&
+        session.volunteerTurn?.completedAt == null
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The Opening Prayer turn must be completed before advancing.',
           requestId,
         );
         return;
@@ -1013,14 +1127,15 @@ export class LiveSessionStore {
   }
 
   /**
-   * Participant self-service hand-raise commands (protocol v3). Membership is
-   * proven by the live socket binding — the frame's `memberId` must match the
-   * member bound to this socket (unbound, spoofed, or Study Leader callers get
+   * Participant self-service hand-raise commands (protocol v3) plus the chosen
+   * volunteer's `complete_turn` completion. Membership is proven by the live
+   * socket binding — the frame's `memberId` must match the member bound to this
+   * socket (unbound, spoofed, or Study Leader callers get
    * `UNAUTHORIZED_MEMBER`).
    */
   private handleTurnCommand(
     socket: SessionPeerSocket,
-    command: 'raise_hand' | 'lower_hand',
+    command: 'raise_hand' | 'lower_hand' | 'complete_turn',
     record: Record<string, unknown>,
     requestId?: string,
   ): void {
@@ -1054,7 +1169,9 @@ export class LiveSessionStore {
       this.sendError(
         socket,
         'INVALID_MESSAGE',
-        'A memberId string is required for hand-raise commands.',
+        command === 'complete_turn'
+          ? 'A memberId string is required for complete_turn.'
+          : 'A memberId string is required for hand-raise commands.',
         requestId,
       );
       return;
@@ -1074,9 +1191,53 @@ export class LiveSessionStore {
       this.sendError(
         socket,
         'UNAUTHORIZED_MEMBER',
-        'Only the Participant bound to this connection can raise or lower a hand.',
+        command === 'complete_turn'
+          ? 'Only the Participant bound to this connection can complete the Opening Prayer turn.'
+          : 'Only the Participant bound to this connection can raise or lower a hand.',
         requestId,
       );
+      return;
+    }
+
+    if (command === 'complete_turn') {
+      // (2) state gate: an open Section 1 volunteer turn must exist.
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionId !== 'section_1_prayer' ||
+        !session.volunteerTurn
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The Opening Prayer turn can only be completed during the Opening Prayer section.',
+          requestId,
+        );
+        return;
+      }
+
+      // (3) identity gate: only the chosen volunteer may complete the turn.
+      if (session.volunteerTurn.selectedMemberId !== binding.memberId) {
+        this.sendError(
+          socket,
+          'UNAUTHORIZED_MEMBER',
+          'Only the chosen volunteer can complete the Opening Prayer turn.',
+          requestId,
+        );
+        return;
+      }
+
+      // (4) already completed: idempotent no-op broadcast.
+      if (session.volunteerTurn.completedAt != null) {
+        this.broadcastSessionUpdated(session, command, socket, requestId);
+        return;
+      }
+
+      session.volunteerTurn = applyCompleteTurn(
+        session.volunteerTurn,
+        new Date(this.now()).toISOString(),
+      );
+      session.lastActivityAt = this.now();
+      this.broadcastSessionUpdated(session, command, socket, requestId);
       return;
     }
 
