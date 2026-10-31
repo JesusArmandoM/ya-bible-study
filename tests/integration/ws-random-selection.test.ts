@@ -534,6 +534,12 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
 
     // Candidate disconnect never revokes: state persists, marked disconnected.
     await p1.close();
+    await leader.waitFor(
+      'roster_updated',
+      (msg) =>
+        msg.session.members.find((m) => m.memberId === j1.memberId)
+          ?.connectionStatus === 'disconnected',
+    );
     leader.send({
       type: 'clear_hands',
       sessionCode: created.sessionCode,
