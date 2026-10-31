@@ -403,16 +403,52 @@ describe('WebSocket Section 2 icebreaker open-share turn (protocol v3)', () => {
       (m) => m.command === 'next_section' && m.requestId === 'next-2',
     );
     expect(sec3.session.currentSectionId).toBe('section_3_reading');
-    expect(sec3.session.volunteerTurn).toBeNull();
+    expect(sec3.session.volunteerTurn).toEqual({
+      sectionId: 'section_3_reading',
+      mode: 'gated_reading',
+      raisedHands: [],
+      candidateMemberId: null,
+      candidateExpiresAt: null,
+      selectedMemberId: null,
+      completedAt: null,
+    });
 
-    // Raises in Section 3 are back to INVALID_STATE_TRANSITION.
+    // In Section 3, hand raises succeed.
     raiseHand(p1, created.sessionCode, j1.memberId, 'raise-sec-3');
+    await p1.waitFor('session_updated', (m) => m.command === 'raise_hand');
+
+    // Section 3 advance gate requires turn completion; leader overrides.
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'override-sec-3',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'override_turn');
+
+    leader.send({
+      type: 'next_section',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'next-3',
+    });
+    const sec4 = await leader.waitFor(
+      'session_updated',
+      (m) => m.command === 'next_section' && m.requestId === 'next-3',
+    );
+    expect(sec4.session.currentSectionId).toBe('section_4_discussion');
+    expect(sec4.session.volunteerTurn).toBeNull();
+
+    // Raises in Section 4 are back to INVALID_STATE_TRANSITION.
+    raiseHand(p1, created.sessionCode, j1.memberId, 'raise-sec-4');
     const rejected = await p1.waitFor('session_error');
-    expect(rejected.requestId).toBe('raise-sec-3');
+    expect(rejected.requestId).toBe('raise-sec-4');
     expect(rejected.code).toBe('INVALID_STATE_TRANSITION');
-    lowerHand(p1, created.sessionCode, j1.memberId, 'lower-sec-3');
+    lowerHand(p1, created.sessionCode, j1.memberId, 'lower-sec-4');
     const lowerRejected = await p1.waitFor('session_error');
-    expect(lowerRejected.requestId).toBe('lower-sec-3');
+    expect(lowerRejected.requestId).toBe('lower-sec-4');
     expect(lowerRejected.code).toBe('INVALID_STATE_TRANSITION');
   });
 

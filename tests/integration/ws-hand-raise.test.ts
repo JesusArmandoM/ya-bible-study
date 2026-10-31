@@ -494,7 +494,7 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
     );
     expect(loweredIn2.session.volunteerTurn?.raisedHands).toEqual([]);
 
-    // Leaving Section 2 clears the turn and raises reject again.
+    // Leaving Section 2 into Section 3 creates the fresh Section 3 reading turn.
     leader.send({
       type: 'next_section',
       sessionCode: created.sessionCode,
@@ -502,11 +502,44 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
       memberId: created.memberId,
       requestId: 'next-2',
     });
-    const cleared = await leader.waitFor(
+    const sec3 = await leader.waitFor(
       'session_updated',
       (m) => m.command === 'next_section',
     );
-    expect(cleared.session.currentSectionId).not.toBe('section_2_icebreaker');
+    expect(sec3.session.currentSectionId).toBe('section_3_reading');
+    expect(sec3.session.volunteerTurn).toEqual({
+      sectionId: 'section_3_reading',
+      mode: 'gated_reading',
+      raisedHands: [],
+      candidateMemberId: null,
+      candidateExpiresAt: null,
+      selectedMemberId: null,
+      completedAt: null,
+    });
+
+    // Section 3 advance gate requires turn completion; leader overrides.
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'override-sec-3',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'override_turn');
+
+    // Leaving Section 3 into Section 4 clears the turn and raises reject again.
+    leader.send({
+      type: 'next_section',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'next-3',
+    });
+    const cleared = await leader.waitFor(
+      'session_updated',
+      (m) => m.command === 'next_section' && m.requestId === 'next-3',
+    );
+    expect(cleared.session.currentSectionId).toBe('section_4_discussion');
     expect(cleared.session.volunteerTurn).toBeNull();
 
     raiseHand(p1, created.sessionCode, j1.memberId, 'raise-after-next');

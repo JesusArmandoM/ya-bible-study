@@ -5,11 +5,30 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `section-3-gospel-reading-turn`
+- Current next ready feature: `section-4-leader-question-queue-notes`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
+
+### Session 029
+
+- Date: `2026-10-31`
+- Goal: Implement and self-verify `section-3-gospel-reading-turn` per `docs/specs/section-3-gospel-reading-turn.md`.
+- Completed:
+  - Wire protocol & projection: Added `SessionGospelReadingContent` in `src/shared/session.ts` at protocol v3, bounded normalization (`SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH = 10_000`), and snapshot projection isolating `leaderLiturgicalContextNote` exclusively to the Study Leader.
+  - Server turn lifecycle & gating: In `src/server/sessionStore.ts`, widened `raise_hand`, `lower_hand`, `choose_volunteer`, `override_turn`, and `complete_turn` to `section_3_reading`. Initialized volunteer turn via `createVolunteerTurnForSection('section_3_reading')` when entering Section 3 and cleared it (`volunteerTurn = null`) on advancing into Section 4. Enforced server-side gating in `next_section` rejecting advancement with `INVALID_STATE_TRANSITION` (`'The Gospel Reading turn must be completed before advancing.'`) until `volunteerTurn.completedAt` is set.
+  - Client UI & interactions: Created Section 3 components under `src/client/components/reading/` (`GospelReadingScreen`, `ScriptureCard`, `ReadAloudOrb`, `LeaderReaderCard`, `ParticipantRosterStrip`, `ReadingDoneView`) matching `ux/7` and `ux/8` (using Participant domain copy). Implemented Gospel-only Scripture card (DESIGN override #2) with bounded scroll (max-height 280px) ensuring positive vertical separation with the Read aloud orb on 375x812 mobile viewports, Sanctuary indigo (`#6E75F5`) Read aloud orb with optimistic ripple feedback and tactile haptics, reader counter (`0 / N`), direct roster avatar assignment with 2-letter centered initials (DESIGN override #4), 30s random volunteer countdown panel integration (`RandomSelectionPanel`), exclusive `YOU WERE CHOSEN` view with embedded Scripture card and gold `Done Reading` CTA, locked leader advance bar morphing into gold `Begin Discussion →` CTA, and leader override unlocking Section 4 advancement without deadlock. Routed `section_3_reading` in `src/client/App.tsx`.
+  - CSS layout & styling: Added Section 3 Midnight Sanctuary styles placed before `/* Session resilience chip` in `src/client/styles/global.css` to protect chip static assertions.
+- Verification run:
+  - Baseline `./init.sh`: passed exit code 0 (TypeScript check clean across 3 configs, Vitest 39 files / 365 tests passed, Vite production build clean).
+  - Vitest suites: `tests/unit/gospel-reading-content.test.ts` (12/12 passed), `tests/unit/gospel-reading-screen.test.tsx` (16/16 passed), `tests/integration/ws-gospel-reading-turn.test.ts` (6/6 passed), `tests/integration/ws-hand-raise.test.ts` (7/7 passed), `tests/integration/ws-icebreaker-hand-raise.test.ts` (5/5 passed).
+  - Playwright E2E: `PLAYWRIGHT_PORT=3301 npm run test:e2e` full suite passed all 51 tests (51/51 passed in 11.4m on mobile-chromium 390x844). Second consecutive run of `tests/e2e/section-3-gospel-reading-turn.spec.ts` passed 6/6 tests in 2.2m with zero leaks and zero flakiness.
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
+- Evidence captured: All test gates green; `section-3-gospel-reading-turn` marked `passing` in `feature_list.json`.
+- Files or artifacts updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/App.tsx`, `src/client/styles/global.css`, `src/client/components/reading/*`, `tests/unit/gospel-reading-content.test.ts`, `tests/unit/gospel-reading-screen.test.tsx`, `tests/integration/ws-gospel-reading-turn.test.ts`, `tests/integration/ws-hand-raise.test.ts`, `tests/integration/ws-icebreaker-hand-raise.test.ts`, `tests/e2e/section-3-gospel-reading-turn.spec.ts`, `tests/e2e/section-2-icebreaker.spec.ts`, `tests/e2e/random-volunteer-picker-countdown.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Evidence captured: All test gates green; independent validator verdict: accept ($feature-validator); `section-3-gospel-reading-turn` marked `accepted` in `feature_list.json`.
+- Next best step: Publish `feature/section-3-gospel-reading-turn` (push + PR + merge into `main`), then proceed to `section-4-leader-question-queue-notes`.
 
 ### Session 028
 
@@ -54,7 +73,6 @@
 - Documented deviations: (1) `SessionResilienceChip` accepts optional injectable `client`/`wakeLockApi` props (defaults `getSharedSessionSocketClient()` / `navigator.wakeLock`) beyond the spec's `{ sessionActive, onSessionGone }` — purely for deterministic tests, no behavior change; (2) e2e Scenario 5 asserts the Welcome state for the resync-path client only — the closer's `session_closed` broadcast landing on the join sheet is pre-existing behavior outside this feature's scope; (3) e2e tests that click `Leave` (which clears `sessionStorage` without closing the room) stash leader credentials first and close via `closeSessionWith` in `finally` to avoid leaking sessions.
 - Known risk or unresolved issue: Wake-lock `denied`/`unsupported` (iOS Safari low-power mode, older browsers) is silent by design — the session stays fully usable but the screen may sleep; the resync path covers any resulting suspension. The 5s watchdog detects stalled connections, not offline queues — a fully offline client retries only on the next trigger (foreground/visibility/`session_updated`), per spec. Wave note: `random-volunteer-picker-countdown` / `section-2-icebreaker-flow` wave-mates must keep their diffs out of the five forbidden shared files above (this feature kept that contract).
 - Next best step: Run independent `$feature-validator` on `mobile-wake-lock-foreground-resync`; on `accept`, persist `accepted` and continue the wave with `random-volunteer-picker-countdown` / `section-2-icebreaker-flow`.
->>>>>>> origin/main
 
 ### Session 024
 

@@ -284,11 +284,17 @@
       "random-volunteer-picker-countdown",
       "section-2-icebreaker-flow"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Playwright test asserting Section 3 shows only Matthew 15:21-28 as main reading without multi-reading Mass tabs, verifies non-overlapping layout between Scripture card and 'Read aloud' orb on a 375x812 mobile viewport, and verifies exclusive 'Done Reading' gating before advancing to Section 4."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-31: Implemented Section 3 Gospel Reading turn per docs/specs/section-3-gospel-reading-turn.md. src/shared/session.ts adds SessionGospelReadingContent, bounded normalization toSessionGospelReadingContent (SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH = 10_000), and projection stripping leaderLiturgicalContextNote for participants. src/server/sessionStore.ts widens raise_hand/lower_hand, choose_volunteer, override_turn, and complete_turn to section_3_reading, creates the volunteer turn via createVolunteerTurnForSection('section_3_reading') on next_section into Section 3, clears volunteer turn on next_section into Section 4, and server-enforces gating rejecting next_section with INVALID_STATE_TRANSITION ('The Gospel Reading turn must be completed before advancing.') until completedAt is set. Client components under src/client/components/reading/ (GospelReadingScreen, ScriptureCard, ReadAloudOrb, LeaderReaderCard, ParticipantRosterStrip, ReadingDoneView) implement Scenarios 1–6: Gospel-only Scripture card (DESIGN override #2) with bounded scroll (max-height: 280px), non-overlapping mobile stack on 375x812 viewport, Sanctuary indigo (#6E75F5) Read aloud orb with optimistic ripple, 2-letter centered initials roster strip, Random volunteer countdown panel integration, exclusive YOU WERE CHOSEN view with Done Reading CTA, locked advance bar morphing into gold Begin Discussion → CTA, and leader override unlocking Section 4 advancement without deadlock.",
+      "2026-10-31: Unit and integration verification passed: tests/unit/gospel-reading-content.test.ts (12/12 passed), tests/unit/gospel-reading-screen.test.tsx (16/16 passed), tests/integration/ws-gospel-reading-turn.test.ts (6/6 passed), tests/integration/ws-hand-raise.test.ts (7/7 passed), tests/integration/ws-icebreaker-hand-raise.test.ts (5/5 passed). Baseline ./init.sh passed cleanly with 39 Vitest files / 365 tests passing, 0 typecheck errors across all 3 tsconfigs, and clean production Vite + tsc build.",
+      "2026-10-31: End-to-end Playwright verification passed: PLAYWRIGHT_PORT=3301 npx playwright test tests/e2e/section-3-gospel-reading-turn.spec.ts passed 6/6 scenarios (sole Gospel reading without Mass tabs, 375x812 non-overlapping mobile layout, Read aloud orb + avatar roster strip selection, 30s random selection countdown integration, exclusive Done Reading + gated advance into Section 4, facilitator liturgical context privacy + reload hydration + leader override). Full suite PLAYWRIGHT_PORT=3301 npm run test:e2e passed all 51 tests (51 passed in 11.4m on mobile-chromium 390x844). A second consecutive run of tests/e2e/section-3-gospel-reading-turn.spec.ts passed 6/6 tests in 2.2m with zero leaks and zero flakiness.",
+      "2026-10-31: Terminology invariant verified: grep -rn 'Assistant' src/ returned 0 matches (exit code 1).",
+      "2026-10-31: Independent validator verdict: accept ($feature-validator) — audited docs/specs/section-3-gospel-reading-turn.md and diff; verified ./init.sh (39 files / 365 tests exit 0, build exit 0), Playwright E2E full suite 51/51 tests passing, grep -rn \"Assistant\" src/ 0 matches, sole Gospel Reading without Mass tabs, 375x812 non-overlapping layout, server-enforced advance gate, secret & pastoral stripping, 0 findings."
+    ],
     "notes": "Follow ux/7. Reading - Leader.png, ux/8. Reading - Assistant.png, CONTEXT.md Gospel-only rule, and DESIGN.md override #2 & #4."
   },
   {
