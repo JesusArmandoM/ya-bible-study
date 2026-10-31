@@ -14,6 +14,7 @@ import { ActiveQuestionCard } from './ActiveQuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
 import { LeaderQuestionQueue } from './LeaderQuestionQueue';
 import { PastoralNotesDrawer } from './PastoralNotesDrawer';
+import { SubmitReflectionModal } from './SubmitReflectionModal';
 
 export interface DiscussionScreenProps {
   role: SanctuaryRole;
@@ -24,6 +25,11 @@ export interface DiscussionScreenProps {
   onSwitchQuestion: (questionId: string) => void | Promise<void>;
   onAddQuestion: (question: SessionDiscussionQuestion) => void | Promise<void>;
   onNextSection: () => void | Promise<void>;
+  onSubmitReflection?: (input: {
+    questionId: string;
+    content: string;
+    isAnonymous: boolean;
+  }) => void | Promise<void>;
 }
 
 export function DiscussionScreen({
@@ -33,10 +39,12 @@ export function DiscussionScreen({
   onSwitchQuestion,
   onAddQuestion,
   onNextSection,
+  onSubmitReflection,
 }: DiscussionScreenProps) {
   const setStage = useSacredStageStore((s) => s.setStage);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPastoralDrawerOpen, setIsPastoralDrawerOpen] = useState(false);
+  const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
 
   const isLeader = role === 'Study Leader';
 
@@ -49,6 +57,10 @@ export function DiscussionScreen({
   const questions = useMemo(
     () => discussionState?.questions ?? [],
     [discussionState?.questions],
+  );
+  const reflections = useMemo(
+    () => discussionState?.reflections ?? [],
+    [discussionState?.reflections],
   );
   const activeQuestionId = discussionState?.activeQuestionId ?? '';
 
@@ -98,6 +110,7 @@ export function DiscussionScreen({
           <LeaderQuestionQueue
             questions={questions}
             activeQuestionId={activeQuestionId}
+            reflections={reflections}
             onSwitchQuestion={(qId) => void onSwitchQuestion(qId)}
             onOpenAddModal={() => setIsAddModalOpen(true)}
             onNextQuestion={handleNextQuestion}
@@ -125,8 +138,21 @@ export function DiscussionScreen({
           question={activeQuestion}
           activeIndex={activeIndex}
           totalQuestions={questions.length}
+          reflections={reflections}
+          onOpenRespondModal={() => setIsRespondModalOpen(true)}
         />
       )}
+
+      <SubmitReflectionModal
+        isOpen={isRespondModalOpen}
+        onClose={() => setIsRespondModalOpen(false)}
+        onSubmit={async (input) => {
+          if (onSubmitReflection) {
+            await onSubmitReflection(input);
+          }
+        }}
+        question={activeQuestion}
+      />
     </div>
   );
 }

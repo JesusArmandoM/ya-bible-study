@@ -258,6 +258,14 @@ export interface TurnCommandInput {
   memberId?: string;
 }
 
+export interface SubmitReflectionInput {
+  sessionCode?: string;
+  memberId?: string;
+  questionId: string;
+  content: string;
+  isAnonymous?: boolean;
+}
+
 export interface SessionSocketClient {
   getWsUrl(): string;
   connect(): Promise<void>;
@@ -293,6 +301,9 @@ export interface SessionSocketClient {
    */
   sendTurnCommand?(
     input: TurnCommandInput,
+  ): Promise<Extract<ServerWsMessage, { type: 'session_updated' }>>;
+  submitReflection?(
+    input: SubmitReflectionInput,
   ): Promise<Extract<ServerWsMessage, { type: 'session_updated' }>>;
 }
 
@@ -788,6 +799,31 @@ export function createSessionSocketClient(
           type: input.type,
           sessionCode,
           memberId,
+        },
+        ['session_updated'],
+      );
+    },
+
+    submitReflection: async (input) => {
+      const sessionCode = input.sessionCode ?? credentials?.sessionCode ?? '';
+      const memberId = input.memberId ?? credentials?.memberId ?? '';
+      if (!sessionCode) {
+        throw new Error('submitReflection requires a sessionCode.');
+      }
+      if (!memberId) {
+        throw new Error('submitReflection requires a memberId.');
+      }
+      if (!input.questionId) {
+        throw new Error('submitReflection requires a questionId.');
+      }
+      return await sendRequest(
+        {
+          type: 'submit_reflection',
+          sessionCode,
+          memberId,
+          questionId: input.questionId,
+          content: input.content,
+          isAnonymous: input.isAnonymous ?? false,
         },
         ['session_updated'],
       );

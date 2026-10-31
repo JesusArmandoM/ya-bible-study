@@ -454,6 +454,11 @@ export function App({ sessionClient }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                  onSubmitReflection={(input) => {
+                    void liveSession.submitReflection(input).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                 />
               ) : (
                 <SectionPlaceholderScreen

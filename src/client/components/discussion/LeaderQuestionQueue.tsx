@@ -1,10 +1,14 @@
 import { motion } from 'motion/react';
-import type { SessionDiscussionQuestion } from '../../../shared/session';
+import type {
+  SessionDiscussionQuestion,
+  SessionReflection,
+} from '../../../shared/session';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
 
 export interface LeaderQuestionQueueProps {
   questions: SessionDiscussionQuestion[];
   activeQuestionId: string;
+  reflections?: SessionReflection[];
   onSwitchQuestion: (questionId: string) => void;
   onOpenAddModal: () => void;
   onNextQuestion: () => void;
@@ -78,6 +82,7 @@ function PlusIcon() {
 export function LeaderQuestionQueue({
   questions,
   activeQuestionId,
+  reflections = [],
   onSwitchQuestion,
   onOpenAddModal,
   onNextQuestion,
@@ -93,6 +98,14 @@ export function LeaderQuestionQueue({
       <div className="queue-cards-stack">
         {questions.map((q) => {
           const isActive = q.id === activeQuestionId;
+          const responseCount = reflections.filter((r) => r.questionId === q.id).length;
+          const responseText =
+            responseCount > 0
+              ? `${responseCount} ${responseCount === 1 ? 'response' : 'responses'}`
+              : isActive
+                ? 'Active'
+                : '0 responses';
+
           return (
             <motion.article
               key={q.id}
@@ -120,9 +133,12 @@ export function LeaderQuestionQueue({
 
                 <div className="queue-card-meta">
                   <div className="meta-indicator">
-                    <SpeechBubbleIcon isActive={isActive} />
-                    <span className={isActive ? 'meta-active' : 'meta-muted'}>
-                      {isActive ? 'Active' : '0 responses'}
+                    <SpeechBubbleIcon isActive={isActive || responseCount > 0} />
+                    <span
+                      className={isActive || responseCount > 0 ? 'meta-active' : 'meta-muted'}
+                      data-testid={`question-response-count-${q.id}`}
+                    >
+                      {responseText}
                     </span>
                   </div>
 

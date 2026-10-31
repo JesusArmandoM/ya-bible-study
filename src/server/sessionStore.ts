@@ -25,6 +25,7 @@ import {
   isValidSessionCode,
   normalizeDisplayName,
   normalizeLeaderPin,
+  normalizeReflectionContent,
   normalizeSessionCode,
   normalizeSessionDiscussionQuestion,
   normalizeSessionStudySummary,
@@ -40,6 +41,7 @@ import {
   type SessionDiscussionQuestion,
   type SessionDiscussionState,
   type SessionErrorCode,
+  type SessionReflection,
   type SessionStudySummary,
   type SessionUpdatedCommand,
   type StudySectionId,
@@ -217,6 +219,7 @@ function toPublicDiscussionState(
   return {
     activeQuestionId: state.activeQuestionId,
     questions: state.questions.map((q) => ({ ...q })),
+    reflections: (state.reflections ?? []).map((r) => ({ ...r })),
   };
 }
 
@@ -407,6 +410,9 @@ export class LiveSessionStore {
       case 'lower_hand':
       case 'complete_turn':
         this.handleTurnCommand(socket, record.type, record, requestId);
+        return;
+      case 'submit_reflection':
+        this.handleSubmitReflection(socket, record, requestId);
         return;
       default:
         this.sendError(
@@ -1344,11 +1350,13 @@ export class LiveSessionStore {
               ...q,
               number: idx + 1,
             })),
+            reflections: [],
           };
         } else {
           session.discussionState = {
             activeQuestionId: '',
             questions: [],
+            reflections: [],
           };
         }
       }
@@ -1516,6 +1524,145 @@ export class LiveSessionStore {
     );
     session.lastActivityAt = this.now();
     this.broadcastSessionUpdated(session, command, socket, requestId);
+  }
+
+  /**
+   * Participant-submitted reflection to the Section 4 Deep Analysis feed.
+   * Authenticated via socket binding. Masks author identity for anonymous
+   * submissions and broadcasts full snapshot to all connected clients.
+   */
+  private handleSubmitReflection(
+    socket: SessionPeerSocket,
+    record: Record<string, unknown>,
+    requestId?: string,
+  ): void {
+    this.sweepExpiredSessions();
+
+    const sessionCode = normalizeSessionCode(record.sessionCode);
+    if (!isValidSessionCode(sessionCode)) {
+      this.sendError(
+        socket,
+        'INVALID_SESSION_CODE',
+        'Enter a valid 6-character session code.',
+        requestId,
+      );
+      return;
+    }
+
+    const session = this.sessions.get(sessionCode);
+    if (!session) {
+      this.sendError(
+        socket,
+        'SESSION_NOT_FOUND',
+        `No active Bible study session found for code "${sessionCode}".`,
+        requestId,
+      );
+      return;
+    }
+
+    const rawMemberId =
+      typeof record.memberId === 'string' ? record.memberId.trim() : '';
+    if (rawMemberId.length === 0) {
+      this.sendError(
+        socket,
+        'INVALID_MESSAGE',
+        'A memberId string is required to submit a reflection.',
+        requestId,
+      );
+      return;
+    }
+
+    const binding = this.socketBindings.get(socket);
+    const boundMember = binding
+      ? session.members.get(binding.memberId)
+      : undefined;
+    if (
+      !binding ||
+      binding.sessionCode !== session.sessionCode ||
+      !boundMember ||
+      rawMemberId !== binding.memberId
+    ) {
+      this.sendError(
+        socket,
+        'UNAUTHORIZED_MEMBER',
+        'Only the member bound to this connection can submit a reflection.',
+        requestId,
+      );
+      return;
+    }
+
+    if (
+      session.status !== 'in_progress' ||
+      session.currentSectionId !== 'section_4_discussion' ||
+      !session.discussionState
+    ) {
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'Reflections can only be submitted during the Deep Analysis discussion.',
+        requestId,
+      );
+      return;
+    }
+
+    const rawQuestionId =
+      typeof record.questionId === 'string' ? record.questionId.trim() : '';
+    if (rawQuestionId.length === 0) {
+      this.sendError(
+        socket,
+        'INVALID_MESSAGE',
+        'A valid questionId is required.',
+        requestId,
+      );
+      return;
+    }
+
+    const questionExists = session.discussionState.questions.some(
+      (q) => q.id === rawQuestionId,
+    );
+    if (!questionExists) {
+      this.sendError(
+        socket,
+        'INVALID_MESSAGE',
+        'Question ID does not exist in the active discussion queue.',
+        requestId,
+      );
+      return;
+    }
+
+    const normalizedContent = normalizeReflectionContent(record.content);
+    if (!normalizedContent) {
+      this.sendError(
+        socket,
+        'INVALID_MESSAGE',
+        'Reflection content must be between 1 and 1000 characters.',
+        requestId,
+      );
+      return;
+    }
+
+    const isAnonymous = record.isAnonymous === true;
+    const currentNow = this.now();
+    const isoNow = new Date(currentNow).toISOString();
+    const reflectionId = this.generateMemberId();
+
+    const reflection: SessionReflection = {
+      id: reflectionId,
+      questionId: rawQuestionId,
+      authorDisplayName: isAnonymous ? 'Anonymous' : boundMember.displayName,
+      authorInitials: isAnonymous ? '?' : boundMember.initials,
+      avatarPalette: isAnonymous ? 'indigo' : boundMember.avatarPalette,
+      content: normalizedContent,
+      createdAt: isoNow,
+      isAnonymous,
+    };
+
+    if (!session.discussionState.reflections) {
+      session.discussionState.reflections = [];
+    }
+    session.discussionState.reflections.push(reflection);
+    session.lastActivityAt = currentNow;
+    this.broadcastSessionUpdated(session, 'submit_reflection', socket, requestId);
   }
 
   /**

@@ -21,8 +21,10 @@ import {
   isValidSessionCode,
   normalizeLeaderPin,
   normalizeSessionCode,
+  toSessionStudySummary,
   type ServerWsMessage,
 } from '../../src/shared/session';
+import { getDefaultStudyDocument } from '../../src/server/studies/greatIsYourFaithSeed';
 
 class InMemoryStorage implements StorageLike {
   private readonly store = new Map<string, string>();
@@ -738,3 +740,66 @@ describe('sessionSocket random-selection leader command framing (protocol v3, ad
     store.dispose();
   });
 });
+
+describe('sessionSocket reflection submission (protocol v3, additive)', () => {
+  it('frames submit_reflection and resolves on session_updated', async () => {
+    const store = new LiveSessionStore({
+      sweepIntervalMs: false,
+    });
+    const leaderClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+    const participantClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+
+    const created = await leaderClient.createSession({ displayName: 'Leader Armando' });
+    await participantClient.joinSession({
+      sessionCode: created.sessionCode,
+      displayName: 'Mary Lopez',
+    });
+    await leaderClient.sendLeaderCommand({
+      type: 'load_study',
+      study: toSessionStudySummary(getDefaultStudyDocument()),
+    });
+    await leaderClient.sendLeaderCommand({ type: 'start_study' });
+
+    // Advance through turns to Section 4
+    await leaderClient.sendLeaderCommand({ type: 'override_turn' });
+    await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s2
+    await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s3
+    await leaderClient.sendLeaderCommand({ type: 'override_turn' });
+    const s4 = await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s4
+
+    if (s4.type !== 'session_updated') {
+      throw new Error('next_section must resolve on session_updated.');
+    }
+    expect(s4.session.currentSectionId).toBe('section_4_discussion');
+    const qId = s4.session.discussionState?.activeQuestionId!;
+    expect(qId).toBeDefined();
+
+    // Submit reflection from participant
+    expect(participantClient.submitReflection).toBeDefined();
+    const result = await participantClient.submitReflection!({
+      questionId: qId,
+      content: 'She kept praying with deep trust.',
+      isAnonymous: false,
+    });
+
+    expect(result.type).toBe('session_updated');
+    expect(result.command).toBe('submit_reflection');
+    const reflections = result.session.discussionState?.reflections ?? [];
+    expect(reflections).toHaveLength(1);
+    expect(reflections[0]?.authorDisplayName).toBe('Mary Lopez');
+
+    await leaderClient.sendLeaderCommand({ type: 'close_session' });
+    leaderClient.disconnect();
+    participantClient.disconnect();
+    store.dispose();
+  });
+});
+

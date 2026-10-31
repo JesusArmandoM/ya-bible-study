@@ -123,11 +123,29 @@ export interface SessionDiscussionQuestion {
 }
 
 /**
+ * Participant-submitted reflection to the live Section 4 Deep Analysis feed.
+ * For anonymous submissions, `authorDisplayName` is strictly 'Anonymous',
+ * `authorInitials` is '?', and `avatarPalette` is 'indigo'; the submitter's
+ * real identity and memberId are never attached to this object.
+ */
+export interface SessionReflection {
+  id: string;
+  questionId: string;
+  authorDisplayName: string;
+  authorInitials: string;
+  avatarPalette: AvatarPalette;
+  content: string;
+  createdAt: string;
+  isAnonymous: boolean;
+}
+
+/**
  * Section 4 discussion queue & active question synchronization state.
  */
 export interface SessionDiscussionState {
   activeQuestionId: string;
   questions: SessionDiscussionQuestion[];
+  reflections: SessionReflection[];
 }
 
 /**
@@ -175,6 +193,8 @@ export const SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH = 1000;
 export const SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH = 10_000;
 export const SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES = 1;
 export const SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES = 180;
+export const SESSION_REFLECTION_CONTENT_MIN_LENGTH = 1;
+export const SESSION_REFLECTION_CONTENT_MAX_LENGTH = 1000;
 
 /** One raised hand in the volunteer turn queue (server-clock timestamp). */
 export interface RaisedHandEntry {
@@ -703,6 +723,25 @@ export function normalizeSessionDiscussionContent(
 }
 
 /**
+ * Bounded reflection text validation: trims leading/trailing whitespace,
+ * enforces length between 1 and 1000 characters, and preserves internal
+ * line breaks and paragraph structure. Returns `null` if invalid.
+ */
+export function normalizeReflectionContent(raw: unknown): string | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (
+    trimmed.length < SESSION_REFLECTION_CONTENT_MIN_LENGTH ||
+    trimmed.length > SESSION_REFLECTION_CONTENT_MAX_LENGTH
+  ) {
+    return null;
+  }
+  return trimmed;
+}
+
+/**
  * Validates and normalizes an inbound `load_study` summary. Returns `null`
  * when any field is missing, empty, or exceeds its bound so the server can
  * reject the frame with `INVALID_MESSAGE`.
@@ -1124,7 +1163,8 @@ export type SessionUpdatedCommand = Exclude<
   | 'raise_hand'
   | 'lower_hand'
   | 'complete_turn'
-  | 'random_expired',
+  | 'random_expired'
+  | 'submit_reflection',
   'close_session'
 >;
 
@@ -1266,6 +1306,15 @@ export type ClientWsMessage =
       type: 'complete_turn';
       sessionCode: string;
       memberId: string;
+      requestId?: string;
+    }
+  | {
+      type: 'submit_reflection';
+      sessionCode: string;
+      memberId: string;
+      questionId: string;
+      content: string;
+      isAnonymous?: boolean;
       requestId?: string;
     }
   | {
