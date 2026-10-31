@@ -26,6 +26,7 @@ import {
   normalizeDisplayName,
   normalizeLeaderPin,
   normalizeSessionCode,
+  normalizeSessionDiscussionQuestion,
   normalizeSessionStudySummary,
   volunteerTurnPhase,
   type AvatarPalette,
@@ -36,6 +37,8 @@ import {
   type PublicSessionMember,
   type ServerWsMessage,
   type SessionCloseReason,
+  type SessionDiscussionQuestion,
+  type SessionDiscussionState,
   type SessionErrorCode,
   type SessionStudySummary,
   type SessionUpdatedCommand,
@@ -78,6 +81,7 @@ interface InternalLiveSession {
   nextParticipantPaletteIndex: number;
   study: SessionStudySummary | null;
   volunteerTurn: VolunteerTurnState | null;
+  discussionState: SessionDiscussionState | null;
   members: Map<string, InternalSessionMember>;
   /** Single unref'd random-selection countdown expiry timer. */
   randomExpiryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -195,7 +199,24 @@ function toPublicSnapshot(
     members,
     study: session.study ? { ...session.study } : null,
     volunteerTurn: toPublicVolunteerTurn(session.volunteerTurn),
+    discussionState: toPublicDiscussionState(session.discussionState),
     protocolVersion: SESSION_PROTOCOL_VERSION,
+  };
+}
+
+/**
+ * Deep-copies the discussion state (including every question item) so the
+ * internal queue can never be mutated through a snapshot.
+ */
+function toPublicDiscussionState(
+  state: SessionDiscussionState | null,
+): SessionDiscussionState | null {
+  if (!state) {
+    return null;
+  }
+  return {
+    activeQuestionId: state.activeQuestionId,
+    questions: state.questions.map((q) => ({ ...q })),
   };
 }
 
@@ -377,6 +398,8 @@ export class LiveSessionStore {
       case 'retry_random':
       case 'confirm_random':
       case 'clear_hands':
+      case 'switch_question':
+      case 'add_question':
       case 'close_session':
         this.handleLeaderCommand(socket, record.type, record, requestId);
         return;
@@ -453,6 +476,7 @@ export class LiveSessionStore {
       nextParticipantPaletteIndex: 0,
       study: null,
       volunteerTurn: null,
+      discussionState: null,
       members,
       randomExpiryTimer: undefined,
     };
@@ -1141,6 +1165,100 @@ export class LiveSessionStore {
       return;
     }
 
+    if (command === 'switch_question') {
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionId !== 'section_4_discussion' ||
+        !session.discussionState
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'Active question can only be switched during the Deep Analysis discussion.',
+          requestId,
+        );
+        return;
+      }
+
+      const questionId =
+        typeof record.questionId === 'string' ? record.questionId.trim() : '';
+      if (questionId.length === 0) {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'questionId must be a non-empty string.',
+          requestId,
+        );
+        return;
+      }
+
+      const exists = session.discussionState.questions.some(
+        (q) => q.id === questionId,
+      );
+      if (!exists) {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'Question ID does not exist in the active discussion queue.',
+          requestId,
+        );
+        return;
+      }
+
+      session.discussionState.activeQuestionId = questionId;
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
+    if (command === 'add_question') {
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionId !== 'section_4_discussion' ||
+        !session.discussionState
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'Questions can only be added during the Deep Analysis discussion.',
+          requestId,
+        );
+        return;
+      }
+
+      const normalized = normalizeSessionDiscussionQuestion(record.question);
+      if (!normalized) {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'Valid discussion question payload is required.',
+          requestId,
+        );
+        return;
+      }
+
+      const alreadyExists = session.discussionState.questions.some(
+        (q) => q.id === normalized.id,
+      );
+      if (alreadyExists) {
+        this.sendError(
+          socket,
+          'INVALID_MESSAGE',
+          'Question is already in the discussion queue.',
+          requestId,
+        );
+        return;
+      }
+
+      session.discussionState.questions.push({
+        ...normalized,
+        number: session.discussionState.questions.length + 1,
+      });
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
     if (command === 'next_section') {
       if (
         session.status !== 'in_progress' ||
@@ -1206,6 +1324,35 @@ export class LiveSessionStore {
           ? createVolunteerTurnForSection(nextSectionId)
           : null;
       this.cancelRandomExpiryTimer(session);
+
+      if (nextSectionId === 'section_4_discussion' && !session.discussionState) {
+        const discussion = session.study?.discussion;
+        if (discussion && discussion.questions.length > 0) {
+          const defaultIds = discussion.defaultActiveQuestionIds;
+          let queueQuestions: SessionDiscussionQuestion[] = defaultIds
+            .map((id) => discussion.questions.find((q) => q.id === id))
+            .filter((q): q is SessionDiscussionQuestion => Boolean(q));
+
+          if (queueQuestions.length === 0) {
+            queueQuestions = discussion.questions.slice(0, 3);
+          }
+
+          const activeQuestionId = queueQuestions[0]?.id ?? '';
+          session.discussionState = {
+            activeQuestionId,
+            questions: queueQuestions.map((q, idx) => ({
+              ...q,
+              number: idx + 1,
+            })),
+          };
+        } else {
+          session.discussionState = {
+            activeQuestionId: '',
+            questions: [],
+          };
+        }
+      }
+
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
     }

@@ -5,11 +5,32 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `section-4-leader-question-queue-notes`
+- Current next ready feature: `section-4-live-participant-reflections`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
+
+### Session 030
+
+- Date: `2026-10-31`
+- Goal: Implement and self-verify `section-4-leader-question-queue-notes` per `docs/specs/section-4-leader-question-queue-notes.md`.
+- Completed:
+  - Wire protocol & projection: Added `SessionDiscussionQuestion`, `SessionDiscussionState`, `SessionDiscussionContent` in `src/shared/session.ts` at protocol v3, bounded normalizations (`SESSION_DISCUSSION_QUESTION_CATEGORY_MAX_LENGTH = 100`, `SESSION_DISCUSSION_QUESTION_PROMPT_MAX_LENGTH = 500`), optional `discussion` on `SessionStudySummary`, optional `discussionState` on `PublicLiveSessionSnapshot`, and snapshot projection stripping pastoral commentary, doctrine notes, patristic notes, and sample answers for participants. Added `switch_question` and `add_question` to `LeaderCommandType` and `ClientWsMessage`.
+  - Server discussion queue lifecycle: In `src/server/sessionStore.ts`, initialized `discussionState` with the 3 curated questions (`'q-6'`, `'q-5'`, `'q-8'`) and `activeQuestionId = 'q-6'` on `next_section` into `section_4_discussion`. Handled leader-gated `switch_question` and `add_question` commands with state gating, bounds validation, duplicate rejection, and full-snapshot `session_updated` fan-out. Enforced unconditional leader advancement into Section 5 ("mercy, not pace") without volunteer turn gate.
+  - Client socket & hook: In `src/client/lib/sessionSocket.ts`, updated `LeaderCommandInput` and `sendLeaderCommand` with `questionId` and `question`. In `src/client/lib/useLiveSession.ts`, exposed `switchQuestion` and `addQuestion` room actions.
+  - Client UI & interactions: Created Section 4 components under `src/client/components/discussion/` (`DiscussionScreen`, `LeaderQuestionQueue`, `ActiveQuestionCard`, `PastoralNotesDrawer`, `AddQuestionModal`) and Midnight Sanctuary styles in `global.css`. Curated 3-card stack matching `ux/10` with Active indicator, responses counter chip, card tap switching, `+ Add` button, `Next question →` morphing into `Begin Closing Prayer →` on final question, and footnote note. Add question modal promoting from 12-question study bank and creating custom prompt with `>= 16px` inputs. Participant active question card matching `ux/11` with `QUESTION X OF Y` progress badge, serif prompt, and locked advance note. Facilitator pastoral notes drawer containing Section 4 Commentary A–J, Catholic doctrine highlights with the Romans 11:29 fidelity-to-Israel guardrail, Patristic commentary (Augustine, Chrysostom, Jerome), and sample answers isolated strictly to Study Leader DOM with zero wire leakage to participants. Single persistent `Sacred3DScene` canvas maintained.
+  - Documented compat edit: In `tests/e2e/section-3-gospel-reading-turn.spec.ts`, updated post-Section 3 placeholder locator to `discussion-screen`.
+- Verification run:
+  - Baseline `./init.sh`: passed exit code 0 (TypeScript check clean across 3 configs, Vitest 42 files / 390 tests passed, Vite production build clean).
+  - Vitest suites: `tests/unit/discussion-content.test.ts` (10/10 passed), `tests/unit/discussion-screen.test.tsx` (10/10 passed), `tests/integration/ws-discussion-question.test.ts` (5/5 passed).
+  - Playwright E2E: `PLAYWRIGHT_PORT=3303 npx playwright test tests/e2e/section-4-leader-question-queue-notes.spec.ts` passed 6/6 scenarios (1.4m on mobile-chromium 390x844).
+  - Compatibility E2E: `PLAYWRIGHT_PORT=3304 npx playwright test tests/e2e/section-3-gospel-reading-turn.spec.ts` passed 6/6 scenarios (2.2m).
+  - Lifecycle E2E: `PLAYWRIGHT_PORT=3305 npx playwright test tests/e2e/ws-room-lifecycle.spec.ts` passed 1/1 scenario (14.8s).
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
+- Evidence captured: All test gates green; `section-4-leader-question-queue-notes` marked `passing` in `feature_list.json`.
+- Files updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/App.tsx`, `src/client/lib/sessionSocket.ts`, `src/client/lib/useLiveSession.ts`, `src/client/components/discussion/*`, `src/client/styles/global.css`, `tests/unit/discussion-content.test.ts`, `tests/unit/discussion-screen.test.tsx`, `tests/integration/ws-discussion-question.test.ts`, `tests/e2e/section-4-leader-question-queue-notes.spec.ts`, `tests/e2e/section-3-gospel-reading-turn.spec.ts`, `.gitignore`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Run independent `$feature-validator` on `section-4-leader-question-queue-notes`; on `accept`, proceed to `section-4-live-participant-reflections`.
 
 ### Session 029
 
