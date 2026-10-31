@@ -1,5 +1,9 @@
 import type { SanctuaryRole } from './health.js';
-import type { OpeningPrayerSection, StudyDocument } from './study.js';
+import type {
+  IcebreakerSection,
+  OpeningPrayerSection,
+  StudyDocument,
+} from './study.js';
 
 export const SESSION_PROTOCOL_VERSION = 3;
 export const SESSION_CODE_LENGTH = 6;
@@ -71,6 +75,23 @@ export interface SessionOpeningPrayerContent {
 }
 
 /**
+ * Sanitized, participant-visible Icebreaker content synced with the study
+ * summary. Never carries the facilitator-facing pastoral fields (`leaderNote`,
+ * `examplesToListenFor` — that copy stays on the locally held `StudyDocument`).
+ */
+export interface SessionIcebreakerContent {
+  title: string;
+  eyebrow: string;
+  durationLabel: string;
+  /** Group-facing icebreaker framing copy. */
+  introText: string;
+  /** Group-facing main icebreaker question. */
+  mainQuestion: string;
+  /** Group-facing italic follow-up question. */
+  followUpQuestion: string;
+}
+
+/**
  * Sanitized, title/meta-only study summary synced to every client via the
  * leader-gated `load_study` command. Never carries pastoral/facilitator fields
  * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
@@ -85,11 +106,14 @@ export interface SessionStudySummary {
   estimatedMinutes: number;
   /** Participant-visible Opening Prayer copy (additive in protocol v3). */
   openingPrayer?: SessionOpeningPrayerContent | null;
+  /** Participant-visible Icebreaker copy (additive in protocol v3). */
+  icebreaker?: SessionIcebreakerContent | null;
 }
 
 export const SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH = 120;
 export const SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH = 200;
 export const SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH = 2000;
+export const SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH = 1000;
 export const SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES = 1;
 export const SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES = 180;
 
@@ -159,6 +183,24 @@ export function toSessionOpeningPrayerContent(
 }
 
 /**
+ * Projects the Icebreaker section onto the participant-visible synced content.
+ * Explicitly excludes the facilitator-facing `leaderNote` and
+ * `examplesToListenFor` (they never cross `/ws`).
+ */
+export function toSessionIcebreakerContent(
+  section: IcebreakerSection,
+): SessionIcebreakerContent {
+  return {
+    title: section.title,
+    eyebrow: section.eyebrow,
+    durationLabel: section.durationLabel,
+    introText: section.introText,
+    mainQuestion: section.mainQuestion,
+    followUpQuestion: section.followUpQuestion,
+  };
+}
+
+/**
  * Projects a full `StudyDocument` onto the sanitized session study summary
  * shared with Participants over `/ws` snapshots.
  */
@@ -172,6 +214,7 @@ export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
     sectionCount: 5,
     estimatedMinutes: doc.estimatedMinutes,
     openingPrayer: toSessionOpeningPrayerContent(doc.openingPrayer),
+    icebreaker: toSessionIcebreakerContent(doc.icebreaker),
   };
 }
 
@@ -265,6 +308,69 @@ export function normalizeSessionOpeningPrayerContent(
 }
 
 /**
+ * Allow-list validation for a present `icebreaker` payload. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`. Unknown keys (e.g. smuggled
+ * `leaderNote` / `examplesToListenFor`) are dropped by the explicit field
+ * projection. Question/intro copy mirrors the bounded prayer-text precedent
+ * (internal whitespace preserved) at
+ * `SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH`.
+ */
+export function normalizeSessionIcebreakerContent(
+  raw: unknown,
+): SessionIcebreakerContent | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const eyebrow = normalizeBoundedSummaryString(
+    record.eyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const durationLabel = normalizeBoundedSummaryString(
+    record.durationLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const introText = normalizeBoundedPrayerText(
+    record.introText,
+    SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH,
+  );
+  const mainQuestion = normalizeBoundedPrayerText(
+    record.mainQuestion,
+    SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH,
+  );
+  const followUpQuestion = normalizeBoundedPrayerText(
+    record.followUpQuestion,
+    SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH,
+  );
+
+  if (
+    title === null ||
+    eyebrow === null ||
+    durationLabel === null ||
+    introText === null ||
+    mainQuestion === null ||
+    followUpQuestion === null
+  ) {
+    return null;
+  }
+
+  return {
+    title,
+    eyebrow,
+    durationLabel,
+    introText,
+    mainQuestion,
+    followUpQuestion,
+  };
+}
+
+/**
  * Validates and normalizes an inbound `load_study` summary. Returns `null`
  * when any field is missing, empty, or exceeds its bound so the server can
  * reject the frame with `INVALID_MESSAGE`.
@@ -335,6 +441,19 @@ export function normalizeSessionStudySummary(
     }
   }
 
+  /**
+   * Protocol v3 (bounded additive): a missing `icebreaker` stays valid and
+   * normalizes to `null`; a present-but-invalid payload rejects the frame with
+   * `INVALID_MESSAGE`.
+   */
+  let icebreaker: SessionIcebreakerContent | null = null;
+  if (record.icebreaker !== undefined && record.icebreaker !== null) {
+    icebreaker = normalizeSessionIcebreakerContent(record.icebreaker);
+    if (icebreaker === null) {
+      return null;
+    }
+  }
+
   return {
     title,
     subtitle,
@@ -344,6 +463,7 @@ export function normalizeSessionStudySummary(
     sectionCount: 5,
     estimatedMinutes,
     openingPrayer,
+    icebreaker,
   };
 }
 

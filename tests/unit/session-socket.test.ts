@@ -486,7 +486,20 @@ describe('sessionSocket turn commands (protocol v3 hand-raise framing)', () => {
     }
     expect(advanced.command).toBe('next_section');
     expect(advanced.session.currentSectionId).toBe('section_2_icebreaker');
-    expect(advanced.session.volunteerTurn).toBeNull();
+    // Compat edit (section-2-icebreaker-flow; spec deviation — 4th accepted-
+    // test edit, documented in docs/specs/section-2-icebreaker-flow.md):
+    // next_section into Section 2 now creates a fresh open-share turn instead
+    // of clearing the turn, so this assertion locks in the fresh Section 2
+    // turn shape in place of the former toBeNull().
+    expect(advanced.session.volunteerTurn).toEqual({
+      sectionId: 'section_2_icebreaker',
+      mode: 'open_share',
+      raisedHands: [],
+      candidateMemberId: null,
+      candidateExpiresAt: null,
+      selectedMemberId: null,
+      completedAt: null,
+    });
 
     await leaderClient.sendLeaderCommand({ type: 'close_session' });
     leaderClient.disconnect();

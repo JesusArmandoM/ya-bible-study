@@ -293,7 +293,8 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
       (m) => m.command === 'next_section',
     );
     expect(advanced.session.currentSectionId).toBe('section_2_icebreaker');
-    expect(advanced.session.volunteerTurn).toBeNull();
+    expect(advanced.session.volunteerTurn?.sectionId).toBe('section_2_icebreaker');
+    expect(advanced.session.volunteerTurn?.mode).toBe('open_share');
   }, 15_000);
 
   it('Scenario 2: Retry re-rolls excluding the current candidate and resets the window', async () => {
@@ -483,6 +484,10 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
     // A disconnected-only pool is equally empty for the picker.
     const { participant: p1 } = await joinParticipant(created.sessionCode, 'Mia');
     await p1.close();
+    await leader.waitFor(
+      'roster_updated',
+      (msg) => msg.session.connectedMemberCount === 1,
+    );
     randomCommand(leader, created, 'pick_random', 'disconnected-pick');
     await expectError(leader, 'INVALID_STATE_TRANSITION', 'disconnected-pick');
     randomCommand(leader, created, 'retry_random', 'disconnected-retry');

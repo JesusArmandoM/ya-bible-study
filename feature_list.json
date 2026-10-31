@@ -266,11 +266,13 @@
     "depends_on": [
       "section-1-chosen-volunteer-prayer-gate"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Playwright test verifying Section 2 renders main + follow-up questions, hides 'Examples to Listen For' from Participants, syncs live hand-raise counts, and lets only the Study Leader advance via 'Begin Reading'."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-31: Implemented Section 2 Ice Breaker flow per docs/specs/section-2-icebreaker-flow.md. src/shared/session.ts adds SessionIcebreakerContent (mainQuestion, followUpQuestion, leaderNote, examplesToListenFor) on SessionStudySummary, bounded normalization toSessionIcebreakerContent, and projection stripping leaderNote/examplesToListenFor for participants. src/server/sessionStore.ts widens raise_hand/lower_hand to section_2_icebreaker and creates the Section 2 open-share turn via createVolunteerTurnForSection('section_2_icebreaker') on next_section into Section 2. src/client/components/icebreaker/ introduces SectionIcebreakerScreen, LeaderIcebreakerView, ParticipantIcebreakerView, and IcebreakerHeroCard matching ux/7 and ux/8 with 0/1/N raised states, persistent Sacred3DScene stage, live raised count pill, and leader-only 'Begin Reading →' CTA. Verified with ./init.sh (29 files / 256 tests passing), tests/e2e/section-2-icebreaker.spec.ts (5/5 passing on PLAYWRIGHT_PORT=3302), and grep -rn 'Assistant' src/ returning 0 matches."
+    ],
     "notes": "Follow ux/7. Ice Breaker - Leader.png and ux/8. Ice Breaker - Assistant.png."
   },
   {

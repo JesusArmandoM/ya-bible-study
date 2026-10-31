@@ -429,10 +429,17 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
     );
     expect(accepted.session.volunteerTurn?.raisedHands).toHaveLength(1);
 
-    // After next_section leaves Section 1 the turn is cleared and raises reject.
+    // After next_section leaves Section 1 the Section 1 turn is replaced by the
+    // fresh Section 2 open-share turn and Section 1 raises no longer apply.
     // Compat edit (section-1-chosen-volunteer-prayer-gate): the Section 1
     // next_section gate now requires volunteerTurn.completedAt, so the leader
     // completes the turn via override_turn first. All assertions unchanged.
+    // Compat edit (section-2-icebreaker-flow): next_section into Section 2 now
+    // creates a fresh open-share turn (raises are the Section 2 interaction),
+    // so the former `volunteerTurn toBeNull()` / rejection assertions moved to
+    // after the second next_section into section_3_reading, where the turn is
+    // cleared and raises reject again. Rejection codes and requestId routing
+    // asserted unchanged.
     leader.send({
       type: 'override_turn',
       sessionCode: created.sessionCode,
@@ -457,7 +464,50 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
       (m) => m.command === 'next_section',
     );
     expect(advanced.session.currentSectionId).not.toBe('section_1_prayer');
-    expect(advanced.session.volunteerTurn).toBeNull();
+    expect(advanced.session.currentSectionId).toBe('section_2_icebreaker');
+    expect(advanced.session.volunteerTurn).toEqual({
+      sectionId: 'section_2_icebreaker',
+      mode: 'open_share',
+      raisedHands: [],
+      candidateMemberId: null,
+      candidateExpiresAt: null,
+      selectedMemberId: null,
+      completedAt: null,
+    });
+
+    // Section 2 accepts raises (and lowers) on the fresh open-share turn.
+    raiseHand(p1, created.sessionCode, j1.memberId, 'raise-in-section-2');
+    const acceptedIn2 = await p1.waitFor(
+      'session_updated',
+      (m) => m.command === 'raise_hand',
+    );
+    expect(acceptedIn2.session.volunteerTurn?.raisedHands).toHaveLength(1);
+    p1.send({
+      type: 'lower_hand',
+      sessionCode: created.sessionCode,
+      memberId: j1.memberId,
+      requestId: 'lower-in-section-2',
+    });
+    const loweredIn2 = await p1.waitFor(
+      'session_updated',
+      (m) => m.command === 'lower_hand',
+    );
+    expect(loweredIn2.session.volunteerTurn?.raisedHands).toEqual([]);
+
+    // Leaving Section 2 clears the turn and raises reject again.
+    leader.send({
+      type: 'next_section',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'next-2',
+    });
+    const cleared = await leader.waitFor(
+      'session_updated',
+      (m) => m.command === 'next_section',
+    );
+    expect(cleared.session.currentSectionId).not.toBe('section_2_icebreaker');
+    expect(cleared.session.volunteerTurn).toBeNull();
 
     raiseHand(p1, created.sessionCode, j1.memberId, 'raise-after-next');
     const afterError = await p1.waitFor('session_error');

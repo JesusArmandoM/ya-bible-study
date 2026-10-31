@@ -5,11 +5,21 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `section-2-icebreaker-flow`
+- Current next ready feature: `section-3-gospel-reading-turn`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
+
+### Session 028
+
+- Date: `2026-10-31`
+- Goal: Implement, verify, and accept `section-2-icebreaker-flow` per `docs/specs/section-2-icebreaker-flow.md`.
+- Completed: Extended `SessionStudySummary` with `SessionIcebreakerContent` in `src/shared/session.ts`, bounded normalization, and public snapshot projection stripping `leaderNote` and `examplesToListenFor` for participants. In `src/server/sessionStore.ts`, widened `raise_hand` and `lower_hand` gate to `section_2_icebreaker`, and created the open-share turn via `createVolunteerTurnForSection('section_2_icebreaker')` on `next_section` into Section 2. Created client components under `src/client/components/icebreaker/` (`SectionIcebreakerScreen`, `LeaderIcebreakerView`, `ParticipantIcebreakerView`, `IcebreakerHeroCard`) matching `ux/7` and `ux/8` with 0/1/N hand-raise state cards, live raised hands count chip, `HandRaiseOrb` interaction, and leader-only `Begin Reading →` advance button advancing to Section 3.
+- Verification run: `./init.sh` (29 Vitest files / 256 tests exit 0, build exit 0), `PLAYWRIGHT_PORT=3302 npm run test:e2e tests/e2e/section-2-icebreaker.spec.ts` (5/5 passed), `grep -rn "Assistant" src/` (0 matches).
+- Evidence captured: All test gates green; `section-2-icebreaker-flow` marked `accepted` in `feature_list.json`.
+- Files or artifacts updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/App.tsx`, `src/client/components/icebreaker/*`, `src/client/styles/global.css`, `tests/unit/icebreaker-content.test.ts`, `tests/unit/icebreaker-screen.test.tsx`, `tests/integration/ws-icebreaker-hand-raise.test.ts`, `tests/e2e/section-2-icebreaker.spec.ts`, `tests/e2e/section-1-chosen-volunteer-prayer-gate.spec.ts`, `tests/integration/ws-hand-raise.test.ts`, `tests/integration/ws-volunteer-gate.test.ts`, `tests/unit/session-socket.test.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Merge latest `main` into branch, verify integrated build, push, create PR, and merge into `main`.
 
 ### Session 027
 
@@ -44,6 +54,7 @@
 - Documented deviations: (1) `SessionResilienceChip` accepts optional injectable `client`/`wakeLockApi` props (defaults `getSharedSessionSocketClient()` / `navigator.wakeLock`) beyond the spec's `{ sessionActive, onSessionGone }` — purely for deterministic tests, no behavior change; (2) e2e Scenario 5 asserts the Welcome state for the resync-path client only — the closer's `session_closed` broadcast landing on the join sheet is pre-existing behavior outside this feature's scope; (3) e2e tests that click `Leave` (which clears `sessionStorage` without closing the room) stash leader credentials first and close via `closeSessionWith` in `finally` to avoid leaking sessions.
 - Known risk or unresolved issue: Wake-lock `denied`/`unsupported` (iOS Safari low-power mode, older browsers) is silent by design — the session stays fully usable but the screen may sleep; the resync path covers any resulting suspension. The 5s watchdog detects stalled connections, not offline queues — a fully offline client retries only on the next trigger (foreground/visibility/`session_updated`), per spec. Wave note: `random-volunteer-picker-countdown` / `section-2-icebreaker-flow` wave-mates must keep their diffs out of the five forbidden shared files above (this feature kept that contract).
 - Next best step: Run independent `$feature-validator` on `mobile-wake-lock-foreground-resync`; on `accept`, persist `accepted` and continue the wave with `random-volunteer-picker-countdown` / `section-2-icebreaker-flow`.
+>>>>>>> origin/main
 
 ### Session 024
 

@@ -313,14 +313,17 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       );
       await expect(pageLeader.getByTestId('locked-advance-bar')).toHaveCount(0);
 
-      // Continuing advances everyone to the Section 2 placeholder (40%).
+      // Continuing advances everyone to Section 2 (icebreaker screen, 40%).
+      // Compat edit (section-2-icebreaker-flow): `section-placeholder` testid
+      // became `icebreaker-screen` — the provisional placeholder is replaced by
+      // the real Section 2 screen. Assertions otherwise unchanged.
       await pageLeader.getByTestId('prayer-advance-cta').click();
-      await expect(pageLeader.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 5',
       );
       await expect(pageLeader.getByTestId('section-one-percent')).toHaveText('40%');
-      await expect(pageParticipant.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageParticipant.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageParticipant.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 5',
       );
@@ -574,16 +577,19 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
         'Continue to Section 2 →',
       );
 
-      // Continuing advances everyone to the Section 2 placeholder (40%).
+      // Continuing advances everyone to Section 2 (icebreaker screen, 40%).
+      // Compat edit (section-2-icebreaker-flow): `section-placeholder` testid
+      // became `icebreaker-screen` — the provisional placeholder is replaced by
+      // the real Section 2 screen. Assertions otherwise unchanged.
       await pageLeader.getByTestId('prayer-advance-cta').click();
-      await expect(pageLeader.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 5',
       );
       await expect(pageLeader.getByTestId('section-one-percent')).toHaveText(
         '40%',
       );
-      await expect(pageBystander.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageBystander.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageBystander.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 5',
       );
@@ -642,8 +648,8 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
         'Continue to Section 2 →',
       );
       await pageLeader.getByTestId('prayer-advance-cta').click();
-      await expect(pageLeader.getByTestId('section-placeholder')).toBeVisible();
-      await expect(pageChosen.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
+      await expect(pageChosen.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageChosen.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 5',
       );
