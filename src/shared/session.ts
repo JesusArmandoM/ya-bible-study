@@ -1,5 +1,6 @@
 import type { SanctuaryRole } from './health.js';
 import type {
+  DeepAnalysisSection,
   GospelReadingSection,
   GospelVerse,
   IcebreakerSection,
@@ -110,6 +111,41 @@ export interface SessionGospelReadingContent {
 }
 
 /**
+ * Sanitized discussion question item synced across all clients.
+ * Never carries facilitator-facing `sampleAnswer` or `leaderNote`.
+ */
+export interface SessionDiscussionQuestion {
+  id: string;
+  number: number;
+  prompt: string;
+  category: string;
+  estimatedMinutes?: number;
+}
+
+/**
+ * Section 4 discussion queue & active question synchronization state.
+ */
+export interface SessionDiscussionState {
+  activeQuestionId: string;
+  questions: SessionDiscussionQuestion[];
+}
+
+/**
+ * Sanitized, participant-visible Deep Analysis discussion content synced with
+ * the study summary. Never carries facilitator pastoral fields
+ * (`verseCommentary`, `catholicDoctrine`, `youngAdultApplication`,
+ * `sampleAnswer`, `leaderNote`, `prayerCardTemplate` — that copy stays on
+ * the locally held `StudyDocument`).
+ */
+export interface SessionDiscussionContent {
+  title: string;
+  eyebrow: string;
+  durationLabel: string;
+  defaultActiveQuestionIds: string[];
+  questions: SessionDiscussionQuestion[];
+}
+
+/**
  * Sanitized, title/meta-only study summary synced to every client via the
  * leader-gated `load_study` command. Never carries pastoral/facilitator fields
  * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
@@ -128,6 +164,8 @@ export interface SessionStudySummary {
   icebreaker?: SessionIcebreakerContent | null;
   /** Participant-visible Gospel Reading copy (additive in protocol v3). */
   gospelReading?: SessionGospelReadingContent | null;
+  /** Participant-visible Deep Analysis copy (additive in protocol v3). */
+  discussion?: SessionDiscussionContent | null;
 }
 
 export const SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH = 120;
@@ -182,6 +220,8 @@ export interface PublicLiveSessionSnapshot {
   study?: SessionStudySummary | null;
   /** Per-section volunteer turn state (additive in protocol v3). */
   volunteerTurn?: VolunteerTurnState | null;
+  /** Discussion queue & active question state in Section 4 (additive in protocol v3). */
+  discussionState?: SessionDiscussionState | null;
   /** Snapshot protocol version (`SESSION_PROTOCOL_VERSION`); additive in v2. */
   protocolVersion?: number;
 }
@@ -243,6 +283,32 @@ export function toSessionGospelReadingContent(
 }
 
 /**
+ * Projects the Deep Analysis section onto the participant-visible synced
+ * content. Explicitly excludes facilitator pastoral fields (`verseCommentary`,
+ * `catholicDoctrine`, `youngAdultApplication`, `prayerCardTemplate`,
+ * `sampleAnswer`, `leaderNote`).
+ */
+export function toSessionDiscussionContent(
+  section: DeepAnalysisSection,
+): SessionDiscussionContent {
+  return {
+    title: section.title,
+    eyebrow: section.eyebrow,
+    durationLabel: section.durationLabel,
+    defaultActiveQuestionIds: [...section.defaultActiveQuestionIds],
+    questions: section.reflectionQuestions.map((q) => ({
+      id: q.id,
+      number: q.number,
+      prompt: q.prompt,
+      category: q.category,
+      ...(q.estimatedMinutes !== undefined
+        ? { estimatedMinutes: q.estimatedMinutes }
+        : {}),
+    })),
+  };
+}
+
+/**
  * Projects a full `StudyDocument` onto the sanitized session study summary
  * shared with Participants over `/ws` snapshots.
  */
@@ -258,6 +324,7 @@ export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
     openingPrayer: toSessionOpeningPrayerContent(doc.openingPrayer),
     icebreaker: toSessionIcebreakerContent(doc.icebreaker),
     gospelReading: toSessionGospelReadingContent(doc.gospelReading),
+    discussion: toSessionDiscussionContent(doc.deepAnalysis),
   };
 }
 
@@ -504,6 +571,138 @@ export function normalizeSessionGospelReadingContent(
 }
 
 /**
+ * Allow-list validation for a single `SessionDiscussionQuestion`. Returns `null`
+ * when any field is missing, empty, or exceeds bounds. Unknown/smuggled fields
+ * (e.g. `sampleAnswer`, `leaderNote`) are dropped by explicit field projection.
+ */
+export function normalizeSessionDiscussionQuestion(
+  raw: unknown,
+): SessionDiscussionQuestion | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const id = normalizeBoundedSummaryString(
+    record.id,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  if (id === null) {
+    return null;
+  }
+
+  const num = record.number;
+  if (typeof num !== 'number' || !Number.isInteger(num) || num <= 0) {
+    return null;
+  }
+
+  const prompt = normalizeBoundedPrayerText(
+    record.prompt,
+    SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH,
+  );
+  if (prompt === null) {
+    return null;
+  }
+
+  const category = normalizeBoundedSummaryString(
+    record.category,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  if (category === null) {
+    return null;
+  }
+
+  let estimatedMinutes: number | undefined;
+  if (record.estimatedMinutes !== undefined && record.estimatedMinutes !== null) {
+    const mins = record.estimatedMinutes;
+    if (
+      typeof mins !== 'number' ||
+      !Number.isInteger(mins) ||
+      mins < 1 ||
+      mins > 180
+    ) {
+      return null;
+    }
+    estimatedMinutes = mins;
+  }
+
+  return {
+    id,
+    number: num,
+    prompt,
+    category,
+    ...(estimatedMinutes !== undefined ? { estimatedMinutes } : {}),
+  };
+}
+
+/**
+ * Allow-list validation for a present `discussion` payload. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`. Unknown keys (e.g. smuggled
+ * `verseCommentary` / `catholicDoctrine`) are dropped by explicit field projection.
+ */
+export function normalizeSessionDiscussionContent(
+  raw: unknown,
+): SessionDiscussionContent | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const eyebrow = normalizeBoundedSummaryString(
+    record.eyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const durationLabel = normalizeBoundedSummaryString(
+    record.durationLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+
+  if (title === null || eyebrow === null || durationLabel === null) {
+    return null;
+  }
+
+  if (!Array.isArray(record.defaultActiveQuestionIds)) {
+    return null;
+  }
+  const defaultActiveQuestionIds: string[] = [];
+  for (const rawId of record.defaultActiveQuestionIds) {
+    const id = normalizeBoundedSummaryString(
+      rawId,
+      SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+    );
+    if (id === null) {
+      return null;
+    }
+    defaultActiveQuestionIds.push(id);
+  }
+
+  if (!Array.isArray(record.questions) || record.questions.length === 0) {
+    return null;
+  }
+  const questions: SessionDiscussionQuestion[] = [];
+  for (const rawQuestion of record.questions) {
+    const question = normalizeSessionDiscussionQuestion(rawQuestion);
+    if (question === null) {
+      return null;
+    }
+    questions.push(question);
+  }
+
+  return {
+    title,
+    eyebrow,
+    durationLabel,
+    defaultActiveQuestionIds,
+    questions,
+  };
+}
+
+/**
  * Validates and normalizes an inbound `load_study` summary. Returns `null`
  * when any field is missing, empty, or exceeds its bound so the server can
  * reject the frame with `INVALID_MESSAGE`.
@@ -600,6 +799,19 @@ export function normalizeSessionStudySummary(
     }
   }
 
+  /**
+   * Protocol v3 (bounded additive): a missing `discussion` stays valid and
+   * normalizes to `null`; a present-but-invalid payload rejects the frame with
+   * `INVALID_MESSAGE`.
+   */
+  let discussion: SessionDiscussionContent | null = null;
+  if (record.discussion !== undefined && record.discussion !== null) {
+    discussion = normalizeSessionDiscussionContent(record.discussion);
+    if (discussion === null) {
+      return null;
+    }
+  }
+
   return {
     title,
     subtitle,
@@ -611,6 +823,7 @@ export function normalizeSessionStudySummary(
     openingPrayer,
     icebreaker,
     gospelReading,
+    discussion,
   };
 }
 
@@ -895,6 +1108,8 @@ export type LeaderCommandType =
   | 'retry_random'
   | 'confirm_random'
   | 'clear_hands'
+  | 'switch_question'
+  | 'add_question'
   | 'close_session';
 
 /**
@@ -1009,6 +1224,22 @@ export type ClientWsMessage =
       sessionCode: string;
       leaderToken: string;
       memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'switch_question';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      questionId: string;
+      requestId?: string;
+    }
+  | {
+      type: 'add_question';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      question: SessionDiscussionQuestion;
       requestId?: string;
     }
   | {

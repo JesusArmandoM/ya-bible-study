@@ -3,6 +3,7 @@ import type { SanctuaryRole } from '../../shared/health';
 import type {
   PublicLiveSessionSnapshot,
   ServerWsMessage,
+  SessionDiscussionQuestion,
   SessionStudySummary,
   SessionUpdatedCommand,
 } from '../../shared/session';
@@ -61,6 +62,10 @@ export interface UseLiveSessionResult {
   lowerHand: (targetMemberId: string) => Promise<void>;
   /** Study Leader: lower every raised hand. */
   clearRaisedHands: () => Promise<void>;
+  /** Study Leader: switch active discussion question (`switch_question`). */
+  switchQuestion: (questionId: string) => Promise<void>;
+  /** Study Leader: append discussion question to the queue (`add_question`). */
+  addQuestion: (question: SessionDiscussionQuestion) => Promise<void>;
   /** Command of the latest `session_updated` broadcast (motion triggers). */
   lastSessionCommand: SessionUpdatedCommand | null;
   leaveRoom: () => void;
@@ -568,6 +573,62 @@ export function useLiveSession(
     }
   }, [client]);
 
+  const switchQuestion = useCallback(
+    async (questionId: string) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const stored = client.getCredentials();
+        const response = await client.sendLeaderCommand({
+          type: 'switch_question',
+          questionId,
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to switch question';
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
+  const addQuestion = useCallback(
+    async (question: SessionDiscussionQuestion) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const stored = client.getCredentials();
+        const response = await client.sendLeaderCommand({
+          type: 'add_question',
+          question,
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to add question';
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
   const leaveRoom = useCallback(() => {
     client.disconnect();
     clearStoredSessionCredentials();
@@ -604,6 +665,8 @@ export function useLiveSession(
     setHandRaised,
     lowerHand,
     clearRaisedHands,
+    switchQuestion,
+    addQuestion,
     lastSessionCommand,
     leaveRoom,
     clearError,

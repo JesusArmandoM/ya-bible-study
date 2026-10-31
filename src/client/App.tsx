@@ -6,6 +6,7 @@ import { OpeningPrayerScreen } from './components/prayer/OpeningPrayerScreen';
 import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholderScreen';
 import { IcebreakerScreen } from './components/icebreaker/IcebreakerScreen';
 import { GospelReadingScreen } from './components/reading/GospelReadingScreen';
+import { DiscussionScreen } from './components/discussion/DiscussionScreen';
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
@@ -431,6 +432,28 @@ export function App({ sessionClient }: AppProps = {}) {
                     });
                   }}
                   lastSessionCommand={liveSession.lastSessionCommand}
+                />
+              ) : liveSession.session.currentSectionId === 'section_4_discussion' ? (
+                <DiscussionScreen
+                  role={liveSession.role ?? 'Participant'}
+                  session={liveSession.session}
+                  localStudyDocument={studySetup.study}
+                  memberId={liveSession.credentials?.memberId ?? null}
+                  onSwitchQuestion={(questionId) => {
+                    void liveSession.switchQuestion(questionId).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onAddQuestion={(question) => {
+                    void liveSession.addQuestion(question).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onNextSection={() => {
+                    void liveSession.nextSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                 />
               ) : (
                 <SectionPlaceholderScreen

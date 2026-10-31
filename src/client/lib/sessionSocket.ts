@@ -6,6 +6,7 @@ import {
   type LeaderCommandType,
   type PublicLiveSessionSnapshot,
   type ServerWsMessage,
+  type SessionDiscussionQuestion,
   type SessionErrorCode,
   type SessionStudySummary,
 } from '../../shared/session';
@@ -244,6 +245,10 @@ export interface LeaderCommandInput {
    * `clear_hands`.
    */
   targetMemberId?: string;
+  /** Target question id: required for `switch_question`. */
+  questionId?: string;
+  /** Discussion question payload: required for `add_question`. */
+  question?: SessionDiscussionQuestion;
 }
 
 /** Participant self-service turn commands (protocol v3). */
@@ -716,6 +721,44 @@ export function createSessionSocketClient(
             leaderToken,
             ...(memberId ? { memberId } : {}),
             targetMemberId,
+          },
+          ['session_updated'],
+        );
+      }
+
+      if (input.type === 'switch_question') {
+        const questionId = input.questionId;
+        if (!questionId) {
+          throw new Error(
+            'switch_question leader commands require a questionId.',
+          );
+        }
+        return await sendRequest(
+          {
+            type: 'switch_question',
+            sessionCode,
+            leaderToken,
+            ...(memberId ? { memberId } : {}),
+            questionId,
+          },
+          ['session_updated'],
+        );
+      }
+
+      if (input.type === 'add_question') {
+        const question = input.question;
+        if (!question) {
+          throw new Error(
+            'add_question leader commands require a question.',
+          );
+        }
+        return await sendRequest(
+          {
+            type: 'add_question',
+            sessionCode,
+            leaderToken,
+            ...(memberId ? { memberId } : {}),
+            question,
           },
           ['session_updated'],
         );

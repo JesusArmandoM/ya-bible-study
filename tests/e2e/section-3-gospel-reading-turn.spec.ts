@@ -419,7 +419,7 @@ test.describe('Section 3 — Gospel Reading sole passage presentation with gated
       // Leader advances all clients to Section 4
       await pageLeader.getByTestId('reading-advance-cta').click();
       for (const page of [pageLeader, pageChosen, pageBystander]) {
-        await expect(page.getByTestId('section-placeholder')).toBeVisible();
+        await expect(page.getByTestId('discussion-screen')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(
           'SECTION 4 OF 5',
         );
@@ -483,7 +483,7 @@ test.describe('Section 3 — Gospel Reading sole passage presentation with gated
       await pageLeader.getByTestId('reading-override-button').click();
       await expect(pageLeader.getByTestId('reading-advance-cta')).toBeVisible();
       await pageLeader.getByTestId('reading-advance-cta').click();
-      await expect(pageLeader.getByTestId('section-placeholder')).toBeVisible();
+      await expect(pageLeader.getByTestId('discussion-screen')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
         'SECTION 4 OF 5',
       );
