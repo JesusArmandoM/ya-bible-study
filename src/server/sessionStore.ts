@@ -5,16 +5,21 @@ import {
   DEFAULT_SESSION_TTL_MS,
   LEADER_PIN_LENGTH,
   PARTICIPANT_AVATAR_PALETTES,
+  RANDOM_SELECTION_COUNTDOWN_MS,
   SESSION_CODE_ALPHABET,
   SESSION_CODE_LENGTH,
   SESSION_PROTOCOL_VERSION,
   STUDY_SECTION_IDS,
   applyClearHands,
+  applyClearRandomCandidate,
   applyCompleteTurn,
+  applyConfirmRandomCandidate,
   applySelectVolunteer,
   applySetHandRaised,
+  applyStageRandomCandidate,
   createVolunteerTurnForSection,
   deriveInitials,
+  eligibleRandomCandidateIds,
   isValidDisplayName,
   isValidLeaderPin,
   isValidSessionCode,
@@ -22,6 +27,7 @@ import {
   normalizeLeaderPin,
   normalizeSessionCode,
   normalizeSessionStudySummary,
+  volunteerTurnPhase,
   type AvatarPalette,
   type LeaderCommandType,
   type LiveSessionStatus,
@@ -73,6 +79,8 @@ interface InternalLiveSession {
   study: SessionStudySummary | null;
   volunteerTurn: VolunteerTurnState | null;
   members: Map<string, InternalSessionMember>;
+  /** Single unref'd random-selection countdown expiry timer. */
+  randomExpiryTimer: ReturnType<typeof setTimeout> | undefined;
 }
 
 interface SocketBinding {
@@ -88,6 +96,17 @@ export interface LiveSessionStoreOptions {
   generateLeaderPin?: () => string;
   generateSecretToken?: () => string;
   generateMemberId?: () => string;
+  /**
+   * Random-selection countdown window in milliseconds
+   * (default {@link RANDOM_SELECTION_COUNTDOWN_MS}; integration tests use a
+   * fast ~100ms window).
+   */
+  randomCountdownMs?: number;
+  /**
+   * Deterministic-testable RNG seam for the random picker: returns an index
+   * in `[0, maxExclusive)` (default `crypto.randomInt`).
+   */
+  pickRandomIndex?: (maxExclusive: number) => number;
 }
 
 function defaultGenerateSessionCode(): string {
@@ -112,6 +131,10 @@ function defaultGenerateSecretToken(): string {
 
 function defaultGenerateMemberId(): string {
   return crypto.randomUUID();
+}
+
+function defaultPickRandomIndex(maxExclusive: number): number {
+  return crypto.randomInt(0, maxExclusive);
 }
 
 function timingSafeEqualSecret(candidate: unknown, expected: string): boolean {
@@ -212,6 +235,8 @@ export class LiveSessionStore {
   private readonly generateLeaderPin: () => string;
   private readonly generateSecretToken: () => string;
   private readonly generateMemberId: () => string;
+  private readonly randomCountdownMs: number;
+  private readonly pickRandomIndex: (maxExclusive: number) => number;
   private sweepTimer: ReturnType<typeof setInterval> | undefined;
 
   public constructor(options: LiveSessionStoreOptions = {}) {
@@ -224,6 +249,9 @@ export class LiveSessionStore {
     this.generateSecretToken =
       options.generateSecretToken ?? defaultGenerateSecretToken;
     this.generateMemberId = options.generateMemberId ?? defaultGenerateMemberId;
+    this.randomCountdownMs =
+      options.randomCountdownMs ?? RANDOM_SELECTION_COUNTDOWN_MS;
+    this.pickRandomIndex = options.pickRandomIndex ?? defaultPickRandomIndex;
 
     const sweepIntervalMs =
       options.sweepIntervalMs === undefined
@@ -270,6 +298,9 @@ export class LiveSessionStore {
     if (this.sweepTimer) {
       clearInterval(this.sweepTimer);
       this.sweepTimer = undefined;
+    }
+    for (const session of this.sessions.values()) {
+      this.cancelRandomExpiryTimer(session);
     }
   }
 
@@ -342,6 +373,9 @@ export class LiveSessionStore {
       case 'next_section':
       case 'choose_volunteer':
       case 'override_turn':
+      case 'pick_random':
+      case 'retry_random':
+      case 'confirm_random':
       case 'clear_hands':
       case 'close_session':
         this.handleLeaderCommand(socket, record.type, record, requestId);
@@ -420,6 +454,7 @@ export class LiveSessionStore {
       study: null,
       volunteerTurn: null,
       members,
+      randomExpiryTimer: undefined,
     };
 
     this.sessions.set(sessionCode, session);
@@ -917,6 +952,21 @@ export class LiveSessionStore {
       return;
     }
 
+    if (
+      command === 'pick_random' ||
+      command === 'retry_random' ||
+      command === 'confirm_random'
+    ) {
+      this.handleRandomSelectionCommand(
+        session,
+        command,
+        socket,
+        requestId,
+        currentNow,
+      );
+      return;
+    }
+
     if (command === 'open_lobby') {
       if (session.status !== 'setup' && session.status !== 'lobby') {
         this.sendError(
@@ -1121,6 +1171,7 @@ export class LiveSessionStore {
       session.currentSectionIndex = nextIndex;
       session.currentSectionId = nextSectionId;
       session.volunteerTurn = null;
+      this.cancelRandomExpiryTimer(session);
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
     }
@@ -1266,6 +1317,200 @@ export class LiveSessionStore {
     this.broadcastSessionUpdated(session, command, socket, requestId);
   }
 
+  /**
+   * Leader-only random volunteer picker (pick / retry / confirm). Runs after
+   * the established participant-block -> timing-safe `leaderToken` ->
+   * memberId-match chain in {@link handleLeaderCommand}. The shared gate is
+   * section-neutral (an open volunteer turn in the current section) so the
+   * Section 3 reading turn can reuse these commands unchanged; the countdown
+   * window is judged exclusively against the server clock.
+   */
+  private handleRandomSelectionCommand(
+    session: InternalLiveSession,
+    command: 'pick_random' | 'retry_random' | 'confirm_random',
+    socket: SessionPeerSocket,
+    requestId: string | undefined,
+    currentNow: number,
+  ): void {
+    const turn = session.volunteerTurn;
+    if (
+      session.status !== 'in_progress' ||
+      !turn ||
+      turn.sectionId !== session.currentSectionId ||
+      turn.completedAt != null
+    ) {
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'Random selection requires an open volunteer turn in the current section.',
+        requestId,
+      );
+      return;
+    }
+
+    const phase = volunteerTurnPhase(turn);
+
+    if (command === 'confirm_random') {
+      if (phase !== 'random_pending') {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'A random selection can only be confirmed while a candidate is pending.',
+          requestId,
+        );
+        return;
+      }
+      // Lazy server-clock window check — authoritative even before the expiry
+      // timer fires. Clients can only render the countdown.
+      const expiresMs = Date.parse(turn.candidateExpiresAt ?? '');
+      if (!Number.isFinite(expiresMs) || expiresMs <= currentNow) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The random selection window has expired. Pick again or Retry to continue.',
+          requestId,
+        );
+        return;
+      }
+      session.volunteerTurn = applyConfirmRandomCandidate(turn);
+      this.cancelRandomExpiryTimer(session);
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
+    if (command === 'pick_random' && phase !== 'collecting_hands') {
+      // Retry is the re-roll; a staged/assigned/completed turn never re-picks.
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'A random pick can only start before a candidate is staged or chosen. Use Retry to re-roll.',
+        requestId,
+      );
+      return;
+    }
+
+    if (command === 'retry_random' && phase !== 'random_pending') {
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'Retry is only available while a random selection candidate is pending.',
+        requestId,
+      );
+      return;
+    }
+
+    const eligible = eligibleRandomCandidateIds([...session.members.values()]);
+    if (eligible.length === 0) {
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'At least one connected Participant is required for a random pick.',
+        requestId,
+      );
+      return;
+    }
+
+    // `retry_random` re-rolls excluding the current candidate (valid even
+    // after window expiry); with a single eligible Participant the full pool
+    // is the fallback so Retry never deadlocks.
+    let pool = eligible;
+    if (command === 'retry_random') {
+      const excluding = eligible.filter(
+        (memberId) => memberId !== turn.candidateMemberId,
+      );
+      if (excluding.length > 0) {
+        pool = excluding;
+      }
+    }
+
+    const rawIndex = this.pickRandomIndex(pool.length);
+    const index = Number.isInteger(rawIndex)
+      ? Math.min(Math.max(rawIndex, 0), pool.length - 1)
+      : 0;
+    const candidateMemberId = pool[index];
+    if (!candidateMemberId) {
+      this.sendError(
+        socket,
+        'INVALID_STATE_TRANSITION',
+        'At least one connected Participant is required for a random pick.',
+        requestId,
+      );
+      return;
+    }
+
+    const candidateExpiresAt = new Date(
+      currentNow + this.randomCountdownMs,
+    ).toISOString();
+    session.volunteerTurn = applyStageRandomCandidate(
+      turn,
+      candidateMemberId,
+      candidateExpiresAt,
+    );
+    session.lastActivityAt = currentNow;
+    this.scheduleRandomExpiry(session, currentNow + this.randomCountdownMs);
+    this.broadcastSessionUpdated(session, command, socket, requestId);
+  }
+
+  /**
+   * Schedules the single per-session random-selection expiry timer (unref'd so
+   * it never keeps the process alive). Any previous timer is cancelled first.
+   */
+  private scheduleRandomExpiry(
+    session: InternalLiveSession,
+    fireAtMs: number,
+  ): void {
+    this.cancelRandomExpiryTimer(session);
+    const delayMs = Math.max(0, fireAtMs - this.now());
+    const timer = setTimeout(() => {
+      this.handleRandomExpiry(session);
+    }, delayMs);
+    timer.unref();
+    session.randomExpiryTimer = timer;
+  }
+
+  private cancelRandomExpiryTimer(session: InternalLiveSession): void {
+    if (session.randomExpiryTimer !== undefined) {
+      clearTimeout(session.randomExpiryTimer);
+      session.randomExpiryTimer = undefined;
+    }
+  }
+
+  /**
+   * Server-authoritative countdown expiry: clears `candidate*` and broadcasts
+   * `session_updated { command: 'random_expired' }` so every client drops the
+   * panel back to `collecting_hands`. Self-cancels silently when a manual
+   * `choose_volunteer` / `override_turn` superseded the pick (a staged
+   * candidate is inert in `assigned` / `turn_completed`).
+   */
+  private handleRandomExpiry(session: InternalLiveSession): void {
+    session.randomExpiryTimer = undefined;
+    const turn = session.volunteerTurn;
+    if (!turn || turn.candidateMemberId === null) {
+      return;
+    }
+    if (turn.selectedMemberId != null || turn.completedAt != null) {
+      return;
+    }
+    session.volunteerTurn = applyClearRandomCandidate(turn);
+    this.broadcastRandomExpiry(session);
+  }
+
+  private broadcastRandomExpiry(session: InternalLiveSession): void {
+    const message: ServerWsMessage = {
+      type: 'session_updated',
+      command: 'random_expired',
+      sessionCode: session.sessionCode,
+      session: toPublicSnapshot(session),
+    };
+
+    for (const member of session.members.values()) {
+      if (member.socket) {
+        this.sendToSocket(member.socket, message);
+      }
+    }
+  }
+
   private isParticipantCaller(
     socket: SessionPeerSocket,
     session: InternalLiveSession,
@@ -1397,6 +1642,7 @@ export class LiveSessionStore {
     requesterSocket?: SessionPeerSocket,
     requestId?: string,
   ): void {
+    this.cancelRandomExpiryTimer(session);
     const notifiedSockets = new Set<SessionPeerSocket>();
 
     for (const member of session.members.values()) {

@@ -5,11 +5,21 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `random-volunteer-picker-countdown`, `section-2-icebreaker-flow`, and `mobile-wake-lock-foreground-resync` (all three unlocked by `section-1-chosen-volunteer-prayer-gate` — first parallelizable wave)
+- Current next ready feature: `section-2-icebreaker-flow`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
+
+### Session 025
+
+- Date: `2026-10-31`
+- Goal: Complete and validate `random-volunteer-picker-countdown` per `docs/specs/random-volunteer-picker-countdown.md`.
+- Completed: Implemented `pick_random`, `retry_random`, and `confirm_random` leader commands in `src/server/sessionStore.ts` with server-authoritative 30s countdown timer (`candidateExpiresAt`), uniform random candidate selection via injected `crypto.randomInt` seam, retry excluding current candidate, lazy expired window rejection, and `random_expired` broadcast. Pure reducers and constants added in `src/shared/session.ts` at `SESSION_PROTOCOL_VERSION = 3` (strictly additive, no wire break). Client dispatch hook `src/client/lib/useRandomSelection.ts`, `RandomSelectionPanel.tsx` rendering terracotta notification card, ticking countdown, and leader Retry/Confirm controls, and `OpeningPrayerScreen.tsx` wiring with `Sacred3DScene` `random-polyhedron` stage and `random-spin` / `confirm-burst` impulses. Verified all unit, integration, Playwright E2E (35/35), and raw /ws gating smoke tests. Updated `ARCHITECTURE.md` and `docs/domain-model.md`. Independent validator verdict `accept`.
+- Verification run: `./init.sh` (29 Vitest files / 265 tests exit 0), `PLAYWRIGHT_PORT=3301 npm run test:e2e` (35/35 exit 0), raw /ws smoke on `PORT=3101` (16/16 checks PASS across 3 parts), `grep -rn "Assistant" src/` (0 matches).
+- Evidence captured: All gates green; `random-volunteer-picker-countdown` marked `accepted` in `feature_list.json`.
+- Files or artifacts updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/lib/useRandomSelection.ts`, `src/client/components/random/RandomSelectionPanel.tsx`, `src/client/components/prayer/OpeningPrayerScreen.tsx`, `src/client/App.tsx`, `src/client/styles/global.css`, `ARCHITECTURE.md`, `docs/domain-model.md`, `tests/unit/random-selection-state.test.ts`, `tests/unit/random-selection-screen.test.tsx`, `tests/integration/ws-random-selection.test.ts`, `tests/e2e/random-volunteer-picker-countdown.spec.ts`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Publish `feature/random-volunteer-picker-countdown` (rebase over `main`, push + PR + merge into `main`), then complete `section-2-icebreaker-flow`.
 
 ### Session 024
 

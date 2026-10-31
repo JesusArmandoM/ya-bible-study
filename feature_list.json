@@ -243,11 +243,19 @@
     "depends_on": [
       "section-1-chosen-volunteer-prayer-gate"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
-      "Unit + Playwright tests verifying random candidate selection among connected Participants, 30-second countdown tick/expiry handling, 'Retry' re-selection, 'Confirm selection' transitioning to the 'YOU WERE CHOSEN' state, and graceful disabled state when 0 Participants are connected."
+      "Unit + Playwright tests verifying random candidate selection among connected Participants, 30-second countdown tick/expiry handling, 'Retry' re-selection, 'Confirm selection' transitioning to the 'YOU WERE CHOSEN' state, and graceful disabled state when 0 Participants are connected.",
+      "Re-runnable gates: ./init.sh (typecheck + Vitest + build) exits 0; PLAYWRIGHT_PORT=3301 npm run test:e2e full suite passes (35/35 green); raw /ws gating smoke passes; grep -rn \"Assistant\" src/ returns 0 matches."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-31: Implementation of random-volunteer-picker-countdown adds LeaderCommandType widening ('pick_random' | 'retry_random' | 'confirm_random'), SessionUpdatedCommand widening ('random_expired'), RANDOM_SELECTION_COUNTDOWN_MS (30_000), pure reducers applyStageRandomCandidate/applyConfirmRandomCandidate/applyClearRandomCandidate and helpers eligibleRandomCandidateIds/remainingCountdownSeconds in src/shared/session.ts at SESSION_PROTOCOL_VERSION = 3 with zero wire break. Server in src/server/sessionStore.ts handles pick_random (staged candidate + candidateExpiresAt = now + 30s + unref'd timer), retry_random (re-picks excluding current candidate; single participant re-picks with reset timer), confirm_random (composes applySelectVolunteer into established chosen volunteer gate; rejects expired window with INVALID_STATE_TRANSITION), and timer-driven random_expired broadcast with silent self-cancellation on supersede. Client in src/client/lib/useRandomSelection.ts dispatches commands via shared socket client, RandomSelectionPanel renders ux/9 terracotta notification card with ticking 0:{ss} countdown, OpeningPrayerScreen renders Pick Randomly button and random-selection panel with Sacred3DScene random-polyhedron stage and random-spin/confirm-burst impulses.",
+      "2026-10-31: ./init.sh exited 0 — TypeScript typecheck clean across client/server/root tsconfigs; Vitest 29 files / 265 tests passed including new tests/unit/random-selection-state.test.ts (13), tests/unit/random-selection-screen.test.tsx (18), tests/integration/ws-random-selection.test.ts (8), and expanded tests/unit/session-socket.test.ts (12); production build emitted dist/client and dist/server.",
+      "2026-10-31: PLAYWRIGHT_PORT=3301 npm run test:e2e exited 0 — 35/35 passed (4.6m) on mobile-chromium (390x844), including new tests/e2e/random-volunteer-picker-countdown.spec.ts 4/4 (Scenario 1 3-client pick/countdown/confirm/Done/advance, Scenario 2 retry re-roll, Scenario 3 raw /ws participant pick rejection FORBIDDEN_LEADER_ONLY, Scenario 4 disabled button + clear note for solo leader) and ws-room-lifecycle.spec.ts green with zero leaked sessions.",
+      "2026-10-31: Raw /ws gating smoke script verified protocolVersion 3, real 30s server expiry timer with random_expired fan-out, full negative matrix (FORBIDDEN_LEADER_ONLY, UNAUTHORIZED_LEADER, INVALID_STATE_TRANSITION), fast-seam randomCountdownMs expiry, controllable now lazy confirm rejection, and clean SIGTERM shutdown.",
+      "2026-10-31: Invariant check — grep -rn \"Assistant\" src/ returned 0 matches.",
+      "2026-10-31: INDEPENDENT VALIDATOR ACCEPT ($feature-validator). All gates verified: ./init.sh exit 0, Playwright E2E full suite 35/35 green, raw /ws smoke PASS, zero legacy terminology matches, no external dependencies, clean teardown."
+    ],
     "notes": "Match ux/9. Randomizing.png terracotta notification card, Retry secondary pill, and Confirm selection gold primary pill."
   },
   {

@@ -55,7 +55,7 @@ Participant-owned three-line devotional card created in **Section 4**:
 1. `collecting_hands`: Section opens; `Participants` see the `Raise Hand` / `Read aloud` orb. Raising a hand appends the participant with timestamp (`Raised 4s ago`). Leader's section-advance control is **locked** (`Waiting for volunteer to advance`).
 2. `random_pending` *(optional branch)*: Triggered when `StudyLeader` taps `Pick Randomly` / `Random`. Server picks an eligible connected `Participant`, starts a **30-second countdown**, notifies the candidate, and shows `StudyLeader` `Retry` and `Confirm selection`.
    - `Retry` picks another eligible `Participant` and resets the 30s timer.
-   - Candidate acceptance or leader `Confirm selection` transitions to `assigned`.
+   - Leader `Confirm selection` is the **sole** transition to `assigned` (no participant accept command exists — the "30 seconds to accept" countdown copy is UX only). A confirm attempt after the window elapsed is rejected server-side and prompts `Retry` or a manual pick.
    - Timer expiry without confirmation prompts the leader to `Retry` or pick manually.
 3. `assigned`: Exactly one `Participant` (`selectedMemberId`) sees the `"YOU WERE CHOSEN"` view with the suggested prayer or full Gospel text and the exclusive `Done` / `Done Reading` button. Other `Participants` see who is currently praying/reading. Leader's advance button remains locked (with a secondary emergency override only if needed).
 4. `turn_completed`: Triggered when `selectedMemberId` taps `Done` / `Done Reading` (or `StudyLeader` invokes emergency override after disconnect). Unlocks the `StudyLeader`'s primary gold button to advance to the next `StudySection`.
