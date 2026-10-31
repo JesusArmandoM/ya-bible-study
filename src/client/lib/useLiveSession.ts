@@ -4,6 +4,7 @@ import type {
   PublicLiveSessionSnapshot,
   ServerWsMessage,
   SessionStudySummary,
+  SessionUpdatedCommand,
 } from '../../shared/session';
 import {
   clearStoredSessionCredentials,
@@ -46,12 +47,22 @@ export interface UseLiveSessionResult {
   loadStudy: (summary: SessionStudySummary) => Promise<void>;
   openLobby: () => Promise<void>;
   startStudy: () => Promise<void>;
+  /** Study Leader: assign the chosen volunteer for the current turn. */
+  chooseVolunteer: (targetMemberId: string) => Promise<void>;
+  /** Chosen volunteer: mark the turn done (`complete_turn`). */
+  completeTurn: () => Promise<void>;
+  /** Study Leader: mark the turn done on the volunteer's behalf. */
+  overrideTurn: () => Promise<void>;
+  /** Study Leader: advance to the next section (`next_section`). */
+  nextSection: () => Promise<void>;
   /** Participant self-service: raise (`true`) or lower (`false`) own hand. */
   setHandRaised: (raised: boolean) => Promise<void>;
   /** Study Leader: lower one participant's hand. */
   lowerHand: (targetMemberId: string) => Promise<void>;
   /** Study Leader: lower every raised hand. */
   clearRaisedHands: () => Promise<void>;
+  /** Command of the latest `session_updated` broadcast (motion triggers). */
+  lastSessionCommand: SessionUpdatedCommand | null;
   leaveRoom: () => void;
   clearError: () => void;
 }
@@ -94,6 +105,8 @@ export function useLiveSession(
     useState<LiveSessionConnectionStatus>(() =>
       client.isConnected() ? 'connected' : 'disconnected',
     );
+  const [lastSessionCommand, setLastSessionCommand] =
+    useState<SessionUpdatedCommand | null>(null);
 
   // Subscribe to WebSocket events and sync reactive state
   useEffect(() => {
@@ -134,8 +147,12 @@ export function useLiveSession(
           break;
 
         case 'roster_updated':
+          setSession(message.session);
+          break;
+
         case 'session_updated':
           setSession(message.session);
+          setLastSessionCommand(message.command);
           break;
 
         case 'leader_replaced': {
@@ -364,6 +381,110 @@ export function useLiveSession(
     }
   }, [client]);
 
+  const chooseVolunteer = useCallback(
+    async (targetMemberId: string) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const stored = client.getCredentials();
+        const response = await client.sendLeaderCommand({
+          type: 'choose_volunteer',
+          targetMemberId,
+          ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+          ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+          ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+        });
+        if (response.type === 'session_updated') {
+          setSession(response.session);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to choose the volunteer';
+        setError(message);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [client],
+  );
+
+  const completeTurn = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      if (!client.sendTurnCommand) {
+        throw new Error(
+          'The live session connection does not support turn commands.',
+        );
+      }
+      const response = await client.sendTurnCommand({
+        type: 'complete_turn',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to complete the prayer turn';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
+  const overrideTurn = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'override_turn',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to complete the prayer turn';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
+  const nextSection = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'next_section',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to advance the section';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
   const setHandRaised = useCallback(
     async (raised: boolean) => {
       setIsSubmitting(true);
@@ -476,9 +597,14 @@ export function useLiveSession(
     loadStudy,
     openLobby,
     startStudy,
+    chooseVolunteer,
+    completeTurn,
+    overrideTurn,
+    nextSection,
     setHandRaised,
     lowerHand,
     clearRaisedHands,
+    lastSessionCommand,
     leaveRoom,
     clearError,
   };

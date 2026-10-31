@@ -430,6 +430,21 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
     expect(accepted.session.volunteerTurn?.raisedHands).toHaveLength(1);
 
     // After next_section leaves Section 1 the turn is cleared and raises reject.
+    // Compat edit (section-1-chosen-volunteer-prayer-gate): the Section 1
+    // next_section gate now requires volunteerTurn.completedAt, so the leader
+    // completes the turn via override_turn first. All assertions unchanged.
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'override-before-next',
+    });
+    await leader.waitFor(
+      'session_updated',
+      (m) => m.command === 'override_turn',
+    );
+
     leader.send({
       type: 'next_section',
       sessionCode: created.sessionCode,

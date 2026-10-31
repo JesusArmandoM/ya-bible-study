@@ -3,6 +3,7 @@ import type { SanctuaryRole } from '../../../shared/health';
 import type {
   PublicLiveSessionSnapshot,
   SessionOpeningPrayerContent,
+  SessionUpdatedCommand,
 } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
 import {
@@ -10,8 +11,9 @@ import {
   useSacredStageStore,
 } from '../../state/sacredStageStore';
 import { SectionProgressHeader } from '../sections/SectionProgressHeader';
+import { ChosenVolunteerView } from './ChosenVolunteerView';
 import { HandRaiseOrb } from './HandRaiseOrb';
-import { LockedAdvanceBar } from './LockedAdvanceBar';
+import { LeaderAdvanceZone, LockedAdvanceBar } from './LockedAdvanceBar';
 import { OpeningPrayerCard } from './OpeningPrayerCard';
 import {
   RaisedHandsQueue,
@@ -35,6 +37,16 @@ export interface OpeningPrayerScreenProps {
   onLowerHand: (targetMemberId: string) => void;
   /** Study Leader: lower every raised hand. */
   onClearRaisedHands: () => void;
+  /** Study Leader: assign the chosen volunteer (`choose_volunteer`). */
+  onChooseVolunteer?: (targetMemberId: string) => void | Promise<void>;
+  /** Chosen volunteer: mark the turn done (`complete_turn`). */
+  onCompleteTurn?: () => void | Promise<void>;
+  /** Study Leader: complete the turn on the volunteer's behalf (`override_turn`). */
+  onOverrideTurn?: () => void | Promise<void>;
+  /** Study Leader: advance sections (`next_section`, unlocked by `completedAt`). */
+  onNextSection?: () => void | Promise<void>;
+  /** Command of the latest `session_updated` broadcast (completion pulse). */
+  lastSessionCommand?: SessionUpdatedCommand | null;
 }
 
 const LEADER_SUBTITLE_FALLBACK = 'Waiting for someone to volunteer to pray';
@@ -58,9 +70,13 @@ export function formatPeopleRaisedCount(count: number): string {
 /**
  * Section 1 — Opening Prayer (`in_progress` + `section_1_prayer`). Replaces
  * the provisional `SectionOneHandoff`, keeping its legacy-stable `section-one-*`
- * hooks. The Study Leader sees the prayer card, live raised-hands queue, and
- * locked advance bar; Participants see the violet `Raise Hand` orb, suggested
- * prayer, live count pill, and the locked info bar.
+ * hooks. The Study Leader sees the prayer card, live raised-hands queue (with
+ * `Choose` pills while the turn is open), the chosen-volunteer banner, and the
+ * advance zone (locked bar + discreet override, morphing to the gold CTA on
+ * `completedAt`). The chosen Participant alone gets the `YOU WERE CHOSEN` view
+ * with the exclusive `Done` button; other Participants see the violet
+ * `Raise Hand` orb plus who is praying; everyone else's controls stay out of
+ * their DOM entirely.
  */
 export function OpeningPrayerScreen({
   role,
@@ -70,16 +86,49 @@ export function OpeningPrayerScreen({
   onToggleHandRaised,
   onLowerHand,
   onClearRaisedHands,
+  onChooseVolunteer,
+  onCompleteTurn,
+  onOverrideTurn,
+  onNextSection,
+  lastSessionCommand = null,
 }: OpeningPrayerScreenProps) {
   const isLeader = role === 'Study Leader';
   const setStage = useSacredStageStore((s) => s.setStage);
+  const triggerImpulse = useSacredStageStore((s) => s.triggerImpulse);
 
-  // Stage wiring: Section 1 owns the violet prayer-orb stage variant
-  // (guarded — only ever applied while this screen is mounted).
+  const turn = session.volunteerTurn ?? null;
+  const selectedMemberId = turn?.selectedMemberId ?? null;
+  const completedAt = turn?.completedAt ?? null;
+  const isChosenVolunteer =
+    !isLeader && selectedMemberId !== null && selectedMemberId === memberId;
+  const selectedMember =
+    selectedMemberId !== null
+      ? (session.members.find(
+          (candidate) => candidate.memberId === selectedMemberId,
+        ) ?? null)
+      : null;
+
+  // Stage wiring: Section 1 owns the violet prayer-orb stage variant, and the
+  // chosen volunteer's screen radiates the golden chosen-aura (guarded — only
+  // ever applied while this screen is mounted).
   useEffect(() => {
-    const resolved = resolveSacredStage({ screen: 'section-1-prayer' });
+    const resolved = resolveSacredStage({
+      screen: 'section-1-prayer',
+      isChosenVolunteer,
+    });
     setStage(resolved.stage, { accentMode: resolved.accentMode });
-  }, [setStage]);
+  }, [setStage, isChosenVolunteer]);
+
+  // Synchronized golden completion pulse on every client when the turn is
+  // completed over `/ws` (`complete_turn` or the leader `override_turn`).
+  useEffect(() => {
+    if (
+      lastSessionCommand === 'complete_turn' ||
+      lastSessionCommand === 'override_turn'
+    ) {
+      triggerImpulse('completion-pulse');
+    }
+  }, [lastSessionCommand, triggerImpulse]);
 
   const openingPrayer: SessionOpeningPrayerContent | null =
     session.study?.openingPrayer ?? null;
@@ -91,7 +140,7 @@ export function OpeningPrayerScreen({
       LEADER_SUBTITLE_FALLBACK)
     : (openingPrayer?.participantPrompt ?? PARTICIPANT_SUBTITLE_FALLBACK);
 
-  const raisedHands = session.volunteerTurn?.raisedHands ?? [];
+  const raisedHands = turn?.raisedHands ?? [];
   const rows = useMemo<RaisedHandRowData[]>(
     () =>
       raisedHands.flatMap((entry) => {
@@ -144,12 +193,69 @@ export function OpeningPrayerScreen({
           <OpeningPrayerCard
             suggestedPrayerText={openingPrayer?.suggestedPrayerText}
           />
+          {selectedMember && completedAt === null && (
+            <div
+              className="prayer-chosen-banner"
+              data-testid="prayer-chosen-banner"
+              role="status"
+            >
+              {`${selectedMember.displayName} is praying — waiting for Done`}
+              {selectedMember.connectionStatus === 'disconnected' && (
+                <span
+                  className="prayer-chosen-banner-status"
+                  data-testid="prayer-chosen-banner-status"
+                >
+                  {' · reconnecting'}
+                </span>
+              )}
+            </div>
+          )}
           <RaisedHandsQueue
             rows={rows}
             onLowerHand={onLowerHand}
             onClearAll={onClearRaisedHands}
+            selectedMemberId={selectedMemberId}
+            {...(onChooseVolunteer && completedAt === null
+              ? {
+                  onChoose: (targetMemberId: string) => {
+                    void Promise.resolve(
+                      onChooseVolunteer(targetMemberId),
+                    ).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  },
+                }
+              : {})}
           />
-          <LockedAdvanceBar role="Study Leader" />
+          <LeaderAdvanceZone
+            completedAt={completedAt}
+            onNextSection={() => {
+              void Promise.resolve(onNextSection?.()).catch(() => {
+                // Failure is surfaced via the session error path.
+              });
+            }}
+            onOverrideTurn={() => {
+              void Promise.resolve(onOverrideTurn?.()).catch(() => {
+                // Failure is surfaced via the session error path.
+              });
+            }}
+          />
+        </>
+      ) : isChosenVolunteer ? (
+        <>
+          <ChosenVolunteerView
+            completedAt={completedAt}
+            chosenVolunteerInstruction={
+              openingPrayer?.chosenVolunteerInstruction
+            }
+            suggestedPrayerText={openingPrayer?.suggestedPrayerText}
+            onCompleteTurn={() => {
+              void Promise.resolve(onCompleteTurn?.()).catch(() => {
+                // Failure is surfaced via the session error path.
+              });
+            }}
+          />
+          <LockedAdvanceBar role="Participant" />
         </>
       ) : (
         <>
@@ -157,6 +263,24 @@ export function OpeningPrayerScreen({
           <p className="prayer-random-hint" data-testid="prayer-random-hint">
             {RANDOM_HINT_COPY}
           </p>
+          {selectedMember && completedAt === null && (
+            <p
+              className="prayer-active-volunteer-note"
+              data-testid="prayer-active-volunteer-note"
+              role="status"
+            >
+              {`${selectedMember.displayName} is praying now`}
+            </p>
+          )}
+          {completedAt !== null && (
+            <p
+              className="prayer-completed-note"
+              data-testid="prayer-completed-note"
+              role="status"
+            >
+              The Opening Prayer is complete
+            </p>
+          )}
           <div className="prayer-scroll-region">
             <OpeningPrayerCard
               suggestedPrayerText={openingPrayer?.suggestedPrayerText}

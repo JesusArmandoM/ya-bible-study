@@ -463,3 +463,37 @@ describe('Prayer screen CSS baseline (>= 16px text, >= 44px targets, DESIGN over
     expect(css).toMatch(/\.section-one-progress\s*\{[^}]*height: 4px/);
   });
 });
+
+describe('OpeningPrayerScreen — chosen-volunteer gate extension (Choose pills)', () => {
+  it('renders the leader Choose pill and dispatches choose_volunteer with the row memberId', () => {
+    const onChooseVolunteer = vi.fn();
+    renderScreen({
+      role: 'Study Leader',
+      session: makeSession([
+        { memberId: 'member-1', raisedAt: new Date().toISOString() },
+      ]),
+      onChooseVolunteer,
+    });
+
+    const pill = screen.getByTestId('prayer-queue-choose');
+    expect(pill).toHaveAttribute('aria-label', 'Choose Daniel to pray');
+    fireEvent.click(pill);
+    expect(onChooseVolunteer).toHaveBeenCalledWith('member-1');
+  });
+
+  it('never renders Choose pills or a chosen view in the Participant DOM', () => {
+    renderScreen({
+      role: 'Participant',
+      session: makeSession([
+        { memberId: 'member-2', raisedAt: new Date().toISOString() },
+      ]),
+      onChooseVolunteer: vi.fn(),
+    });
+
+    expect(screen.queryByTestId('prayer-queue-choose')).toBeNull();
+    expect(screen.queryByTestId('prayer-chosen-view')).toBeNull();
+    expect(screen.queryByTestId('prayer-done-button')).toBeNull();
+    expect(document.body.textContent).not.toContain('Choose');
+    expect(document.body.textContent).not.toContain('Done');
+  });
+});

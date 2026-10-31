@@ -239,13 +239,16 @@ export interface LeaderCommandInput {
   reason?: string;
   /** Sanitized study summary; required for `load_study` commands. */
   study?: SessionStudySummary;
-  /** Optional single-member target for `clear_hands`. */
+  /**
+   * Single-member target: required for `choose_volunteer`, optional for
+   * `clear_hands`.
+   */
   targetMemberId?: string;
 }
 
-/** Participant self-service hand-raise commands (protocol v3). */
+/** Participant self-service turn commands (protocol v3). */
 export interface TurnCommandInput {
-  type: 'raise_hand' | 'lower_hand';
+  type: 'raise_hand' | 'lower_hand' | 'complete_turn';
   sessionCode?: string;
   memberId?: string;
 }
@@ -694,6 +697,25 @@ export function createSessionSocketClient(
             leaderToken,
             ...(memberId ? { memberId } : {}),
             ...(input.targetMemberId ? { targetMemberId: input.targetMemberId } : {}),
+          },
+          ['session_updated'],
+        );
+      }
+
+      if (input.type === 'choose_volunteer') {
+        const targetMemberId = input.targetMemberId;
+        if (!targetMemberId) {
+          throw new Error(
+            'choose_volunteer leader commands require a targetMemberId.',
+          );
+        }
+        return await sendRequest(
+          {
+            type: 'choose_volunteer',
+            sessionCode,
+            leaderToken,
+            ...(memberId ? { memberId } : {}),
+            targetMemberId,
           },
           ['session_updated'],
         );

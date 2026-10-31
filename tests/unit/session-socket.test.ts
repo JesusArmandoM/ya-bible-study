@@ -430,6 +430,103 @@ describe('sessionSocket turn commands (protocol v3 hand-raise framing)', () => {
     unboundClient.disconnect();
     store.dispose();
   });
+
+  it('frames choose_volunteer with targetMemberId and complete_turn for the chosen volunteer', async () => {
+    const store = new LiveSessionStore({ sweepIntervalMs: false });
+    const leaderClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+    const chosenClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+
+    const created = await leaderClient.createSession({ displayName: 'Claire' });
+    const joined = await chosenClient.joinSession({
+      sessionCode: created.sessionCode,
+      displayName: 'Daniel',
+    });
+    await leaderClient.sendLeaderCommand({ type: 'start_study' });
+
+    // choose_volunteer requires a targetMemberId.
+    await expect(
+      leaderClient.sendLeaderCommand({ type: 'choose_volunteer' }),
+    ).rejects.toThrow(/targetMemberId/);
+
+    const chosen = await leaderClient.sendLeaderCommand({
+      type: 'choose_volunteer',
+      targetMemberId: joined.memberId,
+    });
+    if (chosen.type !== 'session_updated') {
+      throw new Error('choose_volunteer must resolve on session_updated.');
+    }
+    expect(chosen.command).toBe('choose_volunteer');
+    expect(chosen.session.volunteerTurn?.selectedMemberId).toBe(joined.memberId);
+    expect(chosen.session.volunteerTurn?.completedAt).toBeNull();
+
+    if (!chosenClient.sendTurnCommand) {
+      throw new Error('sendTurnCommand must be implemented by the client.');
+    }
+
+    // complete_turn frames the participant memberId like raise_hand.
+    const done = await chosenClient.sendTurnCommand({ type: 'complete_turn' });
+    expect(done.command).toBe('complete_turn');
+    expect(done.session.volunteerTurn?.selectedMemberId).toBe(joined.memberId);
+    expect(done.session.volunteerTurn?.completedAt).toBeTruthy();
+
+    // The completion unlocks the leader's next_section framing.
+    const advanced = await leaderClient.sendLeaderCommand({
+      type: 'next_section',
+    });
+    if (advanced.type !== 'session_updated') {
+      throw new Error('next_section must resolve on session_updated.');
+    }
+    expect(advanced.command).toBe('next_section');
+    expect(advanced.session.currentSectionId).toBe('section_2_icebreaker');
+    expect(advanced.session.volunteerTurn).toBeNull();
+
+    await leaderClient.sendLeaderCommand({ type: 'close_session' });
+    leaderClient.disconnect();
+    chosenClient.disconnect();
+    store.dispose();
+  });
+
+  it('frames override_turn as a leader command that completes the turn without a selection', async () => {
+    const store = new LiveSessionStore({ sweepIntervalMs: false });
+    const leaderClient = createSessionSocketClient({
+      location: { protocol: 'https:', host: 'parish.example.org' },
+      storage: new InMemoryStorage(),
+      createWebSocket: (url) => new LoopbackClientSocket(url, store),
+    });
+
+    await leaderClient.createSession({ displayName: 'Claire' });
+    await leaderClient.sendLeaderCommand({ type: 'start_study' });
+
+    const overridden = await leaderClient.sendLeaderCommand({
+      type: 'override_turn',
+    });
+    if (overridden.type !== 'session_updated') {
+      throw new Error('override_turn must resolve on session_updated.');
+    }
+    expect(overridden.command).toBe('override_turn');
+    expect(overridden.session.volunteerTurn?.completedAt).toBeTruthy();
+    expect(overridden.session.volunteerTurn?.selectedMemberId).toBeNull();
+
+    const advanced = await leaderClient.sendLeaderCommand({
+      type: 'next_section',
+    });
+    if (advanced.type !== 'session_updated') {
+      throw new Error('next_section must resolve on session_updated.');
+    }
+    expect(advanced.session.currentSectionId).toBe('section_2_icebreaker');
+
+    await leaderClient.sendLeaderCommand({ type: 'close_session' });
+    leaderClient.disconnect();
+    store.dispose();
+  });
 });
 
 describe('LiveSessionStore deterministic collision, reconnect guard, and 4-hour TTL behavior', () => {
