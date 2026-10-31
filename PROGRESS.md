@@ -11,6 +11,16 @@
 
 ## Session Log
 
+### Session 028
+
+- Date: `2026-10-31`
+- Goal: Implement, verify, and accept `section-2-icebreaker-flow` per `docs/specs/section-2-icebreaker-flow.md`.
+- Completed: Extended `SessionStudySummary` with `SessionIcebreakerContent` in `src/shared/session.ts`, bounded normalization, and public snapshot projection stripping `leaderNote` and `examplesToListenFor` for participants. In `src/server/sessionStore.ts`, widened `raise_hand` and `lower_hand` gate to `section_2_icebreaker`, and created the open-share turn via `createVolunteerTurnForSection('section_2_icebreaker')` on `next_section` into Section 2. Created client components under `src/client/components/icebreaker/` (`SectionIcebreakerScreen`, `LeaderIcebreakerView`, `ParticipantIcebreakerView`, `IcebreakerHeroCard`) matching `ux/7` and `ux/8` with 0/1/N hand-raise state cards, live raised hands count chip, `HandRaiseOrb` interaction, and leader-only `Begin Reading →` advance button advancing to Section 3.
+- Verification run: `./init.sh` (29 Vitest files / 256 tests exit 0, build exit 0), `PLAYWRIGHT_PORT=3302 npm run test:e2e tests/e2e/section-2-icebreaker.spec.ts` (5/5 passed), `grep -rn "Assistant" src/` (0 matches).
+- Evidence captured: All test gates green; `section-2-icebreaker-flow` marked `accepted` in `feature_list.json`.
+- Files or artifacts updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/App.tsx`, `src/client/components/icebreaker/*`, `src/client/styles/global.css`, `tests/unit/icebreaker-content.test.ts`, `tests/unit/icebreaker-screen.test.tsx`, `tests/integration/ws-icebreaker-hand-raise.test.ts`, `tests/e2e/section-2-icebreaker.spec.ts`, `tests/e2e/section-1-chosen-volunteer-prayer-gate.spec.ts`, `tests/integration/ws-hand-raise.test.ts`, `tests/integration/ws-volunteer-gate.test.ts`, `tests/unit/session-socket.test.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Merge latest `main` into branch, verify integrated build, push, create PR, and merge into `main`.
+
 ### Session 024
 
 - Date: `2026-10-31`

@@ -1120,7 +1120,15 @@ export class LiveSessionStore {
 
       session.currentSectionIndex = nextIndex;
       session.currentSectionId = nextSectionId;
-      session.volunteerTurn = null;
+      /**
+       * Entering the Icebreaker opens a fresh open-share hand-raise turn
+       * (count-only; reserved `candidate*` / `selected*` / `completed*` seams
+       * stay `null` and untouched). Every other advance clears the turn.
+       */
+      session.volunteerTurn =
+        nextSectionId === 'section_2_icebreaker'
+          ? createVolunteerTurnForSection('section_2_icebreaker')
+          : null;
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
     }
@@ -1241,15 +1249,25 @@ export class LiveSessionStore {
       return;
     }
 
+    /**
+     * Hand raising is section-scoped: the Opening Prayer turn or the
+     * Icebreaker open-share turn, and the turn on record must belong to the
+     * section currently in progress.
+     */
+    const handRaiseSectionId = session.currentSectionId;
+    const isHandRaiseSection =
+      handRaiseSectionId === 'section_1_prayer' ||
+      handRaiseSectionId === 'section_2_icebreaker';
     if (
       session.status !== 'in_progress' ||
-      session.currentSectionId !== 'section_1_prayer' ||
-      !session.volunteerTurn
+      !isHandRaiseSection ||
+      !session.volunteerTurn ||
+      session.volunteerTurn.sectionId !== handRaiseSectionId
     ) {
       this.sendError(
         socket,
         'INVALID_STATE_TRANSITION',
-        'Hands can only be raised during the Opening Prayer section.',
+        'Hands can only be raised during the Opening Prayer or Icebreaker sections.',
         requestId,
       );
       return;

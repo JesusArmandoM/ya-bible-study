@@ -2692,3 +2692,378 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/* Section 2 — Icebreaker "Outsiders Wanted" (components/icebreaker/, DESIGN ux/7–ux/8) */
+.icebreaker-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    rgba(23, 27, 46, 0.95) 0%,
+    rgba(18, 21, 38, 0.95) 100%
+  );
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.25rem 1.75rem;
+  backdrop-filter: blur(14px);
+}
+
+.icebreaker-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.icebreaker-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.icebreaker-title {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-h1-size);
+  font-weight: 700;
+  line-height: var(--text-h1-lh);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-intro {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-prompt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  background: var(--color-surface-highlight);
+  border: 1px solid var(--color-border-gold);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.15rem 1.35rem;
+}
+
+.icebreaker-prompt-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.icebreaker-prompt-question {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #f8fafc;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-prompt-divider {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: none;
+  background: var(--color-border-subtle);
+}
+
+.icebreaker-prompt-followup {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-examples-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.15rem 1.35rem;
+}
+
+.icebreaker-examples-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.icebreaker-examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.icebreaker-examples-item {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-examples-note {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-examples-fallback {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.icebreaker-share-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.icebreaker-share-question {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-serif);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.32;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-share-followup {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.icebreaker-share-subcopy {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.icebreaker-orb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Bronze hospitality recolor of the shared HandRaiseOrb (DESIGN override #3):
+   descendant overrides only — prayer/HandRaiseOrb.tsx stays untouched. */
+.icebreaker-orb-wrap .hand-raise-orb {
+  background: radial-gradient(
+    circle at 50% 38%,
+    rgba(226, 168, 62, 0.32) 0%,
+    rgba(226, 168, 62, 0.12) 55%,
+    rgba(23, 27, 46, 0.6) 100%
+  );
+}
+
+.icebreaker-orb-wrap .hand-raise-orb-ring {
+  border-color: rgba(226, 168, 62, 0.55);
+}
+
+.icebreaker-orb-wrap .hand-raise-orb-ring-inner {
+  border-color: rgba(226, 168, 62, 0.38);
+}
+
+.icebreaker-orb-wrap .hand-raise-orb-core {
+  background: radial-gradient(
+    circle at 50% 35%,
+    rgba(226, 168, 62, 0.4) 0%,
+    rgba(226, 168, 62, 0.16) 70%,
+    transparent 100%
+  );
+}
+
+.icebreaker-orb-wrap .hand-raise-orb-raised {
+  background: radial-gradient(
+    circle at 50% 38%,
+    rgba(226, 168, 62, 0.55) 0%,
+    rgba(226, 168, 62, 0.22) 55%,
+    rgba(23, 27, 46, 0.6) 100%
+  );
+  border: 1px solid rgba(226, 168, 62, 0.65);
+}
+
+.icebreaker-orb-wrap .hand-raise-orb-ripple {
+  border-color: rgba(226, 168, 62, 0.75);
+}
+
+.icebreaker-orb-wrap .hand-raise-orb-pulsing {
+  animation-name: icebreaker-orb-pulse;
+}
+
+@keyframes icebreaker-orb-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(226, 168, 62, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 32px 10px rgba(226, 168, 62, 0.28);
+  }
+}
+
+/* The wrapper caption carries the spec labels ("Tap to raise your hand" /
+   "Tap again to lower"); hide only the orb's internal duplicate sublabel. */
+.icebreaker-orb-wrap .hand-raise-orb-sublabel {
+  display: none;
+}
+
+.icebreaker-orb-caption {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.icebreaker-orb-hint {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.icebreaker-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding: 0.55rem 1.15rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+}
+
+.icebreaker-count-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-accent-emerald);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+}
+
+.icebreaker-count-pill-text {
+  display: inline-flex;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.icebreaker-advance-zone {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.85rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    180deg,
+    rgba(18, 21, 38, 0) 0%,
+    rgba(11, 13, 23, 0.92) 40%
+  );
+}
+
+.icebreaker-advance-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.85rem 1.25rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-primary-fg);
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 10px 28px var(--glow-gold);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icebreaker-advance-cta:hover {
+  background: var(--color-primary-hover);
+}
+
+.icebreaker-advance-cta:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

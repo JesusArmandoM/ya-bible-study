@@ -276,6 +276,9 @@ describe('WebSocket chosen-volunteer prayer gate (protocol v3)', () => {
     await p2.waitFor('session_updated', (m) => m.command === 'complete_turn');
 
     // The gate opens: next_section advances to the Section 2 placeholder.
+    // Compat edit (section-2-icebreaker-flow): next_section into Section 2 now
+    // creates a fresh open-share turn instead of clearing the turn, so this
+    // assertion now locks in the fresh Section 2 turn shape.
     nextSection(leader, created, 'next-1');
     const advanced = await leader.waitFor(
       'session_updated',
@@ -283,7 +286,15 @@ describe('WebSocket chosen-volunteer prayer gate (protocol v3)', () => {
     );
     expect(advanced.session.currentSectionId).toBe('section_2_icebreaker');
     expect(advanced.session.currentSectionIndex).toBe(1);
-    expect(advanced.session.volunteerTurn).toBeNull();
+    expect(advanced.session.volunteerTurn).toEqual({
+      sectionId: 'section_2_icebreaker',
+      mode: 'open_share',
+      raisedHands: [],
+      candidateMemberId: null,
+      candidateExpiresAt: null,
+      selectedMemberId: null,
+      completedAt: null,
+    });
     await p1.waitFor('session_updated', (m) => m.command === 'next_section');
     await p2.waitFor('session_updated', (m) => m.command === 'next_section');
   }, 15_000);
