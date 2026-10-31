@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'motion/react';
 import { useEffect, useMemo } from 'react';
 import type { SanctuaryRole } from '../../../shared/health';
 import type {
@@ -5,6 +6,7 @@ import type {
   SessionOpeningPrayerContent,
   SessionUpdatedCommand,
 } from '../../../shared/session';
+import { volunteerTurnPhase } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
 import {
   resolveSacredStage,
@@ -19,6 +21,11 @@ import {
   RaisedHandsQueue,
   type RaisedHandRowData,
 } from './RaisedHandsQueue';
+import {
+  RandomPickButton,
+  RandomSelectionPanel,
+  type RandomCandidateData,
+} from '../random/RandomSelectionPanel';
 
 export interface OpeningPrayerScreenProps {
   role: SanctuaryRole;
@@ -45,6 +52,12 @@ export interface OpeningPrayerScreenProps {
   onOverrideTurn?: () => void | Promise<void>;
   /** Study Leader: advance sections (`next_section`, unlocked by `completedAt`). */
   onNextSection?: () => void | Promise<void>;
+  /** Study Leader: stage a random candidate (`pick_random`). */
+  onPickRandomly?: () => void | Promise<void>;
+  /** Study Leader: re-roll the pending candidate (`retry_random`). */
+  onRetryRandom?: () => void | Promise<void>;
+  /** Study Leader: confirm the pending candidate (`confirm_random`). */
+  onConfirmRandom?: () => void | Promise<void>;
   /** Command of the latest `session_updated` broadcast (completion pulse). */
   lastSessionCommand?: SessionUpdatedCommand | null;
 }
@@ -55,6 +68,8 @@ const PARTICIPANT_SUBTITLE_FALLBACK =
 const RANDOM_HINT_COPY =
   'If no one raises their hand, the leader will pick someone randomly.';
 const COUNT_HINT_COPY = 'The leader will choose shortly';
+/** Section-1 completion line for the random-selection panel (`ux/9`). */
+const RANDOM_CHOSEN_LINE = 'has been randomly chosen to pray.';
 
 /** Participant count pill copy: `0` / `1 person` / `N people` phrasing. */
 export function formatPeopleRaisedCount(count: number): string {
@@ -90,6 +105,9 @@ export function OpeningPrayerScreen({
   onCompleteTurn,
   onOverrideTurn,
   onNextSection,
+  onPickRandomly,
+  onRetryRandom,
+  onConfirmRandom,
   lastSessionCommand = null,
 }: OpeningPrayerScreenProps) {
   const isLeader = role === 'Study Leader';
@@ -108,25 +126,57 @@ export function OpeningPrayerScreen({
         ) ?? null)
       : null;
 
-  // Stage wiring: Section 1 owns the violet prayer-orb stage variant, and the
+  // Random-selection countdown state (server-authoritative; display-only).
+  const turnPhase = turn ? volunteerTurnPhase(turn) : null;
+  const isRandomizing = turnPhase === 'random_pending';
+  const randomCandidateId = turn?.candidateMemberId ?? null;
+  const randomCandidateData: RandomCandidateData | null =
+    randomCandidateId !== null
+      ? (() => {
+          const member = session.members.find(
+            (candidate) => candidate.memberId === randomCandidateId,
+          );
+          return member
+            ? {
+                displayName: member.displayName,
+                initials: member.initials,
+                avatarPalette: member.avatarPalette,
+                connectionStatus: member.connectionStatus,
+              }
+            : null;
+        })()
+      : null;
+
+  // Stage wiring: Section 1 owns the violet prayer-orb stage variant, the
+  // random-selection countdown swaps in the violet/gold polyhedron, and the
   // chosen volunteer's screen radiates the golden chosen-aura (guarded — only
   // ever applied while this screen is mounted).
   useEffect(() => {
     const resolved = resolveSacredStage({
       screen: 'section-1-prayer',
       isChosenVolunteer,
+      isRandomizing,
     });
     setStage(resolved.stage, { accentMode: resolved.accentMode });
-  }, [setStage, isChosenVolunteer]);
+  }, [setStage, isChosenVolunteer, isRandomizing]);
 
-  // Synchronized golden completion pulse on every client when the turn is
-  // completed over `/ws` (`complete_turn` or the leader `override_turn`).
+  // Synchronized stage impulses on every client from `/ws` broadcasts:
+  // the golden completion pulse on turn completion (`complete_turn` or the
+  // leader `override_turn`), the polyhedron spin on a random pick/re-roll,
+  // and the confirmation burst when the leader confirms the candidate.
   useEffect(() => {
     if (
       lastSessionCommand === 'complete_turn' ||
       lastSessionCommand === 'override_turn'
     ) {
       triggerImpulse('completion-pulse');
+    } else if (
+      lastSessionCommand === 'pick_random' ||
+      lastSessionCommand === 'retry_random'
+    ) {
+      triggerImpulse('random-spin');
+    } else if (lastSessionCommand === 'confirm_random') {
+      triggerImpulse('confirm-burst');
     }
   }, [lastSessionCommand, triggerImpulse]);
 
@@ -188,8 +238,40 @@ export function OpeningPrayerScreen({
         </p>
       </div>
 
+      {lastSessionCommand === 'random_expired' && (
+        <p
+          className="random-expired-notice"
+          data-testid="random-expired-notice"
+          role="status"
+          aria-live="polite"
+        >
+          The random selection window expired.
+        </p>
+      )}
+
       {isLeader ? (
         <>
+          {isRandomizing && randomCandidateData && (
+            <AnimatePresence>
+              <RandomSelectionPanel
+                key="random-selection-panel"
+                candidate={randomCandidateData}
+                candidateExpiresAt={turn?.candidateExpiresAt ?? ''}
+                chosenLine={RANDOM_CHOSEN_LINE}
+                isLeader
+                onRetryRandom={() => {
+                  void Promise.resolve(onRetryRandom?.()).catch(() => {
+                    // Failure is surfaced via the session error path.
+                  });
+                }}
+                onConfirmRandom={() => {
+                  void Promise.resolve(onConfirmRandom?.()).catch(() => {
+                    // Failure is surfaced via the session error path.
+                  });
+                }}
+              />
+            </AnimatePresence>
+          )}
           <OpeningPrayerCard
             suggestedPrayerText={openingPrayer?.suggestedPrayerText}
           />
@@ -227,6 +309,16 @@ export function OpeningPrayerScreen({
                 }
               : {})}
           />
+          {turnPhase === 'collecting_hands' && onPickRandomly && (
+            <RandomPickButton
+              onPickRandomly={() => {
+                void Promise.resolve(onPickRandomly()).catch(() => {
+                  // Failure is surfaced via the session error path.
+                });
+              }}
+              connectedParticipantCount={session.connectedParticipantCount}
+            />
+          )}
           <LeaderAdvanceZone
             completedAt={completedAt}
             onNextSection={() => {
@@ -259,7 +351,19 @@ export function OpeningPrayerScreen({
         </>
       ) : (
         <>
-          <HandRaiseOrb isRaised={isRaised} onToggle={onToggleHandRaised} />
+          {isRandomizing && randomCandidateData ? (
+            <AnimatePresence>
+              <RandomSelectionPanel
+                key="random-selection-panel"
+                candidate={randomCandidateData}
+                candidateExpiresAt={turn?.candidateExpiresAt ?? ''}
+                chosenLine={RANDOM_CHOSEN_LINE}
+                isLeader={false}
+              />
+            </AnimatePresence>
+          ) : (
+            <HandRaiseOrb isRaised={isRaised} onToggle={onToggleHandRaised} />
+          )}
           <p className="prayer-random-hint" data-testid="prayer-random-hint">
             {RANDOM_HINT_COPY}
           </p>

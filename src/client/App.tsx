@@ -17,6 +17,7 @@ import type { SessionSocketClient } from './lib/sessionSocket';
 import { extractJoinCodeFromLocation } from './lib/urlHelpers';
 import { useLiveSession } from './lib/useLiveSession';
 import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion';
+import { useRandomSelection } from './lib/useRandomSelection';
 import { useStudySetup } from './lib/useStudySetup';
 import {
   SACRED_STAGE_METADATA,
@@ -71,6 +72,7 @@ export function App({ sessionClient }: AppProps = {}) {
   const reducedMotion = usePrefersReducedMotion();
 
   const liveSession = useLiveSession({ client: sessionClient });
+  const randomSelection = useRandomSelection({ client: sessionClient });
   const [urlJoinCode] = useState<string | null>(() =>
     extractJoinCodeFromLocation(),
   );
@@ -347,6 +349,21 @@ export function App({ sessionClient }: AppProps = {}) {
                   }}
                   onNextSection={() => {
                     void liveSession.nextSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onPickRandomly={() => {
+                    void randomSelection.pickRandom().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onRetryRandom={() => {
+                    void randomSelection.retryRandom().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onConfirmRandom={() => {
+                    void randomSelection.confirmRandom().catch(() => {
                       // Failure is surfaced via the session error path.
                     });
                   }}
