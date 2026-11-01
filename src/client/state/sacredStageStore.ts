@@ -1,3 +1,4 @@
+import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { create, type UseBoundStore } from 'zustand';
 import type { StoreApi } from 'zustand/vanilla';
 
@@ -255,4 +256,42 @@ export function createSacredStageStore(
   }));
 }
 
-export const useSacredStageStore: SacredStageStore = createSacredStageStore();
+export const defaultSacredStageStore: SacredStageStore = createSacredStageStore();
+
+export const SacredStageStoreContext = createContext<SacredStageStore | null>(null);
+
+export function SacredStageProvider({
+  store,
+  children,
+}: {
+  store: SacredStageStore;
+  children: ReactNode;
+}) {
+  return createElement(SacredStageStoreContext.Provider, { value: store }, children);
+}
+
+export interface UseSacredStageStoreHook {
+  (): SacredStageStoreState;
+  <T>(selector: (state: SacredStageStoreState) => T): T;
+  getState: StoreApi<SacredStageStoreState>['getState'];
+  setState: StoreApi<SacredStageStoreState>['setState'];
+  subscribe: StoreApi<SacredStageStoreState>['subscribe'];
+  getInitialState?: StoreApi<SacredStageStoreState>['getInitialState'];
+}
+
+export const useSacredStageStore: UseSacredStageStoreHook = Object.assign(
+  function useSacredStageStore<T = SacredStageStoreState>(
+    selector?: (state: SacredStageStoreState) => T,
+  ): T {
+    const contextStore = useContext(SacredStageStoreContext);
+    const targetStore = contextStore ?? defaultSacredStageStore;
+    return selector ? targetStore(selector) : (targetStore() as unknown as T);
+  },
+  {
+    getState: defaultSacredStageStore.getState,
+    setState: defaultSacredStageStore.setState,
+    subscribe: defaultSacredStageStore.subscribe,
+    getInitialState: defaultSacredStageStore.getInitialState,
+  },
+);
+

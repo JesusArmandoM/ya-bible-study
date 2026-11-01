@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import {
   Component,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -13,7 +14,8 @@ import { useStore } from 'zustand';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
 import {
   SACRED_STAGE_METADATA,
-  useSacredStageStore,
+  SacredStageStoreContext,
+  defaultSacredStageStore,
   type SacredStageStore,
 } from '../../state/sacredStageStore';
 import { SacredFallbackEmblem } from './SacredFallbackEmblem';
@@ -72,10 +74,13 @@ function clampNormalized(value: number): number {
 }
 
 export function Sacred3DScene({
-  store = useSacredStageStore,
+  store: storeProp,
   className,
   webglSupportedOverride,
 }: Sacred3DSceneProps) {
+  const contextStore = useContext(SacredStageStoreContext);
+  const store = storeProp ?? contextStore ?? defaultSacredStageStore;
+
   // Strictly primitive selectors so transient 60fps `impulse` ticks cause zero React re-renders.
   const stage = useStore(store, (s) => s.stage);
   const accentMode = useStore(store, (s) => s.accentMode);

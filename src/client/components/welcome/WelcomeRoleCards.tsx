@@ -4,6 +4,7 @@ import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
 
 export interface WelcomeRoleCardsProps {
   onSelectRole: (role: SanctuaryRole) => void;
+  onSelectDualMode?: () => void;
 }
 
 function triggerTactileHaptic(reducedMotion: boolean): void {
@@ -74,7 +75,10 @@ function ChevronRightIcon() {
   );
 }
 
-export function WelcomeRoleCards({ onSelectRole }: WelcomeRoleCardsProps) {
+export function WelcomeRoleCards({
+  onSelectRole,
+  onSelectDualMode,
+}: WelcomeRoleCardsProps) {
   const reducedMotion = usePrefersReducedMotion();
 
   const handleSelect = (role: SanctuaryRole) => {
@@ -83,7 +87,7 @@ export function WelcomeRoleCards({ onSelectRole }: WelcomeRoleCardsProps) {
   };
 
   return (
-    <div className="welcome-role-section">
+    <div className="welcome-role-section" data-testid="welcome-role-section">
       <div className="welcome-role-eyebrow">CHOOSE YOUR ROLE</div>
 
       <div
@@ -137,6 +141,35 @@ export function WelcomeRoleCards({ onSelectRole }: WelcomeRoleCardsProps) {
           </div>
         </motion.button>
       </div>
+
+      {onSelectDualMode && (
+        <div className="welcome-dual-mode-section">
+          <motion.button
+            type="button"
+            className="welcome-dual-mode-btn"
+            data-testid="welcome-dual-mode-btn"
+            whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+            onClick={() => {
+              triggerTactileHaptic(reducedMotion);
+              onSelectDualMode();
+            }}
+          >
+            <span className="welcome-dual-mode-icon" aria-hidden="true">
+              🖥️
+            </span>
+            <div className="welcome-dual-mode-info">
+              <span className="welcome-dual-mode-title">
+                Dual Side-by-Side Mode
+              </span>
+              <span className="welcome-dual-mode-subtitle">
+                Rehearse Study Leader & Participant on desktop
+              </span>
+            </div>
+            <span className="welcome-dual-mode-badge">Desktop</span>
+          </motion.button>
+        </div>
+      )}
     </div>
   );
 }

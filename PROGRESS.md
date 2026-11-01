@@ -5,11 +5,41 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `desktop-dual-side-by-side-mode`
+- Current next ready feature: `none (all 20 features accepted)`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
+
+### Session 034
+
+- Date: `2026-10-31`
+- Goal: Implement, self-verify, and independently validate `desktop-dual-side-by-side-mode` per `docs/specs/desktop-dual-side-by-side-mode.md`.
+- Completed:
+  - Scoped Stage Store Provider Pattern: Added `SacredStageStoreContext`, `SacredStageProvider`, `useSacredStageStore`, and `defaultSacredStageStore` to `src/client/state/sacredStageStore.ts`. Updated `Sacred3DScene.tsx` to read the scoped store context while falling back to the singleton default. Preserved zero-rerender 60fps transient impulses and WebGL lifecycle.
+  - Rehearsal Sandbox Manager: Created `src/client/lib/dualSessionSandbox.ts` providing isolated in-memory credential storage (`createInMemoryStorage()`), multi-socket client orchestration (`initializeRehearsalSession()`, `addParticipantToRehearsal()`, `exitRehearsalSession()`), and `useDualSessionSandbox()` React hook managing leader + participant clients with zero `sessionStorage` pollution and clean teardown.
+  - Desktop Dual Mode UI Components: Created `src/client/components/dual/`:
+    - `DesktopViewportNotice.tsx`: Responsive warning on viewports `< 1024px` with "Return to Welcome" action.
+    - `SimulationToolbar.tsx`: Rehearsal status pill, room code pill with copy action, participant switcher tabs ('Mary Lopez', 'Daniel Reyes', 'Sara Castillo', plus dynamically added participants), inline `+ Add Participant` form, and `Exit Rehearsal` CTA.
+    - `DualDeviceFrame.tsx`: Two side-by-side `390px x 844px` mobile device frames for `Study Leader` (left) and `Participant` (right), each mounting a persistent `Sacred3DScene` under a scoped `SacredStageProvider` (guaranteeing `<=` 2 active canvases across the entire app), rendering full 5-section screen routing.
+    - `DesktopDualSideBySideScreen.tsx`: Root screen coordinating toolbar, frame layout, and viewport notice fallback.
+  - Integration & Entry Points: Added `welcome-dual-mode-btn` trigger on `WelcomeRoleCards.tsx` with `data-testid="welcome-dual-mode-btn"`, handled `?mode=dual` / `?dual=true` query parameters and `isDualMode` state in `App.tsx`. Added complete design-token-compliant styles in `src/client/styles/global.css`.
+- Verification run:
+  - Vitest unit suites:
+    - `tests/unit/dual-stage-scoping.test.tsx` (6/6 tests passed in 126ms)
+    - `tests/unit/dual-session-sandbox.test.ts` (3/3 tests passed in 142ms)
+    - `tests/unit/session-resilience-chip.test.tsx` (8/8 tests passed in 59ms)
+  - Baseline `./init.sh`: passed exit code 0 (TypeScript check clean across 3 configs, Vitest 56 files / 504 tests passed, production client and server bundles built clean).
+  - Domain terminology invariant: `grep -rn "Assistant" src/` returned 0 matches (ZERO_MATCHES).
+  - Playwright desktop E2E suite: `PLAYWRIGHT_PORT=3305 npx playwright test tests/e2e/desktop-dual-side-by-side-mode.spec.ts` passed 3/3 tests in 38.9s:
+    1. Launch from Welcome screen, initialize rehearsal room, and synchronize Lobby start (9.0s).
+    2. Full 5-Section Study Walkthrough with Switcher, Volunteer Turn, and Reflections (19.4s).
+    3. Dynamic Participant Addition, Viewport Fallback Notice & Clean Teardown (6.9s).
+  - Lifecycle hygiene check: `PLAYWRIGHT_PORT=3305 npx playwright test tests/e2e/ws-room-lifecycle.spec.ts` passed 1/1 test (22.7s) confirming zero leaked sessions.
+  - Independent validation verdict: `ACCEPT` (no blockers or findings).
+- Evidence captured: All test gates green; marked `desktop-dual-side-by-side-mode` as `accepted` in `feature_list.json`.
+- Files updated: `src/client/state/sacredStageStore.ts`, `src/client/components/stage/Sacred3DScene.tsx`, `src/client/lib/dualSessionSandbox.ts`, `src/client/components/dual/DesktopViewportNotice.tsx`, `src/client/components/dual/SimulationToolbar.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `src/client/components/dual/DesktopDualSideBySideScreen.tsx`, `src/client/components/welcome/WelcomeRoleCards.tsx`, `src/client/App.tsx`, `src/client/styles/global.css`, `tests/unit/dual-stage-scoping.test.tsx`, `tests/unit/dual-session-sandbox.test.ts`, `tests/e2e/desktop-dual-side-by-side-mode.spec.ts`, `ARCHITECTURE.md`, `PROGRESS.md`, `feature_list.json`.
+- Next best step: All 20 canonical features complete and accepted; final baseline regression pass.
 
 ### Session 033
 
