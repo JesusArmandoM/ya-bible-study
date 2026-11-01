@@ -14,6 +14,7 @@ import { ActiveQuestionCard } from './ActiveQuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
 import { LeaderQuestionQueue } from './LeaderQuestionQueue';
 import { PastoralNotesDrawer } from './PastoralNotesDrawer';
+import { PrayerCardModal } from './PrayerCardModal';
 import { SubmitReflectionModal } from './SubmitReflectionModal';
 
 export interface DiscussionScreenProps {
@@ -36,6 +37,7 @@ export function DiscussionScreen({
   role,
   session,
   localStudyDocument,
+  memberId,
   onSwitchQuestion,
   onAddQuestion,
   onNextSection,
@@ -45,6 +47,7 @@ export function DiscussionScreen({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPastoralDrawerOpen, setIsPastoralDrawerOpen] = useState(false);
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
+  const [isPrayerCardModalOpen, setIsPrayerCardModalOpen] = useState(false);
 
   const isLeader = role === 'Study Leader';
 
@@ -101,6 +104,15 @@ export function DiscussionScreen({
               <span aria-hidden="true">📖</span>
               <span>Pastoral Notes & Commentary</span>
             </button>
+            <button
+              type="button"
+              className="leader-prayer-card-trigger-btn"
+              data-testid="leader-open-prayer-card-btn"
+              onClick={() => setIsPrayerCardModalOpen(true)}
+            >
+              <span aria-hidden="true">✨</span>
+              <span>"Lord, Help Me" Prayer Card</span>
+            </button>
           </div>
         )}
       </header>
@@ -140,6 +152,7 @@ export function DiscussionScreen({
           totalQuestions={questions.length}
           reflections={reflections}
           onOpenRespondModal={() => setIsRespondModalOpen(true)}
+          onOpenPrayerCard={() => setIsPrayerCardModalOpen(true)}
         />
       )}
 
@@ -152,6 +165,15 @@ export function DiscussionScreen({
           }
         }}
         question={activeQuestion}
+      />
+
+      <PrayerCardModal
+        isOpen={isPrayerCardModalOpen}
+        onClose={() => setIsPrayerCardModalOpen(false)}
+        sessionCode={session.sessionCode}
+        memberId={memberId}
+        activeQuestionId={activeQuestionId}
+        onSubmitReflection={onSubmitReflection}
       />
     </div>
   );

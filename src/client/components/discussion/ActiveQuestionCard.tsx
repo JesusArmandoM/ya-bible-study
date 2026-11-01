@@ -12,6 +12,28 @@ export interface ActiveQuestionCardProps {
   totalQuestions: number;
   reflections?: SessionReflection[];
   onOpenRespondModal: () => void;
+  onOpenPrayerCard?: () => void;
+}
+
+function PrayerCrossIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+      className="prayer-card-pill-icon"
+    >
+      <path
+        d="M8 2V14M4.5 5.5H11.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 function InfoCircleIcon() {
@@ -64,6 +86,7 @@ export function ActiveQuestionCard({
   totalQuestions,
   reflections = [],
   onOpenRespondModal,
+  onOpenPrayerCard,
 }: ActiveQuestionCardProps) {
   const reducedMotion = usePrefersReducedMotion();
 
@@ -127,6 +150,16 @@ export function ActiveQuestionCard({
         >
           <SpeechBubbleIcon />
           <span>I want to respond</span>
+        </button>
+
+        <button
+          type="button"
+          className="participant-prayer-card-pill"
+          data-testid="open-prayer-card-btn"
+          onClick={onOpenPrayerCard}
+        >
+          <PrayerCrossIcon />
+          <span>"Lord, Help Me" Prayer Card</span>
         </button>
 
         <div
