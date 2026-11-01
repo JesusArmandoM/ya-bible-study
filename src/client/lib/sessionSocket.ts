@@ -688,6 +688,18 @@ export function createSessionSocketClient(
         );
       }
 
+      if (input.type === 'finish_study') {
+        return await sendRequest(
+          {
+            type: 'finish_study',
+            sessionCode,
+            leaderToken,
+            ...(memberId ? { memberId } : {}),
+          },
+          ['session_closed'],
+        );
+      }
+
       if (input.type === 'load_study') {
         const study = input.study;
         if (!study) {

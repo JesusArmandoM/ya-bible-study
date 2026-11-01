@@ -5,11 +5,37 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `section-5-closing-prayer-completion`
+- Current next ready feature: `desktop-dual-side-by-side-mode`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
+
+### Session 033
+
+- Date: `2026-10-31`
+- Goal: Implement, self-verify, and independently validate `section-5-closing-prayer-completion` per `docs/specs/section-5-closing-prayer-completion.md`.
+- Completed:
+  - Shared types and protocol: Added `SessionWeeklyChallengeItem`, `SessionNextWeekAnnouncement`, `SessionClosingContent` in `src/shared/session.ts` at protocol v3. Added optional `closing?: SessionClosingContent | null;` to `SessionStudySummary`, updated `toSessionStudySummary` to project Section 5 content via `toSessionClosingContent`, and added allow-list normalization `normalizeSessionClosingContent`. Widened `LeaderCommandType` with `'finish_study'`, excluded `'finish_study'` from `SessionUpdatedCommand`, widened `SessionCloseReason` with `'study_completed'`, and added `finish_study` message shape to `ClientWsMessage`.
+  - Server sessionStore lifecycle & privacy: Updated `handleIncomingMessage` to route `finish_study` to `handleLeaderCommand`. Implemented leader authentication for `finish_study`, requiring valid `leaderToken` (rejecting Participants with `FORBIDDEN_LEADER_ONLY` and invalid tokens with `UNAUTHORIZED_LEADER`). Defensively purged all ephemeral reflections from memory (`session.discussionState.reflections = []; session.discussionState = null;`), purged the session from memory (`sessions.delete`), and broadcast `session_closed` with `reason: 'study_completed'`. Updated `closeAndPurgeSession` to defensively purge `discussionState` and reflections.
+  - Client socket and hook: Updated `sendLeaderCommand` in `src/client/lib/sessionSocket.ts` to support `finish_study`. Exposed `finishStudy` room action in `src/client/lib/useLiveSession.ts`, and updated `session_closed` handler to treat `reason === 'study_completed'` cleanly without surfacing session error.
+  - Section 5 UI components: Created `src/client/components/closing/` containing:
+    - `LiveSessionStatsCard.tsx`: 3-column stats card matching `ux/12. Closing Prayer.png` (`5 SECTIONS`, computed elapsed duration `DURATION`, connected participant count `PARTICIPANTS`).
+    - `WeeklyChallengesCard.tsx`: 4 practical weekly challenges from `greatIsYourFaithSeed.ts` with local `localStorage` selection (`ya-bible-study.closing-challenge.${sessionCode}.${memberId}`), gold accent border, check indicator, and zero network calls.
+    - `NextWeekCard.tsx`: Preview card for "Faith that Endures" — James 1:2–4 with announcement icon.
+    - `ClosingPrayerCard.tsx`: Full authoritative 105-word closing prayer in editorial scripture italic.
+    - `ClosingPrayerScreen.tsx`: Complete Section 5 layout with `SectionProgressHeader` (100% progress), 3D stage sync to `star-of-faith`, header lockup, content stack, and role-gated bottom zone (`✓ Finish study` Sacred Gold CTA button for Study Leader; `Waiting for Study Leader to conclude study...` locked bar for Participants).
+  - App routing & style polish: Routed Section 5 in `App.tsx` (`currentSectionId === 'section_5_closing'`) to `ClosingPrayerScreen`. Added session entrance cleanup ensuring `activeSheet` is reset to null and `/join/` path is cleared from URL history. Added comprehensive Section 5 styles in `src/client/styles/global.css` positioned before the session resilience chip block.
+- Verification run:
+  - Baseline `./init.sh`: passed exit code 0 (TypeScript check clean across 3 configs, Vitest 54 files / 495 tests passed, Vite production client and server bundles built clean).
+  - Vitest unit suites: `tests/unit/closing-content.test.ts` (14/14 passed), `tests/unit/closing-prayer-screen.test.tsx` (7/7 passed), `tests/integration/ws-closing-finish.test.ts` (4/4 passed), `tests/unit/session-resilience-chip.test.tsx` (8/8 passed), `tests/unit/discussion-content.test.ts` (10/10 passed), `tests/integration/ws-discussion-question.test.ts` (5/5 passed).
+  - Playwright E2E: `PLAYWRIGHT_PORT=3301 npx playwright test tests/e2e/section-5-closing-prayer-completion.spec.ts` passed 4/4 tests cleanly (56.3s on mobile-chromium 390x844). Verified Scenarios 1–8: 100% progress, Star of Faith, 3-column stats card, 4 weekly challenges with local selection, next week card, closing prayer text, role-gated action zone, leader `finish_study` with ephemeral reflections purged from server memory (`reflections = []`, `discussionState = null`), participant and unauthorized rejection (`FORBIDDEN_LEADER_ONLY`, `UNAUTHORIZED_LEADER`), mobile ergonomics (`font-size >= 16px`, touch targets `>= 44px`), and single persistent WebGL canvas.
+  - Regression compatibility: `PLAYWRIGHT_PORT=3301 npx playwright test tests/e2e/ws-room-lifecycle.spec.ts` passed 1/1 scenario (10.3s).
+  - Invariant check: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
+  - Independent validation verdict: `ACCEPT` (no blockers or findings).
+- Evidence captured: All test gates green; marked `section-5-closing-prayer-completion` as `accepted` in `feature_list.json`.
+- Files updated: `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/App.tsx`, `src/client/lib/sessionSocket.ts`, `src/client/lib/useLiveSession.ts`, `src/client/components/closing/ClosingPrayerScreen.tsx`, `src/client/components/closing/LiveSessionStatsCard.tsx`, `src/client/components/closing/WeeklyChallengesCard.tsx`, `src/client/components/closing/NextWeekCard.tsx`, `src/client/components/closing/ClosingPrayerCard.tsx`, `src/client/styles/global.css`, `tests/unit/closing-content.test.ts`, `tests/unit/closing-prayer-screen.test.tsx`, `tests/integration/ws-closing-finish.test.ts`, `tests/integration/ws-discussion-question.test.ts`, `tests/unit/discussion-content.test.ts`, `tests/e2e/section-5-closing-prayer-completion.spec.ts`, `docs/specs/section-5-closing-prayer-completion.md`, `ARCHITECTURE.md`, `PROGRESS.md`, `feature_list.json`.
+- Next best step: Run `$feature-flow` on `desktop-dual-side-by-side-mode`.
 
 ### Session 032
 

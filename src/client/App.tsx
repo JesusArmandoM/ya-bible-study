@@ -7,6 +7,7 @@ import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholder
 import { IcebreakerScreen } from './components/icebreaker/IcebreakerScreen';
 import { GospelReadingScreen } from './components/reading/GospelReadingScreen';
 import { DiscussionScreen } from './components/discussion/DiscussionScreen';
+import { ClosingPrayerScreen } from './components/closing/ClosingPrayerScreen';
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
@@ -92,6 +93,18 @@ export function App({ sessionClient }: AppProps = {}) {
   const lobbyStudySummary: SessionStudySummary | null =
     liveSession.session?.study ??
     (studySetup.study ? toSessionStudySummary(studySetup.study) : null);
+
+  useEffect(() => {
+    if (liveSession.session) {
+      if (
+        typeof window !== 'undefined' &&
+        window.location.pathname.startsWith('/join/')
+      ) {
+        window.history.replaceState({}, '', '/');
+      }
+      setActiveSheet(null);
+    }
+  }, [liveSession.session]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -459,6 +472,19 @@ export function App({ sessionClient }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                />
+              ) : liveSession.session.currentSectionId === 'section_5_closing' ? (
+                <ClosingPrayerScreen
+                  role={liveSession.role ?? 'Participant'}
+                  session={liveSession.session}
+                  localStudyDocument={studySetup.study}
+                  memberId={liveSession.credentials?.memberId ?? null}
+                  onFinishStudy={() => {
+                    void liveSession.finishStudy().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  isSubmitting={liveSession.isSubmitting}
                 />
               ) : (
                 <SectionPlaceholderScreen

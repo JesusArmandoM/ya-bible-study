@@ -5852,6 +5852,322 @@ button {
   cursor: not-allowed;
 }
 
+/* Section 5 — Closing Prayer & Session Completion (DESIGN ux/12. Closing Prayer.png) */
+.closing-screen-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.closing-header-lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.closing-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.closing-title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.closing-content-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.closing-stats-card {
+  background: rgba(23, 27, 46, 0.85);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1rem;
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.closing-stat-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  flex: 1;
+}
+
+.closing-stat-value {
+  font-family: var(--font-serif);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.closing-stat-label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.closing-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 0.5rem;
+}
+
+.closing-next-week-card {
+  background: rgba(23, 27, 46, 0.85);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.25rem;
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.closing-next-week-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+}
+
+.closing-next-week-announcement {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.closing-challenges-card {
+  background: rgba(23, 27, 46, 0.85);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.closing-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.closing-card-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-primary);
+  text-transform: uppercase;
+}
+
+.closing-challenges-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.closing-challenge-item {
+  min-height: 44px;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(11, 13, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.closing-challenge-item:hover {
+  border-color: rgba(226, 168, 62, 0.4);
+}
+
+.closing-challenge-item.is-selected {
+  border: 1.5px solid var(--color-primary);
+  background: rgba(226, 168, 62, 0.08);
+  box-shadow: 0 0 12px rgba(226, 168, 62, 0.2);
+}
+
+.closing-challenge-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.closing-challenge-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: rgba(226, 168, 62, 0.15);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.closing-challenge-title {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  flex: 1;
+}
+
+.closing-challenge-check {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  width: 18px;
+  text-align: right;
+}
+
+.closing-challenge-desc {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin: 0;
+  padding-left: 1.95rem;
+}
+
+.closing-prayer-card {
+  background: rgba(23, 27, 46, 0.85);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.closing-prayer-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-primary);
+  text-transform: uppercase;
+}
+
+.closing-prayer-text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: #F8FAFC;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.closing-bottom-zone {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  padding: 1rem 0;
+  width: 100%;
+  background: linear-gradient(180deg, rgba(11, 13, 23, 0) 0%, rgba(11, 13, 23, 0.9) 20%, #0B0D17 100%);
+}
+
+.closing-finish-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 54px;
+  padding: 0.95rem 1.5rem;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #11131F;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 9999px;
+  box-shadow: 0 8px 24px rgba(226, 168, 62, 0.35);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.closing-finish-btn:hover {
+  background: var(--color-primary-hover);
+}
+
+.closing-finish-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.closing-finish-icon {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.closing-waiting-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 54px;
+  padding: 0.95rem 1.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: rgba(23, 27, 46, 0.75);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 9999px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.closing-waiting-icon {
+  font-size: 1rem;
+}
+
 /* Session resilience chip (wake lock + foreground resync status) */
 .session-resilience-chip {
   display: inline-flex;
@@ -5892,5 +6208,3 @@ button {
     opacity: 0.55;
   }
 }
-
-

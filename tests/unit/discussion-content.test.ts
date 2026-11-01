@@ -99,7 +99,9 @@ describe('SessionDiscussionContent projection (participant-only, pastoral fields
     expect(json).not.toContain('sampleAnswer');
     expect(json).not.toContain('leaderNote');
     expect(json).not.toContain('prayerCardTemplate');
-    expect(json).not.toContain('Romans 11:29'); // doctrinal guardrail stays local to leader
+    expect(JSON.stringify(summary.discussion)).not.toContain('Romans 11:29'); // discussion never leaks question-level doctrinal note
+    expect(json).not.toContain('CCC 839–840'); // doctrinal guardrail stays local to leader
+    expect(json).not.toContain('anti-Jewish framing');
     expect(json).not.toContain('Chrysostom');
     expect(json).not.toContain('Augustine');
     expect(json).not.toContain('Jerome');

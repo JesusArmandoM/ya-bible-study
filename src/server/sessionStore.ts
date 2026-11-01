@@ -404,6 +404,7 @@ export class LiveSessionStore {
       case 'switch_question':
       case 'add_question':
       case 'close_session':
+      case 'finish_study':
         this.handleLeaderCommand(socket, record.type, record, requestId);
         return;
       case 'raise_hand':
@@ -928,7 +929,24 @@ export class LiveSessionStore {
     const isoNow = new Date(currentNow).toISOString();
 
     if (command === 'close_session') {
-      this.closeAndPurgeSession(session, 'closed_by_leader', socket, requestId);
+      const reason: SessionCloseReason =
+        record.reason === 'study_completed'
+          ? 'study_completed'
+          : 'closed_by_leader';
+      if (session.discussionState) {
+        session.discussionState.reflections = [];
+        session.discussionState = null;
+      }
+      this.closeAndPurgeSession(session, reason, socket, requestId);
+      return;
+    }
+
+    if (command === 'finish_study') {
+      if (session.discussionState) {
+        session.discussionState.reflections = [];
+        session.discussionState = null;
+      }
+      this.closeAndPurgeSession(session, 'study_completed', socket, requestId);
       return;
     }
 
@@ -1992,6 +2010,10 @@ export class LiveSessionStore {
     requestId?: string,
   ): void {
     this.cancelRandomExpiryTimer(session);
+    if (session.discussionState) {
+      session.discussionState.reflections = [];
+      session.discussionState = null;
+    }
     const notifiedSockets = new Set<SessionPeerSocket>();
 
     for (const member of session.members.values()) {

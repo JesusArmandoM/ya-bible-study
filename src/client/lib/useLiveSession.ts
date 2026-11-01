@@ -72,6 +72,8 @@ export interface UseLiveSessionResult {
     content: string;
     isAnonymous?: boolean;
   }) => Promise<void>;
+  /** Study Leader: finish the study, closing session and purging server reflections (`finish_study`). */
+  finishStudy: () => Promise<void>;
   /** Command of the latest `session_updated` broadcast (motion triggers). */
   lastSessionCommand: SessionUpdatedCommand | null;
   leaveRoom: () => void;
@@ -178,7 +180,11 @@ export function useLiveSession(
           setRole(null);
           setLeaderPin(null);
           setConnectionStatus('disconnected');
-          setError('The Bible study session was closed.');
+          if (message.reason === 'study_completed') {
+            setError(null);
+          } else {
+            setError('The Bible study session was closed.');
+          }
           break;
 
         case 'session_error':
@@ -673,6 +679,27 @@ export function useLiveSession(
     [client],
   );
 
+  const finishStudy = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      await client.sendLeaderCommand({
+        type: 'finish_study',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to finish the study';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
   const leaveRoom = useCallback(() => {
     client.disconnect();
     clearStoredSessionCredentials();
@@ -712,6 +739,7 @@ export function useLiveSession(
     switchQuestion,
     addQuestion,
     submitReflection,
+    finishStudy,
     lastSessionCommand,
     leaveRoom,
     clearError,
