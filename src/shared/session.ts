@@ -1,5 +1,6 @@
 import type { SanctuaryRole } from './health.js';
 import type {
+  ClosingSection,
   DeepAnalysisSection,
   GospelReadingSection,
   GospelVerse,
@@ -164,6 +165,37 @@ export interface SessionDiscussionContent {
 }
 
 /**
+ * Sanitized, participant-visible weekly challenge item synced with the study summary.
+ */
+export interface SessionWeeklyChallengeItem {
+  optionNumber: 1 | 2 | 3 | 4;
+  title: string;
+  description: string;
+}
+
+/**
+ * Sanitized, participant-visible announcement for next week's Bible study.
+ */
+export interface SessionNextWeekAnnouncement {
+  title: string;
+  citation: string;
+  displayLabel: string;
+}
+
+/**
+ * Sanitized, participant-visible Closing Prayer content synced with the study summary.
+ */
+export interface SessionClosingContent {
+  title: string;
+  eyebrow: string;
+  durationLabel: string;
+  summaryBullets: string[];
+  weeklyChallenges: SessionWeeklyChallengeItem[];
+  nextWeekAnnouncement: SessionNextWeekAnnouncement;
+  closingPrayerText: string;
+}
+
+/**
  * Sanitized, title/meta-only study summary synced to every client via the
  * leader-gated `load_study` command. Never carries pastoral/facilitator fields
  * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
@@ -184,6 +216,8 @@ export interface SessionStudySummary {
   gospelReading?: SessionGospelReadingContent | null;
   /** Participant-visible Deep Analysis copy (additive in protocol v3). */
   discussion?: SessionDiscussionContent | null;
+  /** Participant-visible Closing Prayer copy (additive in protocol v3). */
+  closing?: SessionClosingContent | null;
 }
 
 export const SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH = 120;
@@ -329,6 +363,32 @@ export function toSessionDiscussionContent(
 }
 
 /**
+ * Projects the Closing Prayer section onto the participant-visible synced
+ * content.
+ */
+export function toSessionClosingContent(
+  section: ClosingSection,
+): SessionClosingContent {
+  return {
+    title: section.title,
+    eyebrow: section.eyebrow,
+    durationLabel: section.durationLabel,
+    summaryBullets: [...section.summaryBullets],
+    weeklyChallenges: section.weeklyChallenges.map((c) => ({
+      optionNumber: c.optionNumber,
+      title: c.title,
+      description: c.description,
+    })),
+    nextWeekAnnouncement: {
+      title: section.nextWeekAnnouncement.title,
+      citation: section.nextWeekAnnouncement.citation,
+      displayLabel: section.nextWeekAnnouncement.displayLabel,
+    },
+    closingPrayerText: section.closingPrayerText,
+  };
+}
+
+/**
  * Projects a full `StudyDocument` onto the sanitized session study summary
  * shared with Participants over `/ws` snapshots.
  */
@@ -345,6 +405,7 @@ export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
     icebreaker: toSessionIcebreakerContent(doc.icebreaker),
     gospelReading: toSessionGospelReadingContent(doc.gospelReading),
     discussion: toSessionDiscussionContent(doc.deepAnalysis),
+    closing: toSessionClosingContent(doc.closing),
   };
 }
 
@@ -723,6 +784,142 @@ export function normalizeSessionDiscussionContent(
 }
 
 /**
+ * Allow-list validation for a present `closing` payload. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`. Unknown keys are dropped by
+ * explicit field projection.
+ */
+export function normalizeSessionClosingContent(
+  raw: unknown,
+): SessionClosingContent | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const eyebrow = normalizeBoundedSummaryString(
+    record.eyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const durationLabel = normalizeBoundedSummaryString(
+    record.durationLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+
+  if (title === null || eyebrow === null || durationLabel === null) {
+    return null;
+  }
+
+  if (!Array.isArray(record.summaryBullets)) {
+    return null;
+  }
+  const summaryBullets: string[] = [];
+  for (const rawBullet of record.summaryBullets) {
+    const bullet = normalizeBoundedSummaryString(
+      rawBullet,
+      SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+    );
+    if (bullet === null) {
+      return null;
+    }
+    summaryBullets.push(bullet);
+  }
+
+  if (
+    !Array.isArray(record.weeklyChallenges) ||
+    record.weeklyChallenges.length === 0
+  ) {
+    return null;
+  }
+  const weeklyChallenges: SessionWeeklyChallengeItem[] = [];
+  for (const rawChallenge of record.weeklyChallenges) {
+    if (
+      typeof rawChallenge !== 'object' ||
+      rawChallenge === null ||
+      Array.isArray(rawChallenge)
+    ) {
+      return null;
+    }
+    const chRecord = rawChallenge as Record<string, unknown>;
+    const optNum = chRecord.optionNumber;
+    if (
+      typeof optNum !== 'number' ||
+      !Number.isInteger(optNum) ||
+      (optNum !== 1 && optNum !== 2 && optNum !== 3 && optNum !== 4)
+    ) {
+      return null;
+    }
+    const chTitle = normalizeBoundedSummaryString(
+      chRecord.title,
+      SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+    );
+    const chDesc = normalizeBoundedPrayerText(
+      chRecord.description,
+      SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+    );
+    if (chTitle === null || chDesc === null) {
+      return null;
+    }
+    weeklyChallenges.push({
+      optionNumber: optNum as 1 | 2 | 3 | 4,
+      title: chTitle,
+      description: chDesc,
+    });
+  }
+
+  if (
+    typeof record.nextWeekAnnouncement !== 'object' ||
+    record.nextWeekAnnouncement === null ||
+    Array.isArray(record.nextWeekAnnouncement)
+  ) {
+    return null;
+  }
+  const nwRecord = record.nextWeekAnnouncement as Record<string, unknown>;
+  const nwTitle = normalizeBoundedSummaryString(
+    nwRecord.title,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const nwCitation = normalizeBoundedSummaryString(
+    nwRecord.citation,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const nwDisplayLabel = normalizeBoundedSummaryString(
+    nwRecord.displayLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  if (nwTitle === null || nwCitation === null || nwDisplayLabel === null) {
+    return null;
+  }
+  const nextWeekAnnouncement: SessionNextWeekAnnouncement = {
+    title: nwTitle,
+    citation: nwCitation,
+    displayLabel: nwDisplayLabel,
+  };
+
+  const closingPrayerText = normalizeBoundedPrayerText(
+    record.closingPrayerText,
+    SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+  );
+  if (closingPrayerText === null) {
+    return null;
+  }
+
+  return {
+    title,
+    eyebrow,
+    durationLabel,
+    summaryBullets,
+    weeklyChallenges,
+    nextWeekAnnouncement,
+    closingPrayerText,
+  };
+}
+
+/**
  * Bounded reflection text validation: trims leading/trailing whitespace,
  * enforces length between 1 and 1000 characters, and preserves internal
  * line breaks and paragraph structure. Returns `null` if invalid.
@@ -851,6 +1048,19 @@ export function normalizeSessionStudySummary(
     }
   }
 
+  /**
+   * Protocol v3 (bounded additive): a missing `closing` stays valid and
+   * normalizes to `null`; a present-but-invalid payload rejects the frame with
+   * `INVALID_MESSAGE`.
+   */
+  let closing: SessionClosingContent | null = null;
+  if (record.closing !== undefined && record.closing !== null) {
+    closing = normalizeSessionClosingContent(record.closing);
+    if (closing === null) {
+      return null;
+    }
+  }
+
   return {
     title,
     subtitle,
@@ -863,6 +1073,7 @@ export function normalizeSessionStudySummary(
     icebreaker,
     gospelReading,
     discussion,
+    closing,
   };
 }
 
@@ -1149,14 +1360,16 @@ export type LeaderCommandType =
   | 'clear_hands'
   | 'switch_question'
   | 'add_question'
-  | 'close_session';
+  | 'close_session'
+  | 'finish_study';
 
 /**
  * Protocol v3 (additive): `session_updated.command` widens to include the
  * participant self-service hand-raise commands, the chosen volunteer's
  * `complete_turn` completion, the random-selection picker commands, and the
- * server-initiated `random_expired` countdown expiry. `close_session` stays
- * excluded because it ends the session without broadcasting `session_updated`.
+ * server-initiated `random_expired` countdown expiry. `close_session` and
+ * `finish_study` stay excluded because they end the session without broadcasting
+ * `session_updated`.
  */
 export type SessionUpdatedCommand = Exclude<
   | LeaderCommandType
@@ -1165,10 +1378,13 @@ export type SessionUpdatedCommand = Exclude<
   | 'complete_turn'
   | 'random_expired'
   | 'submit_reflection',
-  'close_session'
+  'close_session' | 'finish_study'
 >;
 
-export type SessionCloseReason = 'closed_by_leader' | 'expired_inactivity';
+export type SessionCloseReason =
+  | 'closed_by_leader'
+  | 'expired_inactivity'
+  | 'study_completed';
 
 export type ClientWsMessage =
   | {
@@ -1323,6 +1539,13 @@ export type ClientWsMessage =
       leaderToken: string;
       memberId?: string;
       reason?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'finish_study';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
       requestId?: string;
     };
 

@@ -211,7 +211,8 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
       expect(serialized).not.toContain('catholicDoctrine');
       expect(serialized).not.toContain('sampleAnswer');
       expect(serialized).not.toContain('leaderNote');
-      expect(serialized).not.toContain('Romans 11:29');
+      expect(serialized).not.toContain('CCC 839–840');
+      expect(serialized).not.toContain('anti-Jewish framing');
     }
   });
 

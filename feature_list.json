@@ -368,11 +368,20 @@
     "depends_on": [
       "section-4-lord-help-me-prayer-card"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Playwright end-to-end test advancing into Section 5, asserting metrics, Next Week card, challenges, and Closing Prayer render, and verifying 'Finish study' closes the live room and purges server-stored reflections."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-31: Wire protocol & shared types — added SessionWeeklyChallengeItem, SessionNextWeekAnnouncement, SessionClosingContent, toSessionClosingContent, normalizeSessionClosingContent, and optional closing in SessionStudySummary (SESSION_PROTOCOL_VERSION = 3). Widened LeaderCommandType with 'finish_study', excluded 'finish_study' from SessionUpdatedCommand, widened SessionCloseReason with 'study_completed', and added finish_study to ClientWsMessage.",
+      "2026-10-31: Server lifecycle & privacy — in src/server/sessionStore.ts, implemented handleLeaderCommand handling for 'finish_study' requiring valid leaderToken (rejecting Participants with FORBIDDEN_LEADER_ONLY and invalid tokens with UNAUTHORIZED_LEADER). Server wipes all ephemeral reflections from memory (session.discussionState.reflections = []; session.discussionState = null;), deletes session from sessions map, cancels sweep/selection timers, and broadcasts session_closed with reason 'study_completed'. Updated closeAndPurgeSession to defensively purge discussionState.",
+      "2026-10-31: Client UI components — created src/client/components/closing/ (ClosingPrayerScreen, LiveSessionStatsCard, WeeklyChallengesCard, NextWeekCard, ClosingPrayerCard). Features 100% progress indicator, Star of Faith 3D stage ('star-of-faith'), 3-column stats card (5 SECTIONS, computed elapsed duration, connected participant count), 4 interactive weekly challenges with local localStorage selection and zero network calls, Next Week preview card ('Faith that Endures' — James 1:2–4), 105-word closing prayer in editorial scripture italic, participant waiting status bar, and leader-only '✓ Finish study' Sacred Gold CTA pill. Wired in App.tsx with URL / activeSheet cleanup upon session entry.",
+      "2026-10-31: ./init.sh baseline verification passed clean with exit code 0 — TypeScript check clean across 3 configs (tsconfig.client.json, tsconfig.server.json, tsconfig.json), Vitest unit and integration suites 54/54 files passed (495/495 tests), Vite production client and server bundles built clean.",
+      "2026-10-31: Vitest unit & integration test coverage — tests/unit/closing-content.test.ts (14/14 passed), tests/unit/closing-prayer-screen.test.tsx (7/7 passed), tests/integration/ws-closing-finish.test.ts (4/4 passed), tests/unit/session-resilience-chip.test.tsx (8/8 passed), tests/unit/discussion-content.test.ts (10/10 passed), tests/integration/ws-discussion-question.test.ts (5/5 passed).",
+      "2026-10-31: Playwright multi-client E2E suite — npx playwright test tests/e2e/section-5-closing-prayer-completion.spec.ts passed 4/4 tests cleanly in 56.3s on mobile-chromium 390x844. Verified Scenarios 1–8: 100% progress header, Star of Faith, 3-column session stats card, 4 weekly challenges with local selection, Next Week card, Closing Prayer card, role-gated action zone (leader finish-study-btn vs participant-waiting-bar), leader finish_study broadcast and ephemeral reflection purging from memory, participant rejection (FORBIDDEN_LEADER_ONLY), unauthorized leader rejection (UNAUTHORIZED_LEADER), mobile ergonomics (inputs >= 16px, touch targets >= 44px), and single persistent WebGL canvas. tests/e2e/ws-room-lifecycle.spec.ts verified green (1/1 passed, 10.3s).",
+      "2026-10-31: Invariant check — grep -rn 'Assistant' src/ returned 0 matches (exit code 1).",
+      "2026-10-31: Independent validation verdict ACCEPT. Audited docs/specs/section-5-closing-prayer-completion.md, CONSTRAINTS.md (#3 Participant terminology, #5 server leader gating, #6 ephemeral reflections memory purge, #7 >= 16px touch ergonomics, #8 single persistent WebGL canvas), and DESIGN.md tokens matching ux/12. Closing Prayer.png. All 8/8 acceptance scenarios verified across 54 Vitest files / 495 tests, WebSocket completion integration tests, and Playwright multi-client E2E suite with 0 room leaks."
+    ],
     "notes": "Match ux/12. Closing Prayer.png layout and gold Star of Faith hero stage."
   },
   {
