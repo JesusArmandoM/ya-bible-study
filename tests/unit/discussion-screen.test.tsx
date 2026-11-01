@@ -166,6 +166,12 @@ describe('DiscussionScreen — Section 4 Deep Analysis & Discussion', () => {
         "What makes the Canaanite woman's faith 'great'?",
       );
 
+      // Participant can tap to open the Prayer Card modal
+      const openPrayerCardBtn = screen.getByTestId('open-prayer-card-btn');
+      expect(openPrayerCardBtn).toBeInTheDocument();
+      fireEvent.click(openPrayerCardBtn);
+      expect(screen.getByTestId('prayer-card-modal')).toBeInTheDocument();
+
       // Participant lock note
       expect(screen.getByTestId('participant-locked-note').textContent).toContain(
         'Only the leader decides when to advance',

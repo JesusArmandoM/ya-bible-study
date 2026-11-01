@@ -5,17 +5,32 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `section-4-lord-help-me-prayer-card`
+- Current next ready feature: `section-5-closing-prayer-completion`
 - Current blocker: `none`
 - Last verified at: `2026-10-31`
 
 ## Session Log
 
-### Session 031
+### Session 032
 
 - Date: `2026-10-31`
-- Goal: Implement and self-verify `section-4-live-participant-reflections` per `docs/specs/section-4-live-participant-reflections.md`.
+- Goal: Implement, self-verify, and independently validate `section-4-lord-help-me-prayer-card` per `docs/specs/section-4-lord-help-me-prayer-card.md`.
 - Completed:
+  - Client storage module: Created `src/client/lib/prayerCardStorage.ts` providing `PrayerCardDraft` (`self`, `lovedOne`, `churchWorld`, `updatedAt`), `buildPrayerCardStorageKey` (`ya-bible-study.prayer-card.${sessionCode}.${memberId}`), `loadPrayerCardDraft`, `savePrayerCardDraft`, `clearPrayerCardDraft`, and `formatPrayerLine` for deterministic single-line formatting (`[For myself] Lord, help me ...`, stripping redundant prompt prefixes and ensuring clean trailing punctuation). Verified strict client `localStorage` isolation and zero network requests while drafting.
+  - Keepsake Canvas PNG export module: Created `src/client/lib/prayerCardCanvas.ts` implementing high-resolution 1080x1350 HTML5 Canvas rendering matching Sacred Midnight design tokens (`#0B0D17` midnight background with radial glow, `#171B2E` surface cards, `#E2A83E` gold borders/accents, and Playfair Display serif typography, Matthew 15:21–28 citation, and "O woman, great is your faith!" Matthew 15:28 footer quote), `renderPrayerCardToBlob` returning `image/png` Blob, and `exportOrSharePrayerCard` supporting mobile Web Share API (`navigator.share({ files: [file] })`) with automatic fallback to browser file download (`triggerDownload`).
+  - Client UI & integration: Created `src/client/components/discussion/PrayerCardModal.tsx` (and re-export `src/client/components/prayer-card/PrayerCardModal.tsx`) rendering 3-prompt prayer builder (`For myself`, `For someone I love`, `For the Church/world`) with computed `font-size >= 16px` to prevent iOS Safari auto-zoom, privacy reassurance badge ("🔒 Private on your device — never shared automatically"), voluntary single-line sharing dispatching formatted reflections into the live `ReflectionFeed` with optional anonymous masking, and Sacred Gold PNG export CTA. Updated `ActiveQuestionCard.tsx` with secondary `"Lord, Help Me" Prayer Card` action pill trigger, updated `DiscussionScreen.tsx` to manage modal state, and added styling in `src/client/styles/global.css`.
+- Verification run:
+  - Baseline `./init.sh`: passed exit code 0 (TypeScript check clean across 3 tsconfigs, Vitest 51 files / 470 tests passed, Vite production client and server bundles built clean).
+  - Vitest unit suites: `tests/unit/prayer-card-storage.test.ts` (15/15 passed), `tests/unit/prayer-card-canvas.test.ts` (6/6 passed), `tests/unit/prayer-card-modal.test.tsx` (8/8 passed), `tests/unit/discussion-screen.test.tsx` (10/10 passed), `tests/unit/session-resilience-chip.test.tsx` (8/8 passed).
+  - Playwright E2E: `PLAYWRIGHT_PORT=3301 npx playwright test tests/e2e/section-4-lord-help-me-prayer-card.spec.ts` passed twice consecutively: 6/6 passed (1.4m and 1.4m on mobile-chromium 390x844). Verified Scenarios 1–6: opening modal with 3 prompts, strict draft privacy with exactly 0 WebSocket frames transmitted while typing into all 3 inputs + localStorage persistence across reloads, keepsake PNG export generating valid downloadable image/png blob with PNG signature bytes, voluntary single-line sharing sending exactly 1 frame and appearing in live feed + leader response counter update, anonymous single-prayer line sharing masking author to 'Anonymous' and '?' with zero identity leak, and mobile ergonomics confirming computed font-size >= 16px on all 3 textareas with disabled/enabled share button validation.
+  - Lifecycle hygiene: `PLAYWRIGHT_PORT=3301 npx playwright test tests/e2e/ws-room-lifecycle.spec.ts` passed 1/1 scenario (10.4s with zero session leaks).
+  - Invariant check: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
+  - Independent validation verdict: `ACCEPT` (no blockers or repair items).
+- Evidence captured: All test gates green; `section-4-lord-help-me-prayer-card` marked `accepted` in `feature_list.json`.
+- Files updated: `src/client/lib/prayerCardStorage.ts`, `src/client/lib/prayerCardCanvas.ts`, `src/client/components/discussion/PrayerCardModal.tsx`, `src/client/components/prayer-card/PrayerCardModal.tsx`, `src/client/components/discussion/ActiveQuestionCard.tsx`, `src/client/components/discussion/DiscussionScreen.tsx`, `src/client/styles/global.css`, `tests/unit/prayer-card-storage.test.ts`, `tests/unit/prayer-card-canvas.test.ts`, `tests/unit/prayer-card-modal.test.tsx`, `tests/unit/discussion-screen.test.tsx`, `tests/e2e/section-4-lord-help-me-prayer-card.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Run `$feature-flow` on `section-5-closing-prayer-completion`.
+
+### Session 031
   - Wire protocol & projection: Added `SessionReflection` interface (`id`, `questionId`, `authorDisplayName`, `authorInitials`, `avatarPalette`, `content`, `createdAt`, `isAnonymous`), `SessionDiscussionState.reflections`, bounded `normalizeReflectionContent` (`SESSION_REFLECTION_CONTENT_MIN_LENGTH = 1`, `SESSION_REFLECTION_CONTENT_MAX_LENGTH = 1000`, preserving internal line breaks and paragraph structure), and `'submit_reflection'` to `ClientWsMessage` and `SessionUpdatedCommand` at `SESSION_PROTOCOL_VERSION = 3` with zero wire breaks.
   - Server reflection handling & privacy: In `src/server/sessionStore.ts`, initialized `reflections: []` in `session.discussionState` upon entering Section 4. Implemented `handleSubmitReflection` authenticated via live socket binding (`UNAUTHORIZED_MEMBER` if unbound or mismatched), validating `in_progress` + `section_4_discussion`, bounded content, and existing `questionId`. Enforced strict server-side masking for anonymous reflections: sets `authorDisplayName = 'Anonymous'`, `authorInitials = '?'`, `avatarPalette = 'indigo'`, `isAnonymous = true`, guaranteeing zero leak of author's real display name or `memberId` to raw `/ws` wire broadcasts or snapshots. Deep copied `reflections` in `toPublicDiscussionState` and broadcast `session_updated` (`command: 'submit_reflection'`).
   - Client transport & hook: In `src/client/lib/sessionSocket.ts`, added `submitReflection` helper. In `src/client/lib/useLiveSession.ts`, exposed `submitReflection` room action.
