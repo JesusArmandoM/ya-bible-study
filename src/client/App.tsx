@@ -8,6 +8,7 @@ import { IcebreakerScreen } from './components/icebreaker/IcebreakerScreen';
 import { GospelReadingScreen } from './components/reading/GospelReadingScreen';
 import { DiscussionScreen } from './components/discussion/DiscussionScreen';
 import { ClosingPrayerScreen } from './components/closing/ClosingPrayerScreen';
+import { DesktopDualSideBySideScreen } from './components/dual/DesktopDualSideBySideScreen';
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
@@ -34,6 +35,17 @@ export type SanctuaryHealthState = 'loading' | 'ok' | 'degraded';
 
 export interface AppProps {
   sessionClient?: SessionSocketClient;
+  initialDualMode?: boolean;
+}
+
+function isDualModeQueryPresent(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'dual' || params.get('dual') === 'true';
+  } catch {
+    return false;
+  }
 }
 
 function SanctuaryStarIcon() {
@@ -67,7 +79,10 @@ function triggerTactileHaptic(reducedMotion: boolean): void {
   }
 }
 
-export function App({ sessionClient }: AppProps = {}) {
+export function App({ sessionClient, initialDualMode }: AppProps = {}) {
+  const [isDualMode, setIsDualMode] = useState<boolean>(
+    () => initialDualMode ?? isDualModeQueryPresent(),
+  );
   const [healthState, setHealthState] = useState<SanctuaryHealthState>('loading');
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const activeStage = useSacredStageStore((s) => s.stage);
@@ -166,6 +181,30 @@ export function App({ sessionClient }: AppProps = {}) {
       : healthState === 'loading'
         ? 'Verifying live sanctuary synchronization channel…'
         : 'Unable to reach the sanctuary server right now. Check your connection and refresh.';
+
+  if (isDualMode) {
+    return (
+      <DesktopDualSideBySideScreen
+        onExit={() => {
+          setIsDualMode(false);
+          if (typeof window !== 'undefined') {
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('mode');
+              url.searchParams.delete('dual');
+              window.history.replaceState(
+                {},
+                '',
+                url.pathname + (url.search ? url.search : ''),
+              );
+            } catch {
+              // ignore
+            }
+          }
+        }}
+      />
+    );
+  }
 
   return (
     <div className="sanctuary-viewport">
@@ -518,6 +557,7 @@ export function App({ sessionClient }: AppProps = {}) {
             onSelectRole={(role) =>
               setActiveSheet(role === 'Study Leader' ? 'leader' : 'participant')
             }
+            onSelectDualMode={() => setIsDualMode(true)}
           />
         )}
 

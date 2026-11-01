@@ -419,11 +419,19 @@
       "section-5-closing-prayer-completion",
       "mobile-wake-lock-foreground-resync"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Playwright desktop (1440x900) end-to-end test walking an entire 5-section study inside Dual Side-by-Side Mode, switching between sample Participants to raise hands, get chosen, click 'Done', submit reflections, and finish the study with <= 2 active WebGL contexts."
     ],
-    "evidence": [],
+    "evidence": [
+      "Unit test tests/unit/dual-stage-scoping.test.tsx passed (6/6 tests) verifying SacredStageProvider scoping and store isolation.",
+      "Unit test tests/unit/dual-session-sandbox.test.ts passed (3/3 tests) verifying in-memory storage, rehearsal sandbox lifecycle, and participant addition.",
+      "Baseline check ./init.sh passed cleanly with 0 errors across TypeScript typecheck, 56 Vitest test suites (504 tests), and production client/server build.",
+      "Domain invariant check grep -rn 'Assistant' src/ returned 0 matches.",
+      "Playwright desktop E2E suite PLAYWRIGHT_PORT=3305 npx playwright test tests/e2e/desktop-dual-side-by-side-mode.spec.ts passed (3/3 tests in 38.9s) verifying full 5-section walkthrough, participant switcher tabs, volunteer turn gating, reflections, WebGL canvas budget <= 2, viewport notice, and teardown.",
+      "Playwright room lifecycle suite PLAYWRIGHT_PORT=3305 npx playwright test tests/e2e/ws-room-lifecycle.spec.ts passed (1/1 test in 22.7s) verifying zero room leaks on single-port architecture.",
+      "2026-10-31: Independent validation verdict ACCEPT. Audited docs/specs/desktop-dual-side-by-side-mode.md, CONSTRAINTS.md (#3 Participant terminology, #6 in-memory storage sandbox isolation, #7 390x844 chassis and >= 16px inputs, #8 <= 2 active WebGL canvases on screen), and DESIGN.md layout on >= 1024px. All 10 acceptance scenarios verified across 56 Vitest files / 504 tests, dual-stage scoping tests, in-memory sandbox tests, and desktop Playwright E2E suite walking all 5 sections with zero session leaks."
+    ],
     "notes": "Ensure Dual Mode spins up an isolated sessionCode so rehearsal never interferes with another active room."
   }
 ]
