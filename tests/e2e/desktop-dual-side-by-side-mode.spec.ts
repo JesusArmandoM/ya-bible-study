@@ -114,9 +114,17 @@ test.describe('Desktop Dual Side-by-Side Mode (1440x900)', () => {
       const canvasCount = await page.locator('canvas').count();
       expect(canvasCount).toBeLessThanOrEqual(2);
 
-      // Left Frame has Start Study button; Right Frame has waiting state without it
+      // Left Frame has TitleLobbyScreen + Start Study button; Right Frame has isolated ParticipantWaitingScreen
+      await expect(leaderFrame.getByTestId('title-lobby')).toBeVisible();
       const leaderStartBtn = leaderFrame.getByTestId('lobby-start-study');
       await expect(leaderStartBtn).toBeVisible();
+      await expect(
+        participantFrame.getByTestId('participant-waiting-screen'),
+      ).toBeVisible();
+      await expect(
+        participantFrame.getByTestId('participant-waiting-message'),
+      ).toHaveText('The study leader will begin shortly');
+      await expect(participantFrame.getByTestId('title-lobby')).toHaveCount(0);
       await expect(participantFrame.getByTestId('lobby-start-study')).toHaveCount(
         0,
       );

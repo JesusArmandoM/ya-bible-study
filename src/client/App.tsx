@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { HealthResponse } from '../shared/health';
 import { toSessionStudySummary, type SessionStudySummary } from '../shared/session';
 import { OpeningPrayerScreen } from './components/prayer/OpeningPrayerScreen';
@@ -9,6 +9,7 @@ import { GospelReadingScreen } from './components/reading/GospelReadingScreen';
 import { DiscussionScreen } from './components/discussion/DiscussionScreen';
 import { ClosingPrayerScreen } from './components/closing/ClosingPrayerScreen';
 import { DesktopDualSideBySideScreen } from './components/dual/DesktopDualSideBySideScreen';
+import { ParticipantWaitingScreen } from './components/lobby/ParticipantWaitingScreen';
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
@@ -102,6 +103,16 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
 
   const isLeader = liveSession.role === 'Study Leader';
   const sessionStatus = liveSession.session?.status ?? null;
+  const hasSession = Boolean(liveSession.session);
+  const stageLayout = !hasSession
+    ? 'welcome'
+    : !isLeader && (sessionStatus === 'lobby' || sessionStatus === 'setup')
+      ? 'waiting'
+      : sessionStatus === 'lobby'
+        ? 'lobby'
+        : sessionStatus === 'setup'
+          ? 'setup'
+          : 'section';
   const studySetup = useStudySetup({
     enabled: Boolean(liveSession.session && isLeader),
   });
@@ -109,17 +120,27 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
     liveSession.session?.study ??
     (studySetup.study ? toSessionStudySummary(studySetup.study) : null);
 
+  const hadSessionRef = useRef(false);
+
+  const clearJoinUrlPath = () => {
+    if (
+      typeof window !== 'undefined' &&
+      window.location.pathname.startsWith('/join/')
+    ) {
+      window.history.replaceState({}, '', '/');
+    }
+  };
+
   useEffect(() => {
     if (liveSession.session) {
-      if (
-        typeof window !== 'undefined' &&
-        window.location.pathname.startsWith('/join/')
-      ) {
-        window.history.replaceState({}, '', '/');
-      }
+      hadSessionRef.current = true;
+      clearJoinUrlPath();
       setActiveSheet(null);
+    } else if (hadSessionRef.current) {
+      hadSessionRef.current = false;
+      setStage('sanctuary-emblem', { accentMode: 'default' });
     }
-  }, [liveSession.session]);
+  }, [liveSession.session, setStage]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -210,90 +231,26 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
     <div className="sanctuary-viewport">
       <div className="sanctuary-ambient" aria-hidden="true" />
 
-      <main className="sanctuary-column">
-        <header className="sanctuary-hero">
-          <div className="brand-lockup">
-            <div className="sanctuary-emblem-badge" aria-hidden="true">
-              <SanctuaryStarIcon />
-            </div>
-            <div className="brand-wordmark">
-              <span className="brand-ya">YA</span>
-              <span className="brand-eyebrow">BIBLE STUDY</span>
-            </div>
-          </div>
-
-          <h1 className="hero-title">Bible Study for Young Adults</h1>
-          <p className="hero-subtitle">Live interactive sessions for young adults.</p>
-        </header>
-
-        <section
-          className="sanctuary-stage-card"
-          data-health={healthState}
-          aria-label="Sanctuary readiness"
-        >
-          <div className="sanctuary-stage-header">
-            <span className="sanctuary-stage-eyebrow">MIDNIGHT SANCTUARY</span>
-            <span
-              className="sanctuary-stage-moment"
-              data-testid="sacred-active-moment"
-              aria-live="polite"
-            >
-              {activeStageMeta.eyebrow}
-            </span>
-          </div>
-
-          <Sacred3DScene />
-
-          <div
-            className="sacred-stage-pill-grid"
-            role="group"
-            aria-label="Sacred stage emblems"
-          >
-            {SACRED_STAGE_VARIANTS.map((variantId) => {
-              const meta = SACRED_STAGE_METADATA[variantId];
-              const isActive = activeStage === variantId;
-              return (
-                <motion.button
-                  key={variantId}
-                  type="button"
-                  className="sacred-stage-pill"
-                  data-active={isActive ? 'true' : 'false'}
-                  data-stage-pill={variantId}
-                  data-testid={`stage-pill-${variantId}`}
-                  aria-pressed={isActive}
-                  whileTap={reducedMotion ? undefined : { scale: 0.96 }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-                  onClick={() => handleStageSelect(variantId)}
-                >
-                  <span
-                    className="sacred-stage-pill-dot"
-                    aria-hidden="true"
-                    style={{
-                      backgroundColor: isActive ? '#11131F' : meta.primaryColor,
-                    }}
-                  />
-                  <span className="sacred-stage-pill-label">{meta.label}</span>
-                </motion.button>
-              );
-            })}
-          </div>
-
-          <p className="sanctuary-stage-copy">{stageSummary}</p>
-        </section>
-
+      <main
+        className={
+          hasSession
+            ? 'sanctuary-column sanctuary-column--fullscreen'
+            : 'sanctuary-column'
+        }
+      >
         {liveSession.session ? (
-          <>
+          <div
+            key="post-join-session-bar"
+            className="post-join-session-bar"
+            data-testid="post-join-session-bar"
+          >
             <ActiveSessionBanner
+              compact
               session={liveSession.session}
               role={liveSession.role}
               leaderPin={liveSession.leaderPin}
               onLeave={() => {
-                if (
-                  typeof window !== 'undefined' &&
-                  window.location.pathname.startsWith('/join/')
-                ) {
-                  window.history.replaceState({}, '', '/');
-                }
+                clearJoinUrlPath();
                 setActiveSheet(null);
                 setSetupPanelOpen(true);
                 liveSession.leaveRoom();
@@ -302,72 +259,165 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
 
             <SessionResilienceChip
               sessionActive={Boolean(liveSession.session)}
+              client={sessionClient}
               onSessionGone={() => {
+                clearJoinUrlPath();
                 setActiveSheet(null);
                 setSetupPanelOpen(true);
                 liveSession.leaveRoom();
               }}
             />
+          </div>
+        ) : (
+          <header key="welcome-hero" className="sanctuary-hero">
+            <div className="brand-lockup">
+              <div className="sanctuary-emblem-badge" aria-hidden="true">
+                <SanctuaryStarIcon />
+              </div>
+              <div className="brand-wordmark">
+                <span className="brand-ya">YA</span>
+                <span className="brand-eyebrow">BIBLE STUDY</span>
+              </div>
+            </div>
 
-            {isLeader && sessionStatus === 'setup' ? (
-              setupPanelOpen ? (
-                <LeaderStudySetupScreen
-                  study={studySetup.study}
-                  status={studySetup.status}
-                  errorMessages={studySetup.errorMessages}
-                  uploadedFileSize={studySetup.uploadedFileSize}
-                  actionErrorMessage={liveSession.error}
-                  isContinuing={liveSession.isSubmitting}
-                  onFileSelected={(file) => {
-                    void studySetup.analyzeFile(file);
-                  }}
-                  onContinue={() => {
-                    const summary = studySetup.study
-                      ? toSessionStudySummary(studySetup.study)
-                      : null;
-                    void (async () => {
-                      try {
-                        if (summary) {
-                          await liveSession.loadStudy(summary);
-                        }
-                        await liveSession.openLobby();
-                      } catch {
-                        // Failure is surfaced via actionErrorMessage on the screen.
-                      }
-                    })();
-                  }}
-                  onBack={() => setSetupPanelOpen(false)}
-                />
-              ) : (
-                <motion.button
-                  type="button"
-                  className="study-setup-resume"
-                  data-testid="study-setup-resume"
-                  whileTap={reducedMotion ? undefined : { scale: 0.96 }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-                  onClick={() => {
-                    triggerTactileHaptic(reducedMotion);
-                    setSetupPanelOpen(true);
-                  }}
-                >
-                  Set up your study
-                </motion.button>
-              )
-            ) : sessionStatus === 'lobby' ? (
-              <TitleLobbyScreen
-                mode={isLeader ? 'leader' : 'participant'}
-                study={lobbyStudySummary}
-                attendeeCount={liveSession.session.connectedParticipantCount}
-                sessionCode={liveSession.session.sessionCode}
-                isStarting={liveSession.isSubmitting}
-                publicUrl={publicUrl}
-                onStartStudy={() => {
-                  void liveSession.startStudy().catch(() => {
-                    // Failure is surfaced via the session error path.
-                  });
+            <h1 className="hero-title">Bible Study for Young Adults</h1>
+            <p className="hero-subtitle">Live interactive sessions for young adults.</p>
+          </header>
+        )}
+
+        <div
+          key="persistent-sacred-stage"
+          className={
+            hasSession ? 'post-join-stage-shell' : 'sanctuary-stage-card'
+          }
+          role={hasSession ? undefined : 'region'}
+          aria-label={hasSession ? undefined : 'Sanctuary readiness'}
+          data-health={hasSession ? undefined : healthState}
+          data-stage-layout={hasSession ? stageLayout : undefined}
+          data-testid={hasSession ? 'post-join-stage-shell' : undefined}
+        >
+          {!hasSession && (
+            <div key="stage-header" className="sanctuary-stage-header">
+              <span className="sanctuary-stage-eyebrow">MIDNIGHT SANCTUARY</span>
+              <span
+                className="sanctuary-stage-moment"
+                data-testid="sacred-active-moment"
+                aria-live="polite"
+              >
+                {activeStageMeta.eyebrow}
+              </span>
+            </div>
+          )}
+
+          <Sacred3DScene key="sacred-3d-scene" />
+
+          {!hasSession && (
+            <div
+              key="stage-pills"
+              className="sacred-stage-pill-grid"
+              role="group"
+              aria-label="Sacred stage emblems"
+            >
+              {SACRED_STAGE_VARIANTS.map((variantId) => {
+                const meta = SACRED_STAGE_METADATA[variantId];
+                const isActive = activeStage === variantId;
+                return (
+                  <motion.button
+                    key={variantId}
+                    type="button"
+                    className="sacred-stage-pill"
+                    data-active={isActive ? 'true' : 'false'}
+                    data-stage-pill={variantId}
+                    data-testid={`stage-pill-${variantId}`}
+                    aria-pressed={isActive}
+                    whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                    onClick={() => handleStageSelect(variantId)}
+                  >
+                    <span
+                      className="sacred-stage-pill-dot"
+                      aria-hidden="true"
+                      style={{
+                        backgroundColor: isActive ? '#11131F' : meta.primaryColor,
+                      }}
+                    />
+                    <span className="sacred-stage-pill-label">{meta.label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+
+          {!hasSession && (
+            <p key="stage-copy" className="sanctuary-stage-copy">
+              {stageSummary}
+            </p>
+          )}
+        </div>
+
+        {liveSession.session ? (
+          isLeader && sessionStatus === 'setup' ? (
+            setupPanelOpen ? (
+              <LeaderStudySetupScreen
+                study={studySetup.study}
+                status={studySetup.status}
+                errorMessages={studySetup.errorMessages}
+                uploadedFileSize={studySetup.uploadedFileSize}
+                actionErrorMessage={liveSession.error}
+                isContinuing={liveSession.isSubmitting}
+                onFileSelected={(file) => {
+                  void studySetup.analyzeFile(file);
                 }}
+                onContinue={() => {
+                  const summary = studySetup.study
+                    ? toSessionStudySummary(studySetup.study)
+                    : null;
+                  void (async () => {
+                    try {
+                      if (summary) {
+                        await liveSession.loadStudy(summary);
+                      }
+                      await liveSession.openLobby();
+                    } catch {
+                      // Failure is surfaced via actionErrorMessage on the screen.
+                    }
+                  })();
+                }}
+                onBack={() => setSetupPanelOpen(false)}
               />
-            ) : sessionStatus === 'in_progress' ? (
+            ) : (
+              <motion.button
+                type="button"
+                className="study-setup-resume"
+                data-testid="study-setup-resume"
+                whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                onClick={() => {
+                  triggerTactileHaptic(reducedMotion);
+                  setSetupPanelOpen(true);
+                }}
+              >
+                Set up your study
+              </motion.button>
+            )
+          ) : !isLeader &&
+            (sessionStatus === 'lobby' || sessionStatus === 'setup') ? (
+            <ParticipantWaitingScreen />
+          ) : isLeader && sessionStatus === 'lobby' ? (
+            <TitleLobbyScreen
+              mode="leader"
+              study={lobbyStudySummary}
+              attendeeCount={liveSession.session.connectedParticipantCount}
+              sessionCode={liveSession.session.sessionCode}
+              isStarting={liveSession.isSubmitting}
+              publicUrl={publicUrl}
+              onStartStudy={() => {
+                void liveSession.startStudy().catch(() => {
+                  // Failure is surfaced via the session error path.
+                });
+              }}
+            />
+          ) : sessionStatus === 'in_progress' ? (
               liveSession.session.currentSectionId === 'section_1_prayer' ? (
                 <OpeningPrayerScreen
                   role={liveSession.role ?? 'Participant'}
@@ -530,8 +580,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   sectionIndex={liveSession.session.currentSectionIndex ?? 0}
                 />
               )
-            ) : null}
-          </>
+            ) : null
         ) : activeSheet === 'leader' ? (
           <LeaderAccessSheet
             isSubmitting={liveSession.isSubmitting}
@@ -561,18 +610,24 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
           />
         )}
 
-        <footer className="sanctuary-footer">
-          <div
-            className="sanctuary-status-pill"
-            data-status={healthState}
-            data-testid="sanctuary-health-pill"
-            role="status"
-            aria-live="polite"
-          >
-            <span className="status-dot" data-status={healthState} aria-hidden="true" />
-            <span>{footerLabel}</span>
-          </div>
-        </footer>
+        {!hasSession && (
+          <footer key="welcome-footer" className="sanctuary-footer">
+            <div
+              className="sanctuary-status-pill"
+              data-status={healthState}
+              data-testid="sanctuary-health-pill"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                className="status-dot"
+                data-status={healthState}
+                aria-hidden="true"
+              />
+              <span>{footerLabel}</span>
+            </div>
+          </footer>
+        )}
       </main>
     </div>
   );

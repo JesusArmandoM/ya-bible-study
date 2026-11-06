@@ -1,35 +1,58 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect as baseExpect, test, type Page } from '@playwright/test';
+
+const expect = baseExpect.configure({ timeout: 15_000 });
 
 /**
  * Closes the leader's live session over /ws so later suites (e.g.
  * ws-room-lifecycle.spec.ts) still observe activeSessionCount 0.
  */
 async function closeLiveSession(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const raw = sessionStorage.getItem('ya-bible-study.session-credentials');
-    if (!raw) return;
-    const creds = JSON.parse(raw) as {
-      sessionCode?: string;
-      leaderToken?: string;
-    };
-    if (!creds.sessionCode || !creds.leaderToken) return;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-    await new Promise<void>((resolve) =>
-      ws.addEventListener('open', () => resolve(), { once: true }),
-    );
-    ws.send(
-      JSON.stringify({
-        type: 'close_session',
-        sessionCode: creds.sessionCode,
-        leaderToken: creds.leaderToken,
+  try {
+    await Promise.race([
+      page.evaluate(async () => {
+        try {
+          const raw = sessionStorage.getItem('ya-bible-study.session-credentials');
+          if (!raw) return;
+          const creds = JSON.parse(raw) as {
+            sessionCode?: string;
+            leaderToken?: string;
+          };
+          if (!creds.sessionCode || !creds.leaderToken) return;
+          const protocol =
+            window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+          const bounded = (work: Promise<void>): Promise<void> =>
+            Promise.race([
+              work,
+              new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+            ]);
+          await bounded(
+            new Promise<void>((resolve) =>
+              ws.addEventListener('open', () => resolve(), { once: true }),
+            ),
+          );
+          ws.send(
+            JSON.stringify({
+              type: 'close_session',
+              sessionCode: creds.sessionCode,
+              leaderToken: creds.leaderToken,
+            }),
+          );
+          await bounded(
+            new Promise<void>((resolve) =>
+              ws.addEventListener('message', () => resolve(), { once: true }),
+            ),
+          );
+          ws.close();
+        } catch {
+          // Cleanup must never throw.
+        }
       }),
-    );
-    await new Promise<void>((resolve) =>
-      ws.addEventListener('message', () => resolve(), { once: true }),
-    );
-    ws.close();
-  });
+      new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+    ]);
+  } catch {
+    // Cleanup must never fail or hang the suite.
+  }
 }
 
 async function createLeaderInLobby(page: Page): Promise<string> {
@@ -61,10 +84,12 @@ async function joinAsParticipant(
   await page.getByLabel(/Your Name/i).fill(displayName);
   await page.getByRole('button', { name: 'Join Study' }).click();
   await expect(page.getByTestId('active-session-banner')).toBeVisible();
-  await expect(page.getByTestId('title-lobby')).toBeVisible();
+  await expect(page.getByTestId('participant-waiting-screen')).toBeVisible();
 }
 
 test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
+  test.describe.configure({ timeout: 90_000 });
+
   test('Scenarios 2-5: live attendee count, localhost-safe QR sharing, and Study Leader-gated Start Study', async ({
     browser,
   }) => {
@@ -134,18 +159,29 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
       expect(protocolVersion?.healthStatus).toBe('ok');
 
       // ----------------------------------------------------
-      // Scenario 2: two Participants join; ATTENDEES is live on all screens
+      // Scenario 2: two Participants join; ATTENDEES is live for Study Leader while Participants see isolated waiting view
       // ----------------------------------------------------
       await joinAsParticipant(pageA, sessionCode, 'Daniel');
       await joinAsParticipant(pageB, sessionCode, 'Maya');
 
-      for (const page of [pageLeader, pageA, pageB]) {
+      await expect(
+        pageLeader.getByTestId('title-lobby-attendee-count'),
+      ).toHaveText('2');
+      await expect(pageLeader.getByTestId('title-lobby-title')).toHaveText(
+        'Great Is Your Faith',
+      );
+      for (const page of [pageA, pageB]) {
         await expect(
-          page.getByTestId('title-lobby-attendee-count'),
-        ).toHaveText('2');
-        await expect(page.getByTestId('title-lobby-title')).toHaveText(
-          'Great Is Your Faith',
+          page.getByTestId('participant-waiting-screen'),
+        ).toBeVisible();
+        await expect(
+          page.getByTestId('participant-waiting-message'),
+        ).toHaveText('The study leader will begin shortly');
+        await expect(page.getByTestId('active-connected-count')).toContainText(
+          '3 members connected',
         );
+        await expect(page.getByTestId('title-lobby')).toHaveCount(0);
+        await expect(page.getByTestId('title-lobby-metrics')).toHaveCount(0);
       }
 
       // ----------------------------------------------------
@@ -206,9 +242,10 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
       // ----------------------------------------------------
       for (const page of [pageA, pageB]) {
         await expect(page.getByTestId('lobby-start-study')).toHaveCount(0);
-        await expect(page.getByTestId('title-lobby-waiting-pill')).toContainText(
-          'The Study Leader will begin shortly…',
-        );
+        await expect(page.getByTestId('title-lobby')).toHaveCount(0);
+        await expect(
+          page.getByTestId('participant-waiting-message'),
+        ).toHaveText('The study leader will begin shortly');
       }
       await expect(pageLeader.getByTestId('lobby-start-study')).toBeVisible();
 
@@ -216,11 +253,15 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
       // Scenario 2 (disconnect): attendee count decrements live
       // ----------------------------------------------------
       await participantBContext.close();
-      for (const page of [pageLeader, pageA]) {
-        await expect(
-          page.getByTestId('title-lobby-attendee-count'),
-        ).toHaveText('1');
-      }
+      await expect(
+        pageLeader.getByTestId('title-lobby-attendee-count'),
+      ).toHaveText('1');
+      await expect(pageA.getByTestId('active-connected-count')).toContainText(
+        '2 members connected',
+      );
+      await expect(
+        pageA.getByTestId('participant-waiting-screen'),
+      ).toBeVisible();
 
       // ----------------------------------------------------
       // Scenario 5: Start Study advances every screen to Section 1
@@ -274,7 +315,7 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
     }
   });
 
-  test('Scenario 2 (metadata): the study fallback pill shows for Participants before load_study', async ({
+  test('Scenario 2 (metadata): the study fallback pill shows for Study Leader before load_study while Participants remain isolated on the waiting screen', async ({
     browser,
   }) => {
     const leaderContext = await browser.newContext();
@@ -319,18 +360,40 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
         );
       });
       await expect(pageLeader.getByTestId('title-lobby')).toBeVisible();
+      // Block default-study auto-fetch on reload so TitleLobbyScreen reads server session.study === null.
+      await pageLeader.route('**/api/studies/default', (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'unavailable' }),
+        }),
+      );
+      await pageLeader.reload();
+      await expect(pageLeader.getByTestId('title-lobby')).toBeVisible();
+      await expect(
+        pageLeader.getByTestId('title-lobby-study-fallback'),
+      ).toContainText('Study not loaded yet');
+      await expect(
+        pageLeader.getByTestId('title-lobby-metrics'),
+      ).toHaveCount(0);
 
-      // A Participant joining before load_study sees the fallback pill.
+      // A Participant joining before load_study sees ONLY ParticipantWaitingScreen.
       await pageParticipant.goto(`/join/${sessionCode}`);
       await expect(
         pageParticipant.getByTestId('participant-join-sheet'),
       ).toBeVisible();
       await pageParticipant.getByLabel(/Your Name/i).fill('Daniel');
       await pageParticipant.getByRole('button', { name: 'Join Study' }).click();
-      await expect(pageParticipant.getByTestId('title-lobby')).toBeVisible();
+      await expect(
+        pageParticipant.getByTestId('participant-waiting-screen'),
+      ).toBeVisible();
+      await expect(
+        pageParticipant.getByTestId('participant-waiting-message'),
+      ).toHaveText('The study leader will begin shortly');
+      await expect(pageParticipant.getByTestId('title-lobby')).toHaveCount(0);
       await expect(
         pageParticipant.getByTestId('title-lobby-study-fallback'),
-      ).toContainText('Study not loaded yet');
+      ).toHaveCount(0);
       await expect(
         pageParticipant.getByTestId('title-lobby-metrics'),
       ).toHaveCount(0);

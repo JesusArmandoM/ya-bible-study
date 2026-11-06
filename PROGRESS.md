@@ -5,11 +5,29 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `post-join-fullscreen-lobby-isolation` (parallel Wave 1) / `leader-bidirectional-section-navigation` (now unblocked by `six-section-study-model-parser`)
+- Current next ready feature: `leader-persistent-qr-code-reshare` / `leader-bidirectional-section-navigation`
 - Current blocker: `none`
 - Last verified at: `2026-11-06`
 
 ## Session Log
+
+### Session 037
+
+- Date: `2026-11-06`
+- Goal: Implement, self-verify, and independently validate `post-join-fullscreen-lobby-isolation` per `docs/specs/post-join-fullscreen-lobby-isolation.md`.
+- Completed:
+  - Created `ParticipantWaitingScreen.tsx` centered on glowing 3D `Sacred3DScene` (`sanctuary-emblem`) displaying exact message "The study leader will begin shortly" for Participants in `lobby` or early `setup`.
+  - Updated `App.tsx` to unmount `.sanctuary-hero`, `.sanctuary-stage-card`, and `.sanctuary-footer` once joined (`Boolean(liveSession.session)`), letting the active post-join screen cover 100% of the viewport (`min-height: 100dvh`).
+  - Updated `DualDeviceFrame.tsx` in Desktop Dual Side-by-Side Mode to render `ParticipantWaitingScreen` in the right Participant frame.
+  - Preserved single persistent WebGL `<Canvas>` budget (`<= 1` in standalone, `<= 2` in dual mode).
+- Verification run:
+  - `./init.sh` passed exit code 0 (TypeScript clean across 3 tsconfigs, 57 Vitest suites / 508 tests passed, production build clean).
+  - Playwright E2E on `PLAYWRIGHT_PORT=3302` passed 8/8 tests (`post-join-fullscreen-lobby-isolation.spec.ts`, `title-lobby-qr-join.spec.ts`, `desktop-dual-side-by-side-mode.spec.ts`).
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches.
+  - Zero diff on `src/shared/` and `src/server/`.
+- Evidence captured: Marked `post-join-fullscreen-lobby-isolation` as `accepted` in `feature_list.json`.
+- Files updated: `docs/specs/post-join-fullscreen-lobby-isolation.md`, `src/client/App.tsx`, `src/client/components/lobby/ParticipantWaitingScreen.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `src/client/components/lobby/TitleLobbyScreen.tsx`, `src/client/components/setup/LeaderStudySetupScreen.tsx`, `src/client/components/welcome/ActiveSessionBanner.tsx`, `src/client/styles/global.css`, `tests/e2e/post-join-fullscreen-lobby-isolation.spec.ts`, `tests/unit/post-join-fullscreen-isolation.test.tsx`, `tests/unit/title-lobby.test.tsx`, `tests/e2e/*`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Publish and merge to `main`.
 
 ### Session 036
 

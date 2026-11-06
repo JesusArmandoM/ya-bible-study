@@ -1,8 +1,12 @@
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SessionStudySummary } from '../../../shared/session';
 import { resolveJoinUrl } from '../../lib/runtimeUrl';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import {
+  resolveSacredStage,
+  useSacredStageStore,
+} from '../../state/sacredStageStore';
 import { RoomCodeShareSheet } from './RoomCodeShareSheet';
 
 export interface TitleLobbyScreenProps {
@@ -50,8 +54,14 @@ export function TitleLobbyScreen({
   onStartStudy,
 }: TitleLobbyScreenProps) {
   const reducedMotion = usePrefersReducedMotion();
+  const setStage = useSacredStageStore((s) => s.setStage);
   const [shareOpen, setShareOpen] = useState(false);
   const isLeader = mode === 'leader';
+
+  useEffect(() => {
+    const resolved = resolveSacredStage({ screen: 'title-lobby' });
+    setStage(resolved.stage, { accentMode: resolved.accentMode });
+  }, [setStage]);
 
   const join = resolveJoinUrl(sessionCode, { publicUrl });
   const citationLine = study

@@ -160,7 +160,11 @@ test.describe('Section 5 Closing Prayer & Session Completion (Scenarios 1–8)',
       for (const page of [pageLeader, pageMary]) {
         await expect(page.getByTestId('section-one-label')).toHaveText('SECTION 5 OF 5');
         await expect(page.getByTestId('section-one-percent')).toHaveText('100%');
-        await expect(page.getByTestId('sacred-active-moment')).toHaveText('SECTION 5 · CLOSING');
+        await expect(page.getByTestId('sacred-3d-scene')).toHaveAttribute(
+          'data-stage',
+          'star-of-faith',
+        );
+        await expect(page.getByTestId('sacred-active-moment')).toHaveCount(0);
         await expect(page.getByText('WRAPPING UP')).toBeVisible();
         await expect(page.getByRole('heading', { level: 2, name: 'Closing Prayer' })).toBeVisible();
 

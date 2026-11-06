@@ -464,11 +464,16 @@
     "depends_on": [
       "title-lobby-qr-join-start"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Playwright and unit tests asserting that after joining a lobby session, neither the Welcome hero header nor stage-pill switcher is present in the DOM, Participants see only the full-screen 'The study leader will begin shortly' waiting view with Sacred3DScene, and the Study Leader sees the full-screen Lobby view."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-11-06: Independent validator verdict: accept — verified ./init.sh exits 0 (TypeScript check clean across 3 tsconfigs; 57/57 Vitest suites / 508 tests passed; production build clean).",
+      "2026-11-06: Playwright E2E suite on PLAYWRIGHT_PORT=3302 passed 8/8 tests (post-join-fullscreen-lobby-isolation.spec.ts, title-lobby-qr-join.spec.ts, desktop-dual-side-by-side-mode.spec.ts) verifying unmounting of Welcome hero/stage-switcher, full-screen ParticipantWaitingScreen ('The study leader will begin shortly'), TitleLobbyScreen for Study Leader, single persistent WebGL canvas <= 1 (<= 2 in dual mode), and zero session leaks.",
+      "2026-11-06: Terminology invariant verified: grep -rn 'Assistant' src/ returned 0 matches.",
+      "2026-11-06: Zero diff on src/shared/ and src/server/ (clean parallel wave isolation)."
+    ],
     "notes": "Follow DESIGN.md override #2 (Exclusive Full-Screen Isolation Post-Join)."
   },
   {
