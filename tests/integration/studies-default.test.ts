@@ -20,7 +20,7 @@ describe('GET /api/studies/default single-port integration', () => {
     await server.close();
   });
 
-  it('returns HTTP 200 with the validated 5-section "Great Is Your Faith" StudyDocument', async () => {
+  it('returns HTTP 200 with the validated 6-section "Great Is Your Faith" StudyDocument', async () => {
     const response = await fetch(`${baseUrl}/api/studies/default`);
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('application/json');
@@ -39,11 +39,14 @@ describe('GET /api/studies/default single-port integration', () => {
     expect(doc.id).toBe('great-is-your-faith');
     expect(doc.title).toBe('Great Is Your Faith');
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
-    expect(doc.sectionCount).toBe(5);
-    expect(getStudySections(doc)).toHaveLength(5);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
+    expect(getStudySections(doc)).toHaveLength(6);
     expect(doc.gospelReading.verses).toHaveLength(8);
-    expect(doc.deepAnalysis.reflectionQuestions).toHaveLength(12);
     expect(doc.deepAnalysis.verseCommentary).toHaveLength(10);
+    expect(doc.deepAnalysis.catholicDoctrine).toHaveLength(4);
+    expect(doc.deepAnalysis.youngAdultApplication).toHaveLength(4);
+    expect(doc.discussion.reflectionQuestions).toHaveLength(12);
     expect(doc.closing.weeklyChallenges).toHaveLength(4);
   });
 
@@ -57,13 +60,13 @@ describe('GET /api/studies/default single-port integration', () => {
     expect(tunnelRes.status).toBe(200);
     const firstBody = (await tunnelRes.json()) as StudyDocument;
     firstBody.title = 'Client-Mutated Copy';
-    firstBody.deepAnalysis.reflectionQuestions.length = 0;
+    firstBody.discussion.reflectionQuestions.length = 0;
 
     const repeatRes = await fetch(`${baseUrl}/api/studies/default`);
     expect(repeatRes.status).toBe(200);
     const repeatBody = (await repeatRes.json()) as StudyDocument;
     expect(repeatBody.title).toBe('Great Is Your Faith');
-    expect(repeatBody.deepAnalysis.reflectionQuestions).toHaveLength(12);
+    expect(repeatBody.discussion.reflectionQuestions).toHaveLength(12);
   });
 
   it('returns HTTP 404 JSON for unknown /api/studies/* subroutes', async () => {

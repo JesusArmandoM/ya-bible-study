@@ -110,7 +110,7 @@ export function StudyPreviewCard({
               ✓ {source.statusLabel}
             </span>
             <span className="study-file-summary">
-              5 sections · {detectionSummary.totalQuestionCount} questions
+              {study.sectionCount} sections · {detectionSummary.totalQuestionCount} questions
             </span>
             {sizeLabel !== null && (
               <span className="study-file-size" data-testid="study-file-size">

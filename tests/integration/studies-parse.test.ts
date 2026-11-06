@@ -55,8 +55,11 @@ describe('POST /api/studies/parse integration', () => {
     expect(doc.id).toBe('great-is-your-faith');
     expect(doc.title).toBe('Great Is Your Faith');
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
-    expect(doc.sectionCount).toBe(5);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
     expect(doc.gospelReading.verses).toHaveLength(8);
+    expect(doc.deepAnalysis.verseCommentary).toHaveLength(10);
+    expect(doc.discussion.reflectionQuestions).toHaveLength(12);
   });
 
   it('parses application/json body containing content and fileName', async () => {
@@ -243,8 +246,8 @@ describe('POST /api/studies/parse integration', () => {
     expect(doc.source.type).toBe('pdf');
     expect(doc.source.fileName).toBe('great-is-your-faith.pdf');
     expect(doc.source.statusLabel).toBe('Analyzed');
-    expect(doc.sectionCount).toBe(5);
-    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('5 sections detected');
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
     expect(doc.detectionSummary.hasOpeningPrayer).toBe(true);
     expect(doc.detectionSummary.hasGospelReading).toBe(true);
     expect(doc.detectionSummary.hasClosingPrayer).toBe(true);
@@ -293,7 +296,8 @@ describe('POST /api/studies/parse integration', () => {
     expect(doc.source.fileName).toBe('peace-be-still-mark-4.pdf');
     expect(doc.title).toBe('Peace! Be Still');
     expect(doc.gospelCitation).toBe('Mark 4:35–41');
-    expect(doc.deepAnalysis.reflectionQuestions).toHaveLength(12);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.discussion.reflectionQuestions).toHaveLength(12);
   });
 
   it('rejects unsupported file types (.docx, .txt, .png) with HTTP 400', async () => {

@@ -184,7 +184,7 @@ beforeEach(() => {
 });
 
 describe('LeaderStudySetupScreen — preview surface', () => {
-  it('Scenario 1: previews the default study with 5-section structure and Gospel-only Section 3', async () => {
+  it('Scenario 1: previews the default study with 6-section structure and Gospel-only Section 3', async () => {
     installFetchRouter({
       onDefault: async () => jsonResponse(getDefaultStudyDocument()),
     });
@@ -197,25 +197,27 @@ describe('LeaderStudySetupScreen — preview surface', () => {
 
     const previewCard = screen.getByTestId('study-preview-card');
     expect(previewCard).toHaveTextContent('Great Is Your Faith.pdf');
+    expect(previewCard).toHaveTextContent('6 sections · 12 questions');
     expect(screen.getByTestId('study-analyzed-pill')).toHaveTextContent(
       '✓ Analyzed',
     );
     expect(screen.getByTestId('study-detection-summary')).toHaveTextContent(
-      '5 sections detected',
+      '6 sections detected',
     );
-    expect(previewCard).toHaveTextContent('5 sections detected');
+    expect(previewCard).toHaveTextContent('6 sections detected');
 
     const list = screen.getByTestId('study-structure-list');
     expect(list).toHaveTextContent('Opening Prayer');
     expect(list).toHaveTextContent('Icebreaker');
     expect(list).toHaveTextContent('Gospel Reading');
-    expect(list).toHaveTextContent('Deep Analysis & Discussion');
+    expect(list).toHaveTextContent('Deep Analysis');
+    expect(list).toHaveTextContent('Discussion & Reflection');
     expect(list).toHaveTextContent('Closing Prayer');
 
-    for (const rowNumber of [1, 2, 3, 4, 5]) {
-      expect(
-        screen.getByTestId(`study-structure-row-${rowNumber}`),
-      ).toBeInTheDocument();
+    for (const rowNumber of [1, 2, 3, 4, 5, 6]) {
+      const row = screen.getByTestId(`study-structure-row-${rowNumber}`);
+      expect(row).toBeInTheDocument();
+      expect(row).toHaveTextContent(`Section ${rowNumber} of 6`);
     }
 
     const gospelRow = screen.getByTestId('study-structure-row-3');
@@ -270,7 +272,7 @@ describe('LeaderStudySetupScreen — preview surface', () => {
       '✓ Analyzed',
     );
     expect(screen.getByTestId('study-detection-summary')).toHaveTextContent(
-      '5 sections detected',
+      '6 sections detected',
     );
     expect(screen.getByTestId('study-structure-row-3')).toHaveTextContent(
       'Mark 4:35–41',

@@ -32,7 +32,7 @@ export function AddQuestionModal({
 
   // Derive unqueued questions from either localStudyDocument or syncedBankQuestions
   const bankQuestions: Array<Pick<SessionDiscussionQuestion, 'id' | 'number' | 'prompt' | 'category' | 'estimatedMinutes'>> =
-    studyDocument?.deepAnalysis.reflectionQuestions.map((q) => ({
+    studyDocument?.discussion.reflectionQuestions.map((q) => ({
       id: q.id,
       number: q.number,
       prompt: q.prompt,

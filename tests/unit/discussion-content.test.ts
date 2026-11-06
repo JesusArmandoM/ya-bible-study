@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SESSION_DEEP_ANALYSIS_MAX_COMMENTARY_ITEMS,
+  SESSION_DEEP_ANALYSIS_MAX_HIGHLIGHT_ITEMS,
+  SESSION_DEEP_ANALYSIS_MAX_REFERENCES_PER_ITEM,
   SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH,
+  normalizeSessionDeepAnalysisContent,
   normalizeSessionDiscussionContent,
   normalizeSessionDiscussionQuestion,
   normalizeSessionStudySummary,
+  toSessionDeepAnalysisContent,
   toSessionDiscussionContent,
   toSessionStudySummary,
 } from '../../src/shared/session';
@@ -15,13 +20,13 @@ const BASE_SUMMARY = {
   liturgicalEyebrow: 'MATTHEW 15:21–28',
   gospelCitation: 'Matthew 15:21–28',
   gospelSummaryLabel: 'Gospel of Matthew 15:21–28',
-  sectionCount: 5,
+  sectionCount: 6,
   estimatedMinutes: 45,
 };
 
 const VALID_DISCUSSION_CONTENT = {
-  title: 'Deep Analysis & Discussion',
-  eyebrow: 'SECTION 4 OF 5 · 80%',
+  title: 'Discussion & Reflection',
+  eyebrow: 'DISCUSSION · 25 MIN',
   durationLabel: '25 min',
   defaultActiveQuestionIds: ['q-6', 'q-5', 'q-8'],
   questions: [
@@ -49,10 +54,39 @@ const VALID_DISCUSSION_CONTENT = {
   ],
 };
 
-describe('SessionDiscussionContent projection (participant-only, pastoral fields never cross)', () => {
-  it('projects exactly the five participant-visible fields and never verseCommentary, catholicDoctrine, sampleAnswer, or leaderNote', () => {
+describe('SessionDeepAnalysisContent & SessionDiscussionContent projections', () => {
+  it('projects shared Deep Analysis (A–J commentary without patristicNote, A–D doctrine, A–D application)', () => {
     const seed = getDefaultStudyDocument();
-    const content = toSessionDiscussionContent(seed.deepAnalysis);
+    const deep = toSessionDeepAnalysisContent(seed.deepAnalysis);
+
+    expect(Object.keys(deep).sort()).toEqual([
+      'catholicDoctrine',
+      'durationLabel',
+      'eyebrow',
+      'title',
+      'verseCommentary',
+      'youngAdultApplication',
+    ]);
+    expect(deep.title).toBe('Deep Analysis');
+    expect(deep.eyebrow).toBe('DEEP ANALYSIS · 20 MIN');
+    expect(deep.durationLabel).toBe('20 min');
+    expect(deep.verseCommentary).toHaveLength(10);
+    expect(deep.catholicDoctrine).toHaveLength(4);
+    expect(deep.youngAdultApplication).toHaveLength(4);
+
+    for (const item of deep.verseCommentary) {
+      expect(item).not.toHaveProperty('patristicNote');
+    }
+    const deepJson = JSON.stringify(deep);
+    expect(deepJson).not.toContain('patristicNote');
+    expect(deepJson).not.toContain('Chrysostom');
+    expect(deepJson).not.toContain('Augustine');
+    expect(deepJson).not.toContain('Jerome');
+  });
+
+  it('projects exactly the five participant-visible discussion fields and never verseCommentary, catholicDoctrine, sampleAnswer, or leaderNote', () => {
+    const seed = getDefaultStudyDocument();
+    const content = toSessionDiscussionContent(seed.discussion);
 
     expect(Object.keys(content).sort()).toEqual([
       'defaultActiveQuestionIds',
@@ -61,9 +95,9 @@ describe('SessionDiscussionContent projection (participant-only, pastoral fields
       'questions',
       'title',
     ]);
-    expect(content.title).toBe(seed.deepAnalysis.title);
-    expect(content.eyebrow).toBe(seed.deepAnalysis.eyebrow);
-    expect(content.durationLabel).toBe(seed.deepAnalysis.durationLabel);
+    expect(content.title).toBe(seed.discussion.title);
+    expect(content.eyebrow).toBe(seed.discussion.eyebrow);
+    expect(content.durationLabel).toBe(seed.discussion.durationLabel);
     expect(content.defaultActiveQuestionIds).toEqual(['q-6', 'q-5', 'q-8']);
     expect(content.questions).toHaveLength(12);
 
@@ -85,22 +119,29 @@ describe('SessionDiscussionContent projection (participant-only, pastoral fields
     expect(content).not.toHaveProperty('prayerCardTemplate');
   });
 
-  it('keeps pastoral commentary and doctrinal notes off the serialized study summary', () => {
+  it('syncs shared deepAnalysis on study summary while stripping facilitator-only notes', () => {
     const seed = getDefaultStudyDocument();
     const summary = toSessionStudySummary(seed);
     const json = JSON.stringify(summary);
+    const discussionJson = JSON.stringify(summary.discussion);
 
-    expect(summary.discussion).toEqual(
-      toSessionDiscussionContent(seed.deepAnalysis),
+    expect(summary.sectionCount).toBe(6);
+    expect(summary.deepAnalysis).toEqual(
+      toSessionDeepAnalysisContent(seed.deepAnalysis),
     );
-    expect(json).not.toContain('verseCommentary');
-    expect(json).not.toContain('catholicDoctrine');
-    expect(json).not.toContain('youngAdultApplication');
+    expect(summary.discussion).toEqual(
+      toSessionDiscussionContent(seed.discussion),
+    );
+    expect(discussionJson).not.toContain('verseCommentary');
+    expect(discussionJson).not.toContain('catholicDoctrine');
+    expect(discussionJson).not.toContain('youngAdultApplication');
+    expect(discussionJson).not.toContain('Romans 11:29');
     expect(json).not.toContain('sampleAnswer');
     expect(json).not.toContain('leaderNote');
+    expect(json).not.toContain('patristicNote');
+    expect(json).not.toContain('examplesToListenFor');
+    expect(json).not.toContain('leaderLiturgicalContextNote');
     expect(json).not.toContain('prayerCardTemplate');
-    expect(JSON.stringify(summary.discussion)).not.toContain('Romans 11:29'); // discussion never leaks question-level doctrinal note
-    expect(json).not.toContain('CCC 839–840'); // doctrinal guardrail stays local to leader
     expect(json).not.toContain('anti-Jewish framing');
     expect(json).not.toContain('Chrysostom');
     expect(json).not.toContain('Augustine');
@@ -215,5 +256,85 @@ describe('normalizeSessionStudySummary with discussion', () => {
       discussion: { title: '' },
     });
     expect(summary).toBeNull();
+  });
+});
+
+describe('normalizeSessionDeepAnalysisContent (bounded allow-list)', () => {
+  it('accepts valid deepAnalysis and strips smuggled patristicNote', () => {
+    const seed = getDefaultStudyDocument();
+    const validDeep = toSessionDeepAnalysisContent(seed.deepAnalysis);
+    const smuggled = {
+      ...validDeep,
+      verseCommentary: validDeep.verseCommentary.map((item) => ({
+        ...item,
+        patristicNote: 'SMUGGLED PATRISTIC NOTE',
+      })),
+      extraField: 'SMUGGLED',
+    };
+
+    const normalized = normalizeSessionDeepAnalysisContent(smuggled);
+    expect(normalized).toEqual(validDeep);
+    expect(JSON.stringify(normalized)).not.toContain('patristicNote');
+    expect(JSON.stringify(normalized)).not.toContain('SMUGGLED');
+  });
+
+  it('enforces commentary, doctrine, application, and reference array bounds', () => {
+    const seed = getDefaultStudyDocument();
+    const validDeep = toSessionDeepAnalysisContent(seed.deepAnalysis);
+
+    expect(normalizeSessionDeepAnalysisContent(null)).toBeNull();
+    expect(
+      normalizeSessionDeepAnalysisContent({ ...validDeep, verseCommentary: [] }),
+    ).toBeNull();
+    expect(
+      normalizeSessionDeepAnalysisContent({
+        ...validDeep,
+        verseCommentary: Array.from(
+          { length: SESSION_DEEP_ANALYSIS_MAX_COMMENTARY_ITEMS + 1 },
+          () => validDeep.verseCommentary[0]!,
+        ),
+      }),
+    ).toBeNull();
+    expect(
+      normalizeSessionDeepAnalysisContent({
+        ...validDeep,
+        catholicDoctrine: Array.from(
+          { length: SESSION_DEEP_ANALYSIS_MAX_HIGHLIGHT_ITEMS + 1 },
+          () => validDeep.catholicDoctrine[0]!,
+        ),
+      }),
+    ).toBeNull();
+    expect(
+      normalizeSessionDeepAnalysisContent({
+        ...validDeep,
+        youngAdultApplication: Array.from(
+          { length: SESSION_DEEP_ANALYSIS_MAX_HIGHLIGHT_ITEMS + 1 },
+          () => validDeep.youngAdultApplication[0]!,
+        ),
+      }),
+    ).toBeNull();
+    expect(
+      normalizeSessionDeepAnalysisContent({
+        ...validDeep,
+        verseCommentary: [
+          {
+            ...validDeep.verseCommentary[0]!,
+            catechismReferences: Array.from(
+              { length: SESSION_DEEP_ANALYSIS_MAX_REFERENCES_PER_ITEM + 1 },
+              (_, idx) => `CCC ${idx + 1}`,
+            ),
+          },
+        ],
+      }),
+    ).toBeNull();
+
+    const summaryWithoutDeep = normalizeSessionStudySummary({ ...BASE_SUMMARY });
+    expect(summaryWithoutDeep?.deepAnalysis).toBeNull();
+
+    const summaryWithInvalidDeep = normalizeSessionStudySummary({
+      ...BASE_SUMMARY,
+      deepAnalysis: { title: '' },
+    });
+    expect(summaryWithInvalidDeep).toBeNull();
   });
 });

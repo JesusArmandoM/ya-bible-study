@@ -5,7 +5,7 @@ import {
 } from '../../src/shared/study';
 
 test.describe('Unified single-port default study API', () => {
-  test('serves GET /api/studies/default with complete 5-section Matthew 15:21-28 payload alongside "/" shell', async ({
+  test('serves GET /api/studies/default with complete 6-section Matthew 15:21-28 payload alongside "/" shell', async ({
     page,
     request,
   }) => {
@@ -31,14 +31,19 @@ test.describe('Unified single-port default study API', () => {
     expect(doc.id).toBe('great-is-your-faith');
     expect(doc.title).toBe('Great Is Your Faith');
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
-    expect(getStudySections(doc)).toHaveLength(5);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
+    expect(getStudySections(doc)).toHaveLength(6);
     expect(doc.gospelReading.verses).toHaveLength(8);
-    expect(doc.deepAnalysis.defaultActiveQuestionIds).toEqual([
+    expect(doc.deepAnalysis.verseCommentary).toHaveLength(10);
+    expect(doc.deepAnalysis.catholicDoctrine).toHaveLength(4);
+    expect(doc.deepAnalysis.youngAdultApplication).toHaveLength(4);
+    expect(doc.discussion.defaultActiveQuestionIds).toEqual([
       'q-6',
       'q-5',
       'q-8',
     ]);
-    expect(doc.deepAnalysis.reflectionQuestions).toHaveLength(12);
+    expect(doc.discussion.reflectionQuestions).toHaveLength(12);
     expect(doc.closing.nextWeekAnnouncement.displayLabel).toBe(
       '"Faith that Endures" — James 1:2–4',
     );
