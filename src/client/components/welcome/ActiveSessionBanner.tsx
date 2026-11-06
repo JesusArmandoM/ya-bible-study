@@ -8,6 +8,7 @@ export interface ActiveSessionBannerProps {
   role: SanctuaryRole | null;
   leaderPin: string | null;
   onLeave: () => void;
+  compact?: boolean;
 }
 
 function triggerTactileHaptic(reducedMotion: boolean): void {
@@ -28,6 +29,7 @@ export function ActiveSessionBanner({
   role,
   leaderPin,
   onLeave,
+  compact = false,
 }: ActiveSessionBannerProps) {
   const reducedMotion = usePrefersReducedMotion();
 
@@ -37,6 +39,72 @@ export function ActiveSessionBanner({
   };
 
   const isLeader = role === 'Study Leader';
+
+  if (compact) {
+    return (
+      <div
+        className="active-session-card active-session-card--compact"
+        data-testid="active-session-banner"
+        data-compact="true"
+        aria-label="Active Bible Study Session"
+      >
+        <div className="active-session-compact-cluster">
+          <span
+            className="active-session-role-badge"
+            data-role={isLeader ? 'leader' : 'participant'}
+            data-testid="active-user-role"
+          >
+            {role ?? 'Participant'}
+          </span>
+
+          <span className="active-session-compact-pill">
+            <span className="active-session-live-dot" aria-hidden="true" />
+            <span
+              className="active-session-compact-code"
+              data-testid="active-session-code"
+            >
+              {session.sessionCode}
+            </span>
+          </span>
+
+          {isLeader && leaderPin && (
+            <span
+              className="active-session-compact-pin"
+              data-testid="active-leader-pin-box"
+            >
+              <span className="active-session-compact-pin-label">PIN</span>
+              <span
+                className="active-session-compact-pin-value"
+                data-testid="active-leader-pin"
+              >
+                {leaderPin}
+              </span>
+            </span>
+          )}
+
+          <span
+            className="active-session-compact-count"
+            data-testid="active-connected-count"
+          >
+            {session.connectedMemberCount}{' '}
+            {session.connectedMemberCount === 1 ? 'member' : 'members'} connected
+          </span>
+        </div>
+
+        <motion.button
+          type="button"
+          className="active-session-leave-btn active-session-leave-btn--compact"
+          data-testid="active-session-leave-btn"
+          aria-label="Leave Session"
+          whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+          onClick={handleLeave}
+        >
+          Leave
+        </motion.button>
+      </div>
+    );
+  }
 
   return (
     <div

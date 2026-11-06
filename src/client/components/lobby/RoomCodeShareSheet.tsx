@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
 import { renderJoinQrSvg } from '../../lib/qrCode';
 
@@ -124,7 +125,7 @@ export function RoomCodeShareSheet({
     }
   };
 
-  return (
+  const content = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -267,4 +268,10 @@ export function RoomCodeShareSheet({
       )}
     </AnimatePresence>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+
+  return content;
 }

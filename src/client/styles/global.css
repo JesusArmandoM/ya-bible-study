@@ -1677,7 +1677,7 @@ button {
 .room-code-sheet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 120;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -6800,6 +6800,179 @@ button {
   cursor: pointer;
   margin-top: 0.5rem;
   box-shadow: 0 4px 16px rgba(226, 168, 62, 0.3);
+}
+
+/* Post-Join Exclusive Full-Screen Shell & Participant Waiting Isolation (DESIGN.md Override #2) */
+.sanctuary-column--fullscreen {
+  min-height: 100dvh;
+  justify-content: flex-start;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  gap: 0.75rem;
+}
+
+.post-join-session-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.post-join-session-bar .session-resilience-chip {
+  align-self: flex-start;
+}
+
+.active-session-card[data-compact='true'] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  background: rgba(23, 27, 46, 0.86);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  width: 100%;
+  max-width: 100%;
+}
+
+.active-session-compact-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.active-session-compact-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: rgba(11, 13, 23, 0.72);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.active-session-compact-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-primary);
+}
+
+.active-session-compact-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: rgba(226, 168, 62, 0.1);
+  border: 1px dashed rgba(226, 168, 62, 0.42);
+}
+
+.active-session-compact-pin-label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.active-session-compact-pin-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-primary);
+}
+
+.active-session-compact-count {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.active-session-card[data-compact='true'] .active-session-leave-btn {
+  width: auto;
+  min-width: 68px;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+}
+
+.post-join-stage-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.post-join-stage-shell[data-stage-layout='waiting'] {
+  margin-top: auto;
+}
+
+.post-join-stage-shell[data-stage-layout='waiting'] .sacred-stage-container {
+  height: 220px;
+  max-width: 280px;
+  border-radius: var(--radius-lg);
+  border-color: rgba(226, 168, 62, 0.24);
+  box-shadow: 0 0 48px rgba(226, 168, 62, 0.16);
+}
+
+.post-join-stage-shell[data-stage-layout='lobby'] .sacred-stage-container {
+  height: 184px;
+}
+
+.post-join-stage-shell[data-stage-layout='setup'] .sacred-stage-container,
+.post-join-stage-shell[data-stage-layout='section'] .sacred-stage-container {
+  height: 152px;
+}
+
+.participant-waiting-screen {
+  width: 100%;
+  margin-bottom: auto;
+  padding: 0.75rem 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.participant-waiting-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 22rem;
+}
+
+.participant-waiting-message {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  text-shadow: 0 2px 18px rgba(226, 168, 62, 0.22);
+}
+
+.dual-frame-stage-wrapper[data-stage-layout='waiting'] {
+  margin-top: auto;
+  height: 220px;
+  min-height: 220px;
 }
 
 /* Session resilience chip (wake lock + foreground resync status) */

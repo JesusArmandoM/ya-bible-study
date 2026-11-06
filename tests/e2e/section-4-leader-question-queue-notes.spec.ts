@@ -443,7 +443,7 @@ test.describe('Section 4 Deep Analysis Leader Question Queue & Pastoral Notes (u
 
       // All clients immediately advance to Section 5
       for (const page of [pageLeader, pageParticipant]) {
-        await expect(page.getByTestId('section-placeholder')).toBeVisible();
+        await expect(page.getByTestId('closing-prayer-screen')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(
           'SECTION 5 OF 5',
         );

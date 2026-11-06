@@ -1,7 +1,12 @@
 import { motion } from 'motion/react';
+import { useEffect } from 'react';
 import type { StudyDocument } from '../../../shared/study';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
 import type { StudySetupStatus } from '../../lib/useStudySetup';
+import {
+  resolveSacredStage,
+  useSacredStageStore,
+} from '../../state/sacredStageStore';
 import { StudyPreviewCard } from './StudyPreviewCard';
 import { StudyStructureList } from './StudyStructureList';
 import { StudyUploadDropzone } from './StudyUploadDropzone';
@@ -80,10 +85,16 @@ export function LeaderStudySetupScreen({
   isContinuing = false,
 }: LeaderStudySetupScreenProps) {
   const reducedMotion = usePrefersReducedMotion();
+  const setStage = useSacredStageStore((s) => s.setStage);
   const alertMessages = actionErrorMessage
     ? [...errorMessages, actionErrorMessage]
     : errorMessages;
   const isContinueDisabled = status !== 'ready' || isContinuing;
+
+  useEffect(() => {
+    const resolved = resolveSacredStage({ screen: 'leader-setup' });
+    setStage(resolved.stage, { accentMode: resolved.accentMode });
+  }, [setStage]);
 
   return (
     <section

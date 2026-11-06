@@ -533,7 +533,9 @@ test.describe('Mobile wake lock + foreground state resync', () => {
     try {
       const sessionCode = await createLeaderInLobby(pageLeader);
       await joinAsParticipant(pageMia, sessionCode, 'Mia');
-      await expect(pageMia.getByTestId('title-lobby')).toBeVisible();
+      await expect(
+        pageMia.getByTestId('participant-waiting-screen'),
+      ).toBeVisible();
 
       // Chip copy uses Study Leader / Participant wording only (zero legacy
       // role words), and the resilience signals are exposed to the DOM.
@@ -561,6 +563,9 @@ test.describe('Mobile wake lock + foreground state resync', () => {
       await expect(pageMia.getByTestId('welcome-role-leader')).toBeVisible();
       await expect(pageMia.getByTestId('active-session-banner')).toHaveCount(0);
       await expect(pageMia.getByTestId('session-resilience-chip')).toHaveCount(0);
+      await expect(
+        pageMia.getByTestId('participant-waiting-screen'),
+      ).toHaveCount(0);
       await expect(pageMia.getByTestId('prayer-chosen-view')).toHaveCount(0);
       // Zero stale session DOM on the closer's screen too (its session_closed
       // broadcast path is pre-existing behavior outside this feature's scope).

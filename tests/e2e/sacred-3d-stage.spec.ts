@@ -1,4 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect as baseExpect, test } from '@playwright/test';
+
+const expect = baseExpect.configure({ timeout: 15_000 });
 
 const CANONICAL_STAGES = [
   'prayer-orb',

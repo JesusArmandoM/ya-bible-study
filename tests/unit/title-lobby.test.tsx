@@ -4,8 +4,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { OpeningPrayerScreen, type OpeningPrayerScreenProps } from '../../src/client/components/prayer/OpeningPrayerScreen';
+import { ParticipantWaitingScreen } from '../../src/client/components/lobby/ParticipantWaitingScreen';
 import { TitleLobbyScreen } from '../../src/client/components/lobby/TitleLobbyScreen';
 import { StudyStructureList } from '../../src/client/components/setup/StudyStructureList';
+import { useSacredStageStore } from '../../src/client/state/sacredStageStore';
 import { getDefaultStudyDocument } from '../../src/server/studies/greatIsYourFaithSeed';
 import type {
   PublicLiveSessionSnapshot,
@@ -117,51 +119,64 @@ describe('TitleLobbyScreen — leader mode (Scenario 1)', () => {
   });
 });
 
-describe('TitleLobbyScreen — participant mode (Scenario 5)', () => {
-  it('shows the waiting pill and zero Start Study control anywhere in the DOM', () => {
-    render(
-      <TitleLobbyScreen
-        mode="participant"
-        study={SUMMARY}
-        attendeeCount={2}
-        sessionCode="ABC123"
-      />,
+describe('ParticipantWaitingScreen — isolated participant lobby view (DESIGN.md Override #2)', () => {
+  it('renders ONLY "The study leader will begin shortly" with zero study metrics, QR share, or Start Study controls', () => {
+    useSacredStageStore.setState({
+      stage: 'star-of-faith',
+      accentMode: 'hospitality',
+    });
+
+    render(<ParticipantWaitingScreen />);
+
+    const waiting = screen.getByTestId('participant-waiting-screen');
+    expect(waiting).toHaveAttribute('aria-label', 'Waiting for Study Leader');
+    expect(waiting).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByTestId('participant-waiting-message')).toHaveTextContent(
+      'The study leader will begin shortly',
     );
 
-    expect(screen.getByTestId('title-lobby')).toHaveAttribute(
-      'data-mode',
-      'participant',
-    );
-    expect(screen.getByTestId('title-lobby-title')).toHaveTextContent(
-      'Great Is Your Faith',
-    );
-    expect(screen.getByTestId('title-lobby-waiting-pill')).toHaveTextContent(
-      'The Study Leader will begin shortly…',
-    );
+    // Automatically syncs Sacred3DScene back to sanctuary-emblem (default accent).
+    expect(useSacredStageStore.getState().stage).toBe('sanctuary-emblem');
+    expect(useSacredStageStore.getState().accentMode).toBe('default');
 
-    // Exclusive Start Study gating: no control in the DOM for Participants.
-    expect(screen.queryByTestId('lobby-start-study')).not.toBeInTheDocument();
+    // Exclusive isolation: zero TitleLobbyScreen elements or leader controls.
+    expect(screen.queryByTestId('title-lobby')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('title-lobby-title')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('title-lobby-citation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('title-lobby-metrics')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('title-lobby-attendee-count'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId('lobby-share-trigger')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('lobby-start-study')).not.toBeInTheDocument();
     expect(document.body.textContent).not.toContain('Start Study');
+    expect(document.body.textContent).not.toContain('Room Code / QR');
+    expect(document.body.textContent).not.toContain('ATTENDEES');
     expect(document.body.textContent).not.toContain('Assistant');
   });
 
-  it('syncs the live attendee count in real time (Scenario 3)', () => {
+  it('syncs the live attendee count in real time on the Study Leader TitleLobbyScreen (Scenario 3)', () => {
+    useSacredStageStore.setState({
+      stage: 'gospel-codex',
+      accentMode: 'default',
+    });
+
     const { rerender } = render(
       <TitleLobbyScreen
-        mode="participant"
+        mode="leader"
         study={SUMMARY}
         attendeeCount={0}
         sessionCode="ABC123"
       />,
     );
+    expect(useSacredStageStore.getState().stage).toBe('sanctuary-emblem');
     expect(screen.getByTestId('title-lobby-attendee-count')).toHaveTextContent(
       '0',
     );
 
     rerender(
       <TitleLobbyScreen
-        mode="participant"
+        mode="leader"
         study={SUMMARY}
         attendeeCount={2}
         sessionCode="ABC123"
@@ -294,5 +309,9 @@ describe('Title Lobby CSS baseline (>= 16px inputs, >= 44px targets, 56px CTA)',
     expect(css).toMatch(/\.lobby-start-study\s*\{[^}]*min-height: 56px/);
     // 4px gold section progress bar.
     expect(css).toMatch(/\.section-one-progress\s*\{[^}]*height: 4px/);
+    // Post-join 100dvh full-screen shell and Participant waiting view rules.
+    expect(css).toMatch(/\.sanctuary-column--fullscreen\s*\{[^}]*min-height: 100dvh/);
+    expect(css).toMatch(/\.participant-waiting-screen\s*\{[^}]*margin-bottom: auto/);
+    expect(css).toMatch(/\.participant-waiting-message\s*\{[^}]*font-size: 1\.5rem/);
   });
 });
