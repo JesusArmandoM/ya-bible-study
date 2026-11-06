@@ -11,6 +11,27 @@
 
 ## Session Log
 
+### Session 038
+
+- Date: `2026-11-06`
+- Goal: Implement, self-verify, and validate `leader-persistent-qr-code-reshare` per `docs/specs/leader-persistent-qr-code-reshare.md`.
+- Completed:
+  - Enhanced `SectionProgressHeader.tsx` to accept `isLeader`, `sessionCode`, `publicUrl`, and `onShareQr`.
+  - Added Sacred Gold outline pill button `Share QR` (`data-testid="section-share-qr-trigger"`) visible exclusively to the Study Leader across all active study sections.
+  - Clicking `Share QR` opens `RoomCodeShareSheet` with offline QR SVG, room code, and copyable join link from any active section.
+  - Wired props through `OpeningPrayerScreen.tsx`, `IcebreakerScreen.tsx`, `GospelReadingScreen.tsx`, `DiscussionScreen.tsx`, `ClosingPrayerScreen.tsx`, and `SectionPlaceholderScreen.tsx`.
+  - Passed `publicUrl` through `App.tsx` and `DesktopDualSideBySideScreen.tsx` / `DualDeviceFrame.tsx` to active section screens.
+  - Added `.section-header-actions` and `.section-share-qr-trigger` styles in `src/client/styles/global.css`.
+- Verification run:
+  - `./init.sh` passed exit code 0 (TypeScript check clean across 3 tsconfigs, 58 Vitest suites / 519 tests passed, production client and server builds clean).
+  - Added unit test `tests/unit/section-progress-header.test.tsx` (6/6 passed).
+  - Added Playwright E2E suite `tests/e2e/leader-persistent-qr-code-reshare.spec.ts` (2/2 passed) verifying multi-client active section QR re-share, late-joining participant direct hydration into Section 1 without lobby waiting, uninterrupted leader modal, and desktop dual mode frame isolation.
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches.
+  - Zero diff on `src/server/` and `src/shared/`.
+- Evidence captured: Marked `leader-persistent-qr-code-reshare` as `accepted` in `feature_list.json`.
+- Files updated: `docs/specs/leader-persistent-qr-code-reshare.md`, `src/client/components/sections/SectionProgressHeader.tsx`, `src/client/styles/global.css`, `src/client/App.tsx`, `src/client/components/prayer/OpeningPrayerScreen.tsx`, `src/client/components/icebreaker/IcebreakerScreen.tsx`, `src/client/components/reading/GospelReadingScreen.tsx`, `src/client/components/discussion/DiscussionScreen.tsx`, `src/client/components/closing/ClosingPrayerScreen.tsx`, `src/client/components/prayer/SectionPlaceholderScreen.tsx`, `src/client/components/dual/DesktopDualSideBySideScreen.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `tests/unit/section-progress-header.test.tsx`, `tests/e2e/leader-persistent-qr-code-reshare.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
+- Next best step: Publish PR, merge to `main`, and clean up worktree.
+
 ### Session 037
 
 - Date: `2026-11-06`

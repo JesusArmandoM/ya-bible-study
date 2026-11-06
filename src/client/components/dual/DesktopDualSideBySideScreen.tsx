@@ -7,10 +7,12 @@ import { SimulationToolbar } from './SimulationToolbar';
 
 export interface DesktopDualSideBySideScreenProps {
   onExit: () => void;
+  publicUrl?: string | null;
 }
 
 export function DesktopDualSideBySideScreen({
   onExit,
+  publicUrl = null,
 }: DesktopDualSideBySideScreenProps) {
   const [viewportWidth, setViewportWidth] = useState<number>(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1440,
@@ -118,6 +120,7 @@ export function DesktopDualSideBySideScreen({
             client={sandbox.leaderClient}
             stageStore={leaderStageStore}
             testId="leader-frame"
+            publicUrl={publicUrl}
           />
 
           <DualDeviceFrame
@@ -126,6 +129,7 @@ export function DesktopDualSideBySideScreen({
             client={sandbox.activeParticipant?.client ?? null}
             stageStore={participantStageStore}
             testId="participant-frame"
+            publicUrl={publicUrl}
           />
         </main>
       )}
