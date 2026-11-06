@@ -11,7 +11,7 @@ export interface StudyStructureListProps {
 }
 
 /**
- * Canonical 5-section study structure names (docs/domain-model.md). The
+ * Canonical 6-section study structure names (docs/domain-model.md). The
  * per-study `StudySection.title` may vary (e.g. an Icebreaker theme title) and
  * is shown as a secondary line when it differs from the canonical name.
  */
@@ -19,12 +19,13 @@ const CANONICAL_SECTION_NAMES: Record<StudySection['sectionId'], string> = {
   section_1_prayer: 'Opening Prayer',
   section_2_icebreaker: 'Icebreaker',
   section_3_reading: 'Gospel Reading',
-  section_4_discussion: 'Deep Analysis & Discussion',
-  section_5_closing: 'Closing Prayer',
+  section_4_deep_analysis: 'Deep Analysis',
+  section_5_discussion: 'Discussion & Reflection',
+  section_6_closing: 'Closing Prayer',
 };
 
 /**
- * Read-only 5-row confirmation list of the detected study structure. The
+ * Read-only 6-row confirmation list of the detected study structure. The
  * Gospel Reading row presents **only** the Gospel citation — never Old
  * Testament, Psalm, Epistle, or any pastoral/facilitator field.
  */
@@ -64,7 +65,7 @@ export function StudyStructureList({ study }: StudyStructureListProps) {
             <div className="study-structure-row-head">
               <span className="study-structure-row-name">{canonicalName}</span>
               <span className="study-structure-row-duration">
-                Section {rowNumber} of 5 · {section.durationLabel}
+                Section {rowNumber} of {sections.length} · {section.durationLabel}
               </span>
             </div>
 

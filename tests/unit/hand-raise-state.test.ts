@@ -185,7 +185,7 @@ describe('openingPrayer summary normalization (bounded, additive)', () => {
       liturgicalEyebrow: 'MATTHEW 15:21–28',
       gospelCitation: 'Matthew 15:21–28',
       gospelSummaryLabel: 'Gospel Summary',
-      sectionCount: 5,
+      sectionCount: 6,
       estimatedMinutes: 60,
     });
 
@@ -200,7 +200,7 @@ describe('openingPrayer summary normalization (bounded, additive)', () => {
       liturgicalEyebrow: 'MATTHEW 15:21–28',
       gospelCitation: 'Matthew 15:21–28',
       gospelSummaryLabel: 'Gospel Summary',
-      sectionCount: 5,
+      sectionCount: 6,
       estimatedMinutes: 60,
       openingPrayer: {
         title: 'Opening Prayer',

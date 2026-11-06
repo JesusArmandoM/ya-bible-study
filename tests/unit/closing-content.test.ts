@@ -16,7 +16,7 @@ const BASE_SUMMARY = {
   liturgicalEyebrow: 'MATTHEW 15:21–28',
   gospelCitation: 'Matthew 15:21–28',
   gospelSummaryLabel: 'Gospel of Matthew 15:21–28',
-  sectionCount: 5,
+  sectionCount: 6,
   estimatedMinutes: 45,
 };
 

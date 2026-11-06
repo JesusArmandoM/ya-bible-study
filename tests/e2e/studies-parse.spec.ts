@@ -20,7 +20,7 @@ test.describe('POST /api/studies/parse single-port E2E', () => {
     path.join(fixturesDir, 'peace-be-still-mark-4.pdf'),
   );
 
-  test('parses canonical Great Is Your Faith markdown via raw text and verifies 5 sections on unified port', async ({
+  test('parses canonical Great Is Your Faith markdown via raw text and verifies 6 sections on unified port', async ({
     request,
   }) => {
     const parseRes = await request.post('/api/studies/parse', {
@@ -43,10 +43,12 @@ test.describe('POST /api/studies/parse single-port E2E', () => {
     expect(doc.id).toBe('great-is-your-faith');
     expect(doc.title).toBe('Great Is Your Faith');
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
-    expect(doc.sectionCount).toBe(5);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
     expect(doc.gospelReading.verses).toHaveLength(8);
-    expect(doc.deepAnalysis.reflectionQuestions).toHaveLength(12);
-    expect(doc.deepAnalysis.defaultActiveQuestionIds).toEqual(['q-6', 'q-5', 'q-8']);
+    expect(doc.deepAnalysis.verseCommentary).toHaveLength(10);
+    expect(doc.discussion.reflectionQuestions).toHaveLength(12);
+    expect(doc.discussion.defaultActiveQuestionIds).toEqual(['q-6', 'q-5', 'q-8']);
     expect(doc.detectionSummary.hasOpeningPrayer).toBe(true);
     expect(doc.detectionSummary.hasGospelReading).toBe(true);
     expect(doc.detectionSummary.hasClosingPrayer).toBe(true);
@@ -138,7 +140,8 @@ test.describe('POST /api/studies/parse single-port E2E', () => {
     expect(doc.id).toBe('great-is-your-faith');
     expect(doc.title).toBe('Great Is Your Faith');
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
-    expect(doc.sectionCount).toBe(5);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
     expect(doc.detectionSummary.hasOpeningPrayer).toBe(true);
     expect(doc.detectionSummary.hasGospelReading).toBe(true);
     expect(doc.detectionSummary.hasClosingPrayer).toBe(true);
@@ -166,7 +169,8 @@ test.describe('POST /api/studies/parse single-port E2E', () => {
     expect(doc.id).toBe('peace-be-still');
     expect(doc.title).toBe('Peace! Be Still');
     expect(doc.gospelCitation).toBe('Mark 4:35–41');
-    expect(doc.deepAnalysis.reflectionQuestions).toHaveLength(12);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.discussion.reflectionQuestions).toHaveLength(12);
   });
 
   test('rejects unsupported file type (.docx) via multipart upload with HTTP 400', async ({

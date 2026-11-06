@@ -204,15 +204,30 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
     expect(questions[2]?.id).toBe('q-8');
     expect(questions[2]?.number).toBe(3);
 
-    // Verify wire privacy: participant messages never contain pastoral fields
+    expect(sec4Snapshot.study?.sectionCount).toBe(6);
+    expect(sec4Snapshot.study?.deepAnalysis?.verseCommentary).toHaveLength(10);
+    expect(sec4Snapshot.study?.deepAnalysis?.catholicDoctrine).toHaveLength(4);
+    expect(sec4Snapshot.study?.deepAnalysis?.youngAdultApplication).toHaveLength(4);
+
+    // Verify wire privacy: participant messages receive shared deepAnalysis
+    // while facilitator-only pastoral fields never cross /ws.
     for (const msg of participantPeer.received) {
       const serialized = JSON.stringify(msg);
-      expect(serialized).not.toContain('verseCommentary');
-      expect(serialized).not.toContain('catholicDoctrine');
       expect(serialized).not.toContain('sampleAnswer');
       expect(serialized).not.toContain('leaderNote');
-      expect(serialized).not.toContain('CCC 839–840');
+      expect(serialized).not.toContain('patristicNote');
+      expect(serialized).not.toContain('prayerCardTemplate');
+      expect(serialized).not.toContain('Chrysostom');
+      expect(serialized).not.toContain('Augustine');
+      expect(serialized).not.toContain('Jerome');
       expect(serialized).not.toContain('anti-Jewish framing');
+      if ('session' in msg && msg.session.study?.discussion) {
+        const discussionJson = JSON.stringify(msg.session.study.discussion);
+        expect(discussionJson).not.toContain('verseCommentary');
+        expect(discussionJson).not.toContain('catholicDoctrine');
+        expect(discussionJson).not.toContain('youngAdultApplication');
+        expect(discussionJson).not.toContain('Romans 11:29');
+      }
     }
   });
 

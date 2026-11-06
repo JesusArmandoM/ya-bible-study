@@ -2,9 +2,11 @@ import { WebSocket } from 'ws';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LiveSessionStore } from '../../src/server/sessionStore';
 import { createAppServer, type AppServer } from '../../src/server/app';
+import { getDefaultStudyDocument } from '../../src/server/studies/greatIsYourFaithSeed';
 import {
   DEFAULT_SESSION_TTL_MS,
   SESSION_PROTOCOL_VERSION,
+  toSessionStudySummary,
   type ClientWsMessage,
   type ServerWsMessage,
   type SessionStudySummary,
@@ -26,7 +28,7 @@ function createStudySummary(): SessionStudySummary {
     liturgicalEyebrow: 'Gospel Reading',
     gospelCitation: 'Matthew 15:21–28',
     gospelSummaryLabel: 'Gospel of Matthew 15:21–28',
-    sectionCount: 5,
+    sectionCount: 6,
     estimatedMinutes: 45,
   };
 }
@@ -171,7 +173,7 @@ describe('WebSocket load_study / start_study leader gating (protocol v2)', () =>
       gospelCitation: 'Matthew 15:21–28',
       gospelSummaryLabel: 'Gospel of Matthew 15:21–28',
       estimatedMinutes: 45,
-      sectionCount: 5,
+      sectionCount: 6,
     });
     expect(updated.session.protocolVersion).toBe(SESSION_PROTOCOL_VERSION);
     const updatedJson = JSON.stringify(updated.session);
@@ -225,6 +227,51 @@ describe('WebSocket load_study / start_study leader gating (protocol v2)', () =>
       gospelCitation: 'Matthew 15:21–28',
     });
     expect(resumed.session.protocolVersion).toBe(SESSION_PROTOCOL_VERSION);
+  });
+
+  it('broadcasts shared deepAnalysis to both Study Leader and Participant snapshots while stripping facilitator-only notes', async () => {
+    const { leader, created } = await createLeader();
+    const { participant } = await joinParticipant(created.sessionCode, 'Blake');
+    const fullSummary = toSessionStudySummary(getDefaultStudyDocument());
+
+    leader.send({
+      type: 'load_study',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'ls-deep-1',
+      study: fullSummary,
+    });
+
+    const leaderUpdated = await leader.waitFor(
+      'session_updated',
+      (msg) => msg.command === 'load_study',
+    );
+    const participantUpdated = await participant.waitFor(
+      'session_updated',
+      (msg) => msg.command === 'load_study',
+    );
+
+    expect(leaderUpdated.session.study?.sectionCount).toBe(6);
+    expect(participantUpdated.session.study?.sectionCount).toBe(6);
+    expect(participantUpdated.session.study?.deepAnalysis?.verseCommentary).toHaveLength(10);
+    expect(participantUpdated.session.study?.deepAnalysis?.catholicDoctrine).toHaveLength(4);
+    expect(participantUpdated.session.study?.deepAnalysis?.youngAdultApplication).toHaveLength(4);
+    expect(participantUpdated.session.study?.deepAnalysis).toEqual(
+      leaderUpdated.session.study?.deepAnalysis,
+    );
+
+    const wireJson = JSON.stringify(participantUpdated);
+    expect(wireJson).not.toContain('sampleAnswer');
+    expect(wireJson).not.toContain('leaderNote');
+    expect(wireJson).not.toContain('patristicNote');
+    expect(wireJson).not.toContain('examplesToListenFor');
+    expect(wireJson).not.toContain('leaderLiturgicalContextNote');
+    expect(wireJson).not.toContain('prayerCardTemplate');
+    expect(wireJson).not.toContain('Chrysostom');
+    expect(wireJson).not.toContain('Augustine');
+    expect(wireJson).not.toContain('Jerome');
+    expect(wireJson).not.toContain('anti-Jewish framing');
   });
 
   it('rejects load_study from Participants and from a wrong leaderToken', async () => {
