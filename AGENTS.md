@@ -1,21 +1,21 @@
 # Project Agent Instructions
 
-This repository contains **YA Bible Study**, an English-language, mobile-first interactive web application with real-time WebSocket (`/ws`) synchronization and procedural Three.js (`Sacred3DScene`) animations for leader-guided Catholic Young Adult Bible study sessions.
+This repository contains **YA Bible Study**, an English-language, mobile-first interactive web application with real-time WebSocket (`/ws`) synchronization, full-screen 3D procedural Three.js (`Sacred3DScene`) animations, and deterministic 6-section `.pdf`/`.md` parsing for leader-guided Catholic Young Adult Bible study sessions.
 
 ## Read First
 
-- `CONTEXT.md` — canonical domain language (`Study Leader`, `Participant`, `Gospel Reading`, `Volunteer Turn`, `Sacred3DScene`).
+- `CONTEXT.md` — canonical domain language (`Study Leader`, `Participant`, `Study Section` 1–6, `Section Entry 3D Animation`, `Volunteer Turn`, `Random Selection`, `Deep Analysis`, `Sacred3DScene`).
 - `ARCHITECTURE.md` — `src/client`, `src/server`, and `src/shared` boundaries, unified single-port `/api` + `/ws` topology, and verification layers.
 - `CONSTRAINTS.md` — non-negotiable repo invariants (dynamic `ws(s)://`, `allowedHosts: true`, `Participant` terminology, Gospel-only Section 3, server-enforced gating, `>= 16px` mobile inputs, WebGL budget).
-- `docs/build-brief.md` — problem, target users, MVP vertical slice, non-goals, and validation plan.
-- `docs/domain-model.md` — entities, lifecycles, state transitions, and the canonical *"Great Is Your Faith"* (Matthew 15:21–28) seed content.
+- `docs/build-brief.md` — problem, target users, 6-section MVP vertical slice, non-goals, and validation plan.
+- `docs/domain-model.md` — entities, lifecycles, state transitions, and the canonical *"Great Is Your Faith"* (Matthew 15:21–28) 6-section seed content.
 - `docs/risks-and-open-questions.md` — active assumptions, technical risks, and implementation-time decisions.
 
 Read domain-specific docs when relevant:
 
-- `DESIGN.md` — **required whenever touching UI, layout, typography, colors, `motion/react` micro-interactions, `Sacred3DScene`, or referencing `ux/*.png`**.
-- `docs/user-and-access-model.md` — when touching roles, room codes/QR, Leader PIN lock, `VolunteerTurn` gating, override rules, or ephemeral privacy.
-- `docs/technical-discovery.md` — when touching stack, single-port `/ws` server, deterministic `.pdf`/`.md` parsing, `zustand` 60fps bridge, Cloudflare HTTPS tunnel (`npm run share`), or iOS/Android session hardening.
+- `DESIGN.md` — **required whenever touching UI, full-screen isolation, enlarged typography, animated text reveals, colors, `motion/react` micro-interactions, `Sacred3DScene`, or referencing `ux/*.png`**.
+- `docs/user-and-access-model.md` — when touching roles, anytime QR code re-sharing, Leader PIN lock, First-Hand-Wins `VolunteerTurn` gating, bidirectional section navigation, override rules, or ephemeral privacy.
+- `docs/technical-discovery.md` — when touching stack, single-port `/ws` server, deterministic 6-section `.pdf`/`.md` parsing, `zustand` 60fps bridge, Cloudflare HTTPS tunnel (`npm run share`), or iOS/Android session hardening.
 
 ## Startup Workflow
 
@@ -31,7 +31,8 @@ Before writing code:
 
 - Work on one feature at a time.
 - Use `Participant` (never `Assistant`) across all English UI copy and domain types, and present **only the Gospel Reading** as the main reading in Section 3.
-- Enforce `Study Leader` section-advancement exclusivity and selected-volunteer `Done` gating on the `/ws` server, not only in client UI.
+- Enforce `Study Leader` forward/backward section-navigation exclusivity, First-Hand-Wins auto-assignment, automatic 3D random-pick resolution, and selected-volunteer `Done` gating on the `/ws` server, not only in client UI.
+- Once joined, unmount the Welcome/stage-switcher chrome so the active view (`Participant` waiting view, `Study Leader` lobby, 3D section entry overlay, 3D random picker, or active section) covers the entire screen.
 - Do not mark a feature complete just because code was added.
 - Keep changes inside the selected feature scope unless a blocker requires a narrow supporting fix.
 - Do not silently change verification rules during implementation.

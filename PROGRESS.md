@@ -5,11 +5,34 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `none (all 20 features accepted)`
+- Current next ready feature: `six-section-study-model-parser`
 - Current blocker: `none`
-- Last verified at: `2026-10-31`
+- Last verified at: `2026-11-06`
 
 ## Session Log
+
+### Session 035
+
+- Date: `2026-11-06`
+- Goal: Update the minimal startup harness (`AGENTS.md`, `feature_list.json`, `PROGRESS.md`) after `build-brief` product discovery for the 6-section flow, full-screen post-join isolation, full-screen 3D section entry animations, bidirectional leader navigation, First-Hand-Wins + full-screen 3D random picker, parsed Deep Analysis section, enlarged animated typography, and persistent Leader QR re-sharing.
+- Completed:
+  - Updated `AGENTS.md` to reflect the 6-section domain flow, full-screen post-join stage isolation, First-Hand-Wins & automatic 3D random-pick server rules, bidirectional section navigation, and anytime QR code re-sharing.
+  - Appended 9 session-sized `not_started` feature slices to `feature_list.json` (preserving all 20 previously `accepted` features):
+    1. `six-section-study-model-parser`
+    2. `post-join-fullscreen-lobby-isolation`
+    3. `leader-persistent-qr-code-reshare`
+    4. `leader-bidirectional-section-navigation`
+    5. `fullscreen-3d-section-entry-animations`
+    6. `first-hand-wins-volunteer-assignment`
+    7. `fullscreen-3d-random-picker-reveal`
+    8. `section-4-deep-analysis-screen`
+    9. `animated-enlarged-section-typography`
+  - Updated `PROGRESS.md` with the next ready feature (`six-section-study-model-parser`).
+- Verification run: Validated `feature_list.json` JSON syntax, schema fields, and DAG dependency integrity.
+- Evidence captured: 29 total features in `feature_list.json` (20 `accepted`, 9 `not_started`, 0 cycles).
+- Files or artifacts updated: `AGENTS.md`, `feature_list.json`, `PROGRESS.md`.
+- Known risk or unresolved issue: `none`
+- Next best step: Run `feature-flow` starting with `six-section-study-model-parser`.
 
 ### Session 034
 

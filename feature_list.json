@@ -433,5 +433,147 @@
       "2026-10-31: Independent validation verdict ACCEPT. Audited docs/specs/desktop-dual-side-by-side-mode.md, CONSTRAINTS.md (#3 Participant terminology, #6 in-memory storage sandbox isolation, #7 390x844 chassis and >= 16px inputs, #8 <= 2 active WebGL canvases on screen), and DESIGN.md layout on >= 1024px. All 10 acceptance scenarios verified across 56 Vitest files / 504 tests, dual-stage scoping tests, in-memory sandbox tests, and desktop Playwright E2E suite walking all 5 sections with zero session leaks."
     ],
     "notes": "Ensure Dual Mode spins up an isolated sessionCode so rehearsal never interferes with another active room."
+  },
+  {
+    "id": "six-section-study-model-parser",
+    "area": "study-content",
+    "title": "Study parser extracts six interactive sections with shared Deep Analysis",
+    "user_visible_behavior": "Fetching GET /api/studies/default or uploading a .md or .pdf study to POST /api/studies/parse returns a 6-section StudyDocument (1. Opening Prayer, 2. Icebreaker, 3. Gospel Reading, 4. Deep Analysis, 5. Discussion & Reflection, 6. Closing Prayer) where Section 4 (section_4_deep_analysis) exposes the parsed verse-by-verse commentary (A–J), Catholic doctrine highlights (A–D), and young adult application points (A–D) in the shared session study summary for both Study Leader and Participants.",
+    "depends_on": [
+      "pdf-study-deterministic-parser",
+      "leader-load-study-setup-screen"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Vitest unit and integration tests verifying GET /api/studies/default and POST /api/studies/parse return sectionCount === 6 and include the structured deepAnalysis payload (A–J commentary, A–D doctrine, A–D application) on SessionStudySummary without stripping it from Participant snapshots."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/domain-model.md 6-section mapping and docs/technical-discovery.md Shared Deep Analysis Broadcast."
+  },
+  {
+    "id": "post-join-fullscreen-lobby-isolation",
+    "area": "session-lobby",
+    "title": "Joining a session isolates full-screen Participant waiting view from Leader lobby",
+    "user_visible_behavior": "Once a user joins or creates a LiveSession, the Welcome header and stage-switcher card unmount completely so the active screen covers 100% of the viewport; in 'lobby' status, Participants see ONLY a full-screen waiting screen showing 'The study leader will begin shortly' with a 3D Sacred3DScene emblem, while the Study Leader sees a clean full-screen Lobby view with 'Start Study' and QR Code sharing.",
+    "depends_on": [
+      "title-lobby-qr-join-start"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright and unit tests asserting that after joining a lobby session, neither the Welcome hero header nor stage-pill switcher is present in the DOM, Participants see only the full-screen 'The study leader will begin shortly' waiting view with Sacred3DScene, and the Study Leader sees the full-screen Lobby view."
+    ],
+    "evidence": [],
+    "notes": "Follow DESIGN.md override #2 (Exclusive Full-Screen Isolation Post-Join)."
+  },
+  {
+    "id": "leader-persistent-qr-code-reshare",
+    "area": "session-lobby",
+    "title": "Study Leader re-shares room QR code from any active study section",
+    "user_visible_behavior": "Across all active study sections, the Study Leader header displays a persistent 'Share QR' button that opens the localhost-safe Room Code / QR modal at any time so late-arriving Participants can scan, join, and hydrate directly into the current section.",
+    "depends_on": [
+      "post-join-fullscreen-lobby-isolation"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Playwright multi-client test verifying the Study Leader can open the Room Code / QR modal during an active section and a late-joining Participant scanning/using that join URL lands directly in the active full-screen section."
+    ],
+    "evidence": [],
+    "notes": "Follow DESIGN.md override #7 and docs/user-and-access-model.md Access Rules."
+  },
+  {
+    "id": "leader-bidirectional-section-navigation",
+    "area": "realtime-session",
+    "title": "Study Leader navigates backward to previous sections across six-section flow",
+    "user_visible_behavior": "During an in-progress 6-section study, the Study Leader can click 'Previous Section' (on Sections 2–6) to return to any earlier section over /ws ('previous_section'); previously completed gated sections (tracked in completedSectionIds) remain unlocked when revisited so the Study Leader can move forward or backward freely, with an option to reset the volunteer turn ('reset_turn') if desired.",
+    "depends_on": [
+      "six-section-study-model-parser",
+      "section-5-closing-prayer-completion"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Vitest and Playwright tests verifying Study Leader can navigate forward and backward across all 6 sections, Participant attempts to send 'previous_section' are rejected with FORBIDDEN_LEADER_ONLY, and revisiting a completed gated section preserves its unlocked forward state unless 'reset_turn' is triggered."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/domain-model.md Bidirectional Leader Navigation and completedSectionIds[] rules."
+  },
+  {
+    "id": "fullscreen-3d-section-entry-animations",
+    "area": "3d-motion",
+    "title": "Full-screen 3D animation introduces each study section on entry",
+    "user_visible_behavior": "Starting the study or entering any of the 6 sections (forward or backward via sectionEnteredAt) displays a multi-second full-screen 3D Sacred3DScene overlay covering the entire screen with a unique 3D sacred emblem per section, the section number and title ('Section X of 6'), and a short description of the section being entered before revealing the section content.",
+    "depends_on": [
+      "post-join-fullscreen-lobby-isolation",
+      "leader-bidirectional-section-navigation"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit and Playwright tests verifying that starting the study or changing sections renders the full-screen 3D section-entry overlay with each section's distinct 3D emblem and description before revealing the section screen while maintaining <= 1 WebGL canvas per viewport."
+    ],
+    "evidence": [],
+    "notes": "Follow DESIGN.md override #3 (Full-Screen 3D Section Entry Animations for all 6 sections)."
+  },
+  {
+    "id": "first-hand-wins-volunteer-assignment",
+    "area": "volunteer-selection",
+    "title": "First Participant to raise hand immediately wins the volunteer turn",
+    "user_visible_behavior": "In Section 1 (Opening Prayer), Section 2 (Icebreaker), and Section 3 (Gospel Reading), the first Participant to tap 'Raise Hand' or 'Read aloud' during an open turn immediately wins the turn on the /ws server (auto-assigning selectedMemberId without waiting in a manual Choose queue), broadcasting '<Name> was chosen!' to everyone and showing the prominent 'YOU WERE CHOSEN!' screen with 'Done' to the winner.",
+    "depends_on": [
+      "leader-bidirectional-section-navigation"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Integration and Playwright multi-client tests verifying the first Participant to tap 'Raise Hand' in Sections 1, 2, or 3 is immediately assigned selectedMemberId, everyone sees who was chosen, and only the winner sees 'YOU WERE CHOSEN!' and the 'Done' button."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/domain-model.md Path A — First-Hand-Wins and DESIGN.md override #4."
+  },
+  {
+    "id": "fullscreen-3d-random-picker-reveal",
+    "area": "volunteer-selection",
+    "title": "Random picker displays full-screen 3D spin to Participants before automatic winner reveal",
+    "user_visible_behavior": "When no one raises a hand in Sections 1–3 and the Study Leader clicks 'Pick Randomly', Participants see ONLY the full-screen 3D Sacred3DScene random-picker spinning animation for a few seconds until the server automatically locks in the winner, revealing '<Name> was chosen!' to the entire room and displaying a high-visibility 'YOU WERE CHOSEN!' screen to the selected Participant (with a 'Pick Again' option for the Leader).",
+    "depends_on": [
+      "first-hand-wins-volunteer-assignment"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit, integration, and Playwright tests verifying 'Pick Randomly' enters 'random_spinning' where Participants see only the full-screen 3D random picker, then automatically transitions to 'assigned' revealing the chosen Participant to everyone without requiring manual confirmation."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/domain-model.md Path B — Full-Screen 3D Random Selection and DESIGN.md override #4."
+  },
+  {
+    "id": "section-4-deep-analysis-screen",
+    "area": "section-4-deep-analysis",
+    "title": "Section 4 Deep Analysis presents parsed Gospel breakdown to all members",
+    "user_visible_behavior": "Entering Section 4 of 6 ('Deep Analysis', between Gospel Reading and Discussion & Reflection) renders a full-screen stage for both Study Leader and Participants displaying the parsed PDF/MD verse-by-verse commentary (A–J), Catholic doctrine highlights (A–D), and young adult application points (A–D), with Study Leader forward and backward navigation.",
+    "depends_on": [
+      "six-section-study-model-parser",
+      "leader-bidirectional-section-navigation"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit and Playwright tests verifying Section 4 of 6 renders the parsed A–J verse-by-verse breakdown, A–D Catholic doctrine, and A–D application points to both Study Leader and Participant screens, and advances to Section 5 ('Discussion & Reflection')."
+    ],
+    "evidence": [],
+    "notes": "Follow docs/domain-model.md Section 4 — Deep Analysis and DESIGN.md override #5."
+  },
+  {
+    "id": "animated-enlarged-section-typography",
+    "area": "ui-polish",
+    "title": "Study sections reveal enlarged text with staggered animations",
+    "user_visible_behavior": "Across all 6 study sections and Dual Side-by-Side Mode, prayers, icebreaker prompts, Gospel verses, Deep Analysis cards, and discussion questions render at enlarged font sizes (>= 21px italic serif for Scripture and prayers, >= 18px body copy) and animate into view with staggered motion/react entrance choreography (respecting prefers-reduced-motion).",
+    "depends_on": [
+      "fullscreen-3d-section-entry-animations",
+      "fullscreen-3d-random-picker-reveal",
+      "section-4-deep-analysis-screen",
+      "leader-persistent-qr-code-reshare"
+    ],
+    "status": "not_started",
+    "verification": [
+      "Unit and Playwright tests verifying computed typography sizes (>= 21px scriptureItalic, >= 18px body), animated text entrance attributes across all 6 sections, and complete 6-section end-to-end flow in both mobile and Desktop Dual Side-by-Side Mode."
+    ],
+    "evidence": [],
+    "notes": "Follow DESIGN.md Typography tokens and override #6."
   }
 ]

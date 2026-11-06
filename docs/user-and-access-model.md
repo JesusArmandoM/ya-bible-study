@@ -18,33 +18,36 @@
 | Capability | `Study Leader` | Chosen `Participant` (Active Turn) | Regular `Participant` |
 | :--- | :---: | :---: | :---: |
 | Upload `.pdf` / `.md` or select preloaded `StudyDocument` | Yes | No | No |
-| Start study (`Start Study`) & advance `Study Sections` | **Yes (Exclusive)** | No | No |
-| View `Pastoral Leader Notes`, sample answers & full question bank | **Yes (Exclusive)** | No | No |
-| Choose volunteer, run `Random Selection`, `Retry`, `Confirm selection` | **Yes (Exclusive)** | No | No |
-| Emergency override / reassign stalled `VolunteerTurn` | **Yes (Exclusive)** | No | No |
-| Activate `Next question` or `+ Add` prompt in Section 4 | **Yes (Exclusive)** | No | No |
-| `Raise Hand` / `Read aloud` during open volunteer collection | No | N/A | Yes |
-| View `"YOU WERE CHOSEN"` prompt & tap `Done` / `Done Reading` | No | **Yes (Exclusive)** | No |
-| Submit `LiveReflection` (named or anonymous) in Section 4 | Optional | Yes | Yes |
-| Create & download personal `"Lord, Help Me"` `PrayerCard` | Optional | Yes | Yes |
+| Start study (`Start Study`), advance (`Next Section`), & go back (`Previous Section`) | **Yes (Exclusive)** | No | No |
+| Re-share session QR Code / Join Code at any time (lobby & all 6 sections) | **Yes (Exclusive)** | No | No |
+| Trigger `Pick Randomly` (3D random picker), `Pick Again`, or reset/override turn | **Yes (Exclusive)** | No | No |
+| View `Deep Analysis` (`Section 4 of 6` parsed verse-by-verse breakdown `A–J`) | Yes | Yes | Yes |
+| View `Pastoral Leader Notes`, sample answers & full 12-question bank | **Yes (Exclusive)** | No | No |
+| Activate `Next question` or `+ Add` prompt in Section 5 | **Yes (Exclusive)** | No | No |
+| Be first to `Raise Hand` / `Read aloud` to win open `VolunteerTurn` (Sections 1–3) | No | N/A | Yes (First-Hand-Wins) |
+| View exclusive `"YOU WERE CHOSEN!"` prompt & tap `Done` / `Done Reading` | No | **Yes (Exclusive)** | No |
+| View `"<Name> was chosen!"` announcement banner | Yes | Yes | Yes |
+| Submit `LiveReflection` (named or anonymous) in Section 5 | Optional | Yes | Yes |
+| Create & download personal `"Lord, Help Me"` `PrayerCard` in Section 5 | Optional | Yes | Yes |
 
 ## Ownership Boundaries
 
-- **Session & Pacing State**: Owned exclusively by the `Study Leader` and enforced server-side over `/ws` (client UI hiding alone is insufficient; the WebSocket server rejects unauthorized state-advance commands from `Participant` connections).
+- **Session & Bidirectional Pacing State**: Owned exclusively by the `Study Leader` and enforced server-side over `/ws` (client UI hiding alone is insufficient; the WebSocket server rejects unauthorized `next_section`, `previous_section`, `pick_random`, or `reset_turn` commands from `Participant` connections).
+- **First-Hand-Wins Volunteer Lock**: Enforced atomically on the `/ws` server—the first valid `raise_hand` message received while `volunteerTurn.status === 'collecting_hands'` claims `selectedMemberId` and transitions the turn to `assigned`.
 - **Personal `PrayerCard`**: Owned exclusively by the creating `Participant` in browser storage/memory; never transmitted to the server unless the participant explicitly chooses to share **one** selected line with the group.
-- **`LiveReflections`**: Ephemeral to the active `LiveSession`; visible to connected session members during Section 4 and purged when the session closes or expires.
+- **`LiveReflections`**: Ephemeral to the active `LiveSession`; visible to connected session members during Section 5 and purged when the session closes or expires.
 
 ## Access Rules
 
-1. **Frictionless Participant Join**: Entering a valid `sessionCode` (or scanning the lobby QR URL) plus a non-empty `displayName` grants `Participant` access immediately—no email, password, or third-party login required.
+1. **Frictionless Participant Join & Full-Screen Waiting Isolation**: Entering a valid `sessionCode` (or scanning the QR URL shared by the leader at the start or mid-study) plus a non-empty `displayName` grants `Participant` access immediately. If the session is in `lobby`, the `Participant` sees **only** the full-screen waiting view (*"The study leader will begin shortly"*); if the session is already `in_progress`, the late-joining `Participant` is immediately placed into the active full-screen section (`1..6`).
 2. **Single Active Leader Lock**: Creating a `LiveSession` binds leadership to an HTTP/WebSocket `leaderToken` stored in `sessionStorage` and displays a short 4-digit `leaderPin` to the leader. Another device cannot join as `Study Leader` for that `sessionCode` unless the leader enters the `leaderPin` to transfer control.
 3. **Dual Side-by-Side Mode Isolation**: Launching Dual Mode spins up an isolated sandbox/demo `LiveSession` (with pre-populated sample participants such as *Mary Lopez*, *Daniel Reyes*, and *Sara Castillo*) so testing never collides with an active group's live room.
 
 ## Revocation / Expiry
 
-- **Volunteer Turn Revocation**: If a chosen `Participant` disconnects, declines, or lets the 30-second `Random Selection` window lapse without confirmation, the `Study Leader` can `Retry` or reassign, immediately revoking `selectedMemberId` from the prior participant.
+- **Volunteer Turn Re-Pick / Override**: If a chosen `Participant` disconnects or cannot speak, the `Study Leader` can trigger `Pick Randomly` again, `Reset Turn`, or `Mark Done (Override)`, immediately revoking `selectedMemberId` from the prior participant.
 - **Leader Handoff**: Entering the valid `leaderPin` from a new device transfers the active `leaderToken` and downgrades or disconnects the stale leader socket.
-- **Session Expiry & Data Purge**: Closing the study (`Finish study` -> close room) or 4 hours of room inactivity terminates the `LiveSession` in memory and permanently deletes all ephemeral `LiveReflections`, raised-hand history, and member rosters. Locally downloaded `PrayerCards` remain on each participant's own device.
+- **Session Expiry & Data Purge**: Closing the study (`Finish study` -> close room) or 4 hours of room inactivity terminates the `LiveSession` in memory and permanently deletes all ephemeral `LiveReflections`, volunteer turn state, and member rosters. Locally downloaded `PrayerCards` remain on each participant's own device.
 
 ## Edge Cases
 
