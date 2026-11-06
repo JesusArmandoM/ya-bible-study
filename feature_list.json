@@ -484,11 +484,17 @@
     "depends_on": [
       "post-join-fullscreen-lobby-isolation"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Playwright multi-client test verifying the Study Leader can open the Room Code / QR modal during an active section and a late-joining Participant scanning/using that join URL lands directly in the active full-screen section."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-11-06: Verified ./init.sh exits 0 (TypeScript check clean across 3 tsconfigs; 58/58 Vitest suites / 519 tests passed; production client and server builds clean).",
+      "2026-11-06: Added unit test tests/unit/section-progress-header.test.tsx verifying SectionProgressHeader renders label and percent, hides 'Share QR' for Participants, renders 'Share QR' for Study Leader, opens RoomCodeShareSheet modal on tap, supports onShareQr callback, and preserves terminology invariant (6/6 passed).",
+      "2026-11-06: Added Playwright E2E suite tests/e2e/leader-persistent-qr-code-reshare.spec.ts on PLAYWRIGHT_PORT=3304 passing 2/2 tests (multi-client active section QR re-share, late-arriving participant direct hydration into Section 1 without lobby waiting, uninterrupted leader modal, and desktop dual side-by-side mode isolation).",
+      "2026-11-06: Terminology invariant verified: grep -rn 'Assistant' src/ returned 0 matches.",
+      "2026-11-06: Zero diff on src/server/ and src/shared/ (clean UI/client wave isolation)."
+    ],
     "notes": "Follow DESIGN.md override #7 and docs/user-and-access-model.md Access Rules."
   },
   {

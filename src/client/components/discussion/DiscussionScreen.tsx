@@ -31,6 +31,8 @@ export interface DiscussionScreenProps {
     content: string;
     isAnonymous: boolean;
   }) => void | Promise<void>;
+  publicUrl?: string | null;
+  onShareQr?: () => void;
 }
 
 export function DiscussionScreen({
@@ -42,6 +44,8 @@ export function DiscussionScreen({
   onAddQuestion,
   onNextSection,
   onSubmitReflection,
+  publicUrl = null,
+  onShareQr,
 }: DiscussionScreenProps) {
   const setStage = useSacredStageStore((s) => s.setStage);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -87,7 +91,13 @@ export function DiscussionScreen({
 
   return (
     <div className="discussion-screen" data-testid="discussion-screen">
-      <SectionProgressHeader sectionNumber={4} />
+      <SectionProgressHeader
+        sectionNumber={4}
+        isLeader={isLeader}
+        sessionCode={session.sessionCode}
+        publicUrl={publicUrl}
+        onShareQr={onShareQr}
+      />
 
       <header className="discussion-screen-header">
         <span className="discussion-eyebrow">DEEP ANALYSIS · 25 MIN</span>

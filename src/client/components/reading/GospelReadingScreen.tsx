@@ -52,6 +52,10 @@ export interface GospelReadingScreenProps {
   onConfirmRandom?: () => void | Promise<void>;
   /** Command of latest `session_updated` broadcast. */
   lastSessionCommand?: SessionUpdatedCommand | null;
+  /** Sanitized PUBLIC_URL origin from GET /api/health (null when unset). */
+  publicUrl?: string | null;
+  /** Optional custom share trigger handler (overrides internal share sheet state). */
+  onShareQr?: () => void;
 }
 
 export function formatVolunteersCount(count: number): string {
@@ -96,6 +100,8 @@ export function GospelReadingScreen({
   onRetryRandom,
   onConfirmRandom,
   lastSessionCommand,
+  publicUrl = null,
+  onShareQr,
 }: GospelReadingScreenProps) {
   const isLeader = role === 'Study Leader';
   const reducedMotion = usePrefersReducedMotion();
@@ -198,7 +204,13 @@ export function GospelReadingScreen({
       data-testid="gospel-reading-screen"
       data-role={isLeader ? 'leader' : 'participant'}
     >
-      <SectionProgressHeader sectionNumber={3} />
+      <SectionProgressHeader
+        sectionNumber={3}
+        isLeader={isLeader}
+        sessionCode={session.sessionCode}
+        publicUrl={publicUrl}
+        onShareQr={onShareQr}
+      />
 
       <header className="reading-header">
         <h2 className="reading-title" data-testid="reading-title">
