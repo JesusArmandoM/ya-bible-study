@@ -61,7 +61,7 @@ describe('TitleLobbyScreen — leader mode (Scenario 1)', () => {
     );
     expect(screen.getByText('ATTENDEES')).toBeInTheDocument();
     expect(screen.getByTestId('title-lobby-section-count')).toHaveTextContent(
-      '5',
+      '6',
     );
     expect(screen.getByTestId('title-lobby-duration')).toHaveTextContent('90m');
 

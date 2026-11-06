@@ -23,10 +23,32 @@ const LIGATURE_REPLACEMENTS: Record<string, string> = {
 };
 
 const SECTION_HEADING_REGEX =
-  /^(?:##\s+)?((?:[1-9]|1[0-7])\.\s+(?:Central Theme|Session Goal|Schedule|Opening Prayer|Icebreaker|Proclamation|Biblical|Deep Analysis|Catholic Doctrine|Young Adult|Reflection Question|Group Activity|Prayer Card|Weekly Challenge|Closing Summary|Closing Prayer|Next Week|One-Sentence).*)$/i;
+  /^(?:##\s+)?((?:[1-9]|1[0-7])\.\s+(?:Central Theme|Session Goal|Schedule|Opening Prayer|Icebreaker|Proclamation|Biblical|Deep Analysis|(?:Key\s+)?Catholic Doctrine|(?:Application for\s+)?Young Adult|Reflection Question|Discussion|Group Activity|Prayer Card|(?:Practical\s+)?Weekly Challenge|Closing Summary|Closing Prayer|Next Week|One-Sentence).*)$/i;
 
 const UNNUMBERED_SECTION_HEADING_REGEX =
-  /^(?:##\s+)?(Central Themes?|Session Goals?|Schedule & Overview|Opening Prayer|Icebreaker(?::.*)?|Proclamation of the Readings|Biblical Context.*|Deep Analysis.*|Catholic Doctrine.*|Young Adult Pastoral Applications?|Reflection Questions.*|Group Activity.*|Weekly Challenges?|Closing Summary.*|Closing Prayer|Next Week Announcement.*|One-Sentence Main Point.*)$/i;
+  /^(?:##\s+)?(Central Themes?|Session Goals?|Schedule & Overview|Opening Prayer|Icebreaker(?::.*)?|Proclamation of the Readings|Biblical Context.*|Deep Analysis.*|(?:Key\s+)?Catholic Doctrine.*|Application for Young Adults.*|Young Adult Pastoral Applications?|Reflection Questions.*|Discussion(?:\s*(?:&|and)\s*Reflection|\s+Questions?)?(?::.*)?|Group Activity.*|(?:Practical\s+)?Weekly Challenges?|Closing Summary.*|Closing Prayer|Next Week Announcement.*|One-Sentence Main Point.*)$/i;
+
+function inferUnnumberedSectionNumber(headingText: string): number {
+  const lower = headingText.toLowerCase();
+  if (lower.includes('central theme')) return 1;
+  if (lower.includes('session goal')) return 2;
+  if (lower.includes('schedule')) return 3;
+  if (lower.includes('opening prayer')) return 4;
+  if (lower.includes('icebreaker')) return 5;
+  if (lower.includes('proclamation')) return 6;
+  if (lower.includes('biblical') && lower.includes('context')) return 7;
+  if (lower.includes('deep analysis')) return 8;
+  if (lower.includes('catholic doctrine')) return 9;
+  if (lower.includes('young adult')) return 10;
+  if (lower.includes('reflection question') || lower.includes('discussion')) return 11;
+  if (lower.includes('group activity') || lower.includes('prayer card')) return 12;
+  if (lower.includes('weekly challenge')) return 13;
+  if (lower.includes('closing summary')) return 14;
+  if (lower.includes('closing prayer')) return 15;
+  if (lower.includes('next week')) return 16;
+  if (lower.includes('main point')) return 17;
+  return 0;
+}
 
 function toUint8Array(data: Buffer | Uint8Array): Uint8Array {
   if (Buffer.isBuffer(data)) {
@@ -134,7 +156,7 @@ export function normalizePdfText(pages: string[]): string {
     const secMatch = trimmed.match(SECTION_HEADING_REGEX);
     if (secMatch) {
       inPreamble = false;
-      const numMatch = trimmed.match(/^(\d+)\./);
+      const numMatch = trimmed.match(/^(?:##\s+)?(\d+)\./);
       const parsedNum = numMatch?.[1];
       if (parsedNum) {
         currentSectionNumber = parseInt(parsedNum, 10);
@@ -151,8 +173,10 @@ export function normalizePdfText(pages: string[]): string {
     const unnumberedMatch = trimmed.match(UNNUMBERED_SECTION_HEADING_REGEX);
     if (unnumberedMatch) {
       inPreamble = false;
+      const headingLabel = unnumberedMatch[1] ?? trimmed;
+      currentSectionNumber = inferUnnumberedSectionNumber(headingLabel);
       if (!trimmed.startsWith('## ')) {
-        resultLines.push(`## ${unnumberedMatch[1]}`);
+        resultLines.push(`## ${headingLabel}`);
       } else {
         resultLines.push(trimmed);
       }

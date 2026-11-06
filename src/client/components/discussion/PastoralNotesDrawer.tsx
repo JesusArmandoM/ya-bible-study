@@ -27,7 +27,7 @@ export function PastoralNotesDrawer({
   }
 
   const deepAnalysis = studyDocument?.deepAnalysis;
-  const activeQuestionDetail = deepAnalysis?.reflectionQuestions.find(
+  const activeQuestionDetail = studyDocument?.discussion?.reflectionQuestions.find(
     (q) => q.id === activeQuestion?.id,
   );
 

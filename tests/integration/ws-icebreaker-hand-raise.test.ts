@@ -37,7 +37,7 @@ function createStudySummary(): SessionStudySummary {
     liturgicalEyebrow: 'Gospel Reading',
     gospelCitation: 'Matthew 15:21–28',
     gospelSummaryLabel: 'Gospel of Matthew 15:21–28',
-    sectionCount: 5,
+    sectionCount: 6,
     estimatedMinutes: 45,
     icebreaker: ICEBREAKER_SUMMARY_FIELDS,
   };

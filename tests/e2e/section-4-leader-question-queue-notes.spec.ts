@@ -405,7 +405,7 @@ test.describe('Section 4 Deep Analysis Leader Question Queue & Pastoral Notes (u
       expect(participantBody).not.toContain('Augustine');
       expect(participantBody).not.toContain('Jerome');
       expect(participantBody).not.toContain('Sample Answer');
-      expect(participantBody).not.toContain(SEED.deepAnalysis.reflectionQuestions[0]!.sampleAnswer);
+      expect(participantBody).not.toContain(SEED.discussion.reflectionQuestions[0]!.sampleAnswer);
 
       // Close drawer
       await pageLeader.getByTestId('close-pastoral-notes').click();
@@ -441,7 +441,7 @@ test.describe('Section 4 Deep Analysis Leader Question Queue & Pastoral Notes (u
       // Leader uses direct advance (mercy, not pace, is the goal)
       await pageLeader.getByTestId('advance-section-5-direct').click();
 
-      // All clients immediately advance to Section 5
+      // All clients immediately advance to Section 5 (ClosingPrayerScreen since section-5-closing-prayer-completion)
       for (const page of [pageLeader, pageParticipant]) {
         await expect(page.getByTestId('closing-prayer-screen')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(

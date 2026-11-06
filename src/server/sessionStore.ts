@@ -171,6 +171,56 @@ function toPublicMember(member: InternalSessionMember): PublicSessionMember {
   };
 }
 
+function toPublicStudySummary(
+  study: SessionStudySummary | null,
+): SessionStudySummary | null {
+  if (!study) {
+    return null;
+  }
+  return {
+    ...study,
+    openingPrayer: study.openingPrayer ? { ...study.openingPrayer } : study.openingPrayer,
+    icebreaker: study.icebreaker ? { ...study.icebreaker } : study.icebreaker,
+    gospelReading: study.gospelReading
+      ? {
+          ...study.gospelReading,
+          verses: study.gospelReading.verses.map((v) => ({ ...v })),
+        }
+      : study.gospelReading,
+    deepAnalysis: study.deepAnalysis
+      ? {
+          ...study.deepAnalysis,
+          verseCommentary: study.deepAnalysis.verseCommentary.map((item) => ({
+            ...item,
+            catechismReferences: [...item.catechismReferences],
+          })),
+          catholicDoctrine: study.deepAnalysis.catholicDoctrine.map((item) => ({
+            ...item,
+            references: [...item.references],
+          })),
+          youngAdultApplication: study.deepAnalysis.youngAdultApplication.map(
+            (item) => ({ ...item }),
+          ),
+        }
+      : study.deepAnalysis,
+    discussion: study.discussion
+      ? {
+          ...study.discussion,
+          defaultActiveQuestionIds: [...study.discussion.defaultActiveQuestionIds],
+          questions: study.discussion.questions.map((q) => ({ ...q })),
+        }
+      : study.discussion,
+    closing: study.closing
+      ? {
+          ...study.closing,
+          summaryBullets: [...study.closing.summaryBullets],
+          weeklyChallenges: study.closing.weeklyChallenges.map((c) => ({ ...c })),
+          nextWeekAnnouncement: { ...study.closing.nextWeekAnnouncement },
+        }
+      : study.closing,
+  };
+}
+
 function toPublicSnapshot(
   session: InternalLiveSession,
 ): PublicLiveSessionSnapshot {
@@ -199,7 +249,7 @@ function toPublicSnapshot(
     connectedMemberCount,
     connectedParticipantCount,
     members,
-    study: session.study ? { ...session.study } : null,
+    study: toPublicStudySummary(session.study),
     volunteerTurn: toPublicVolunteerTurn(session.volunteerTurn),
     discussionState: toPublicDiscussionState(session.discussionState),
     protocolVersion: SESSION_PROTOCOL_VERSION,
@@ -1047,7 +1097,7 @@ export class LiveSessionStore {
         this.sendError(
           socket,
           'INVALID_MESSAGE',
-          'Study summary must include non-empty title, subtitle, liturgical eyebrow, Gospel citation, and Gospel summary label fields, sectionCount 5, and estimatedMinutes (1-180).',
+          'Study summary must include non-empty title, subtitle, liturgical eyebrow, Gospel citation, and Gospel summary label fields, sectionCount 6, and estimatedMinutes (1-180).',
           requestId,
         );
         return;

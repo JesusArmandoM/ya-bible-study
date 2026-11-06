@@ -23,7 +23,7 @@ describe('pdfParser', () => {
     expect(doc.title).toBe('Great Is Your Faith');
     expect(doc.subtitle).toBe('Mercy, Humility, and the House of Prayer for All Peoples');
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
-    expect(doc.sectionCount).toBe(5);
+    expect(doc.sectionCount).toBe(6);
     expect(doc.estimatedMinutes).toBe(90);
 
     // Source metadata
@@ -32,8 +32,8 @@ describe('pdfParser', () => {
     expect(doc.source.statusLabel).toBe('Analyzed');
 
     // Detection summary
-    expect(doc.detectionSummary.sectionCount).toBe(5);
-    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('5 sections detected');
+    expect(doc.detectionSummary.sectionCount).toBe(6);
+    expect(doc.detectionSummary.sectionsDetectedLabel).toBe('6 sections detected');
     expect(doc.detectionSummary.curatedQuestionCount).toBe(3);
     expect(doc.detectionSummary.totalQuestionCount).toBe(12);
     expect(doc.detectionSummary.hasOpeningPrayer).toBe(true);
@@ -70,16 +70,22 @@ describe('pdfParser', () => {
     expect(doc.gospelReading.leaderLiturgicalContextNote).toContain('Romans 11');
 
     // Section 4: Deep Analysis
-    expect(doc.deepAnalysis.sectionId).toBe('section_4_discussion');
-    expect(doc.deepAnalysis.reflectionQuestions.length).toBe(12);
-    expect(doc.deepAnalysis.defaultActiveQuestionIds).toEqual(['q-6', 'q-5', 'q-8']);
+    expect(doc.deepAnalysis.sectionId).toBe('section_4_deep_analysis');
+    expect(doc.deepAnalysis.sectionNumber).toBe(4);
     expect(doc.deepAnalysis.verseCommentary.length).toBe(10);
     expect(doc.deepAnalysis.catholicDoctrine.length).toBe(4);
     expect(doc.deepAnalysis.youngAdultApplication.length).toBe(4);
-    expect(doc.deepAnalysis.prayerCardTemplate.prompts.length).toBe(3);
 
-    // Section 5: Closing
-    expect(doc.closing.sectionId).toBe('section_5_closing');
+    // Section 5: Discussion & Reflection
+    expect(doc.discussion.sectionId).toBe('section_5_discussion');
+    expect(doc.discussion.sectionNumber).toBe(5);
+    expect(doc.discussion.reflectionQuestions.length).toBe(12);
+    expect(doc.discussion.defaultActiveQuestionIds).toEqual(['q-6', 'q-5', 'q-8']);
+    expect(doc.discussion.prayerCardTemplate.prompts.length).toBe(3);
+
+    // Section 6: Closing
+    expect(doc.closing.sectionId).toBe('section_6_closing');
+    expect(doc.closing.sectionNumber).toBe(6);
     expect(doc.closing.weeklyChallenges.length).toBe(4);
     expect(doc.closing.closingPrayerText).toContain(
       'Lord Jesus, Son of David, have mercy on us.',
@@ -113,8 +119,9 @@ describe('pdfParser', () => {
     expect(doc.gospelReading.verses[0]?.verseNumber).toBe(35);
     expect(doc.gospelReading.verses[6]?.verseNumber).toBe(41);
     expect(doc.gospelReading.fullText).toContain('Quiet! Be still!');
-    expect(doc.deepAnalysis.reflectionQuestions.length).toBe(12);
-    expect(doc.deepAnalysis.defaultActiveQuestionIds).toEqual(['q-6', 'q-3', 'q-8']);
+    expect(doc.sectionCount).toBe(6);
+    expect(doc.discussion.reflectionQuestions.length).toBe(12);
+    expect(doc.discussion.defaultActiveQuestionIds).toEqual(['q-6', 'q-3', 'q-8']);
     expect(doc.closing.weeklyChallenges.length).toBe(4);
     expect(doc.closing.nextWeekAnnouncement.title).toBe('Do Not Be Afraid; Just Have Faith');
 
@@ -165,6 +172,21 @@ describe('pdfParser', () => {
     expect(normalized).toContain('### A. Matthew 15:21');
     expect(normalized).toContain('### 1. First question?');
     expect(normalized).toContain('### 2. Second question?');
+  });
+
+  it('normalizes unhashed Key Catholic Doctrine, Application for Young Adults, Discussion, and Practical Weekly Challenges headings', () => {
+    const simulatedPages = [
+      `# Great Is Your Faith\n\n9. Key Catholic Doctrine\nA. Covenant Fidelity\nSummary text\n\nApplication for Young Adults\nA. Persevering in Prayer\nApplication summary\n\nDiscussion\n1. First discussion prompt?\n\n13. Practical Weekly Challenges\n1. Persistent Prayer: Intercede daily.`,
+    ];
+
+    const normalized = normalizePdfText(simulatedPages);
+    expect(normalized).toContain('## 9. Key Catholic Doctrine');
+    expect(normalized).toContain('### A. Covenant Fidelity');
+    expect(normalized).toContain('## Application for Young Adults');
+    expect(normalized).toContain('### A. Persevering in Prayer');
+    expect(normalized).toContain('## Discussion');
+    expect(normalized).toContain('### 1. First discussion prompt?');
+    expect(normalized).toContain('## 13. Practical Weekly Challenges');
   });
 
   it('rejects textless / scanned image PDFs with actionable error', async () => {

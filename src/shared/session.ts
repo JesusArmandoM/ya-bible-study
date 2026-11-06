@@ -1,12 +1,17 @@
 import type { SanctuaryRole } from './health.js';
-import type {
-  ClosingSection,
-  DeepAnalysisSection,
-  GospelReadingSection,
-  GospelVerse,
-  IcebreakerSection,
-  OpeningPrayerSection,
-  StudyDocument,
+import {
+  FOUR_POINT_ITEM_IDS,
+  VERSE_COMMENTARY_IDS,
+  type ClosingSection,
+  type DeepAnalysisSection,
+  type DiscussionSection,
+  type FourPointItemId,
+  type GospelReadingSection,
+  type GospelVerse,
+  type IcebreakerSection,
+  type OpeningPrayerSection,
+  type StudyDocument,
+  type VerseCommentaryId,
 } from './study.js';
 
 export const SESSION_PROTOCOL_VERSION = 3;
@@ -150,10 +155,57 @@ export interface SessionDiscussionState {
 }
 
 /**
- * Sanitized, participant-visible Deep Analysis discussion content synced with
+ * Shared verse-by-verse Gospel commentary item (A–J) synced to both Study
+ * Leader and Participant snapshots for Section 4 Deep Analysis. Explicitly
+ * excludes facilitator-only `patristicNote`.
+ */
+export interface SessionVerseCommentaryItem {
+  id: VerseCommentaryId;
+  verseCitation: string;
+  quotedText: string;
+  commentary: string;
+  catechismReferences: string[];
+}
+
+/**
+ * Shared Catholic doctrine highlight (A–D) synced to both Study Leader and
+ * Participant snapshots for Section 4 Deep Analysis.
+ */
+export interface SessionDoctrineHighlightItem {
+  id: FourPointItemId;
+  title: string;
+  summary: string;
+  references: string[];
+}
+
+/**
+ * Shared young adult pastoral application point (A–D) synced to both Study
+ * Leader and Participant snapshots for Section 4 Deep Analysis.
+ */
+export interface SessionApplicationPointItem {
+  id: FourPointItemId;
+  title: string;
+  summary: string;
+}
+
+/**
+ * Sanitized, shared Deep Analysis content synced to both Study Leader and
+ * Participant snapshots. Never carries facilitator-facing `patristicNote`
+ * (that copy stays on the locally held `StudyDocument`).
+ */
+export interface SessionDeepAnalysisContent {
+  title: string;
+  eyebrow: string;
+  durationLabel: string;
+  verseCommentary: SessionVerseCommentaryItem[];
+  catholicDoctrine: SessionDoctrineHighlightItem[];
+  youngAdultApplication: SessionApplicationPointItem[];
+}
+
+/**
+ * Sanitized, participant-visible Discussion & Reflection content synced with
  * the study summary. Never carries facilitator pastoral fields
- * (`verseCommentary`, `catholicDoctrine`, `youngAdultApplication`,
- * `sampleAnswer`, `leaderNote`, `prayerCardTemplate` — that copy stays on
+ * (`sampleAnswer`, `leaderNote`, `prayerCardTemplate` — that copy stays on
  * the locally held `StudyDocument`).
  */
 export interface SessionDiscussionContent {
@@ -196,9 +248,11 @@ export interface SessionClosingContent {
 }
 
 /**
- * Sanitized, title/meta-only study summary synced to every client via the
- * leader-gated `load_study` command. Never carries pastoral/facilitator fields
- * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, commentary, doctrine).
+ * Sanitized study summary synced to every client via the leader-gated
+ * `load_study` command. Shares group-visible Section 1–6 content (including
+ * Section 4 `deepAnalysis`) while stripping facilitator-only fields
+ * (`leaderNote`, `examplesToListenFor`, `sampleAnswer`, `patristicNote`,
+ * `leaderLiturgicalContextNote`, `prayerCardTemplate`).
  */
 export interface SessionStudySummary {
   title: string;
@@ -206,7 +260,7 @@ export interface SessionStudySummary {
   liturgicalEyebrow: string;
   gospelCitation: string;
   gospelSummaryLabel: string;
-  sectionCount: 5;
+  sectionCount: 6;
   estimatedMinutes: number;
   /** Participant-visible Opening Prayer copy (additive in protocol v3). */
   openingPrayer?: SessionOpeningPrayerContent | null;
@@ -214,7 +268,9 @@ export interface SessionStudySummary {
   icebreaker?: SessionIcebreakerContent | null;
   /** Participant-visible Gospel Reading copy (additive in protocol v3). */
   gospelReading?: SessionGospelReadingContent | null;
-  /** Participant-visible Deep Analysis copy (additive in protocol v3). */
+  /** Shared Section 4 Deep Analysis copy without patristicNote (additive in protocol v3). */
+  deepAnalysis?: SessionDeepAnalysisContent | null;
+  /** Participant-visible Section 5 Discussion & Reflection copy (additive in protocol v3). */
   discussion?: SessionDiscussionContent | null;
   /** Participant-visible Closing Prayer copy (additive in protocol v3). */
   closing?: SessionClosingContent | null;
@@ -227,6 +283,9 @@ export const SESSION_STUDY_SUMMARY_MAX_QUESTION_LENGTH = 1000;
 export const SESSION_STUDY_SUMMARY_MAX_GOSPEL_TEXT_LENGTH = 10_000;
 export const SESSION_STUDY_SUMMARY_MIN_ESTIMATED_MINUTES = 1;
 export const SESSION_STUDY_SUMMARY_MAX_ESTIMATED_MINUTES = 180;
+export const SESSION_DEEP_ANALYSIS_MAX_COMMENTARY_ITEMS = 20;
+export const SESSION_DEEP_ANALYSIS_MAX_HIGHLIGHT_ITEMS = 12;
+export const SESSION_DEEP_ANALYSIS_MAX_REFERENCES_PER_ITEM = 16;
 export const SESSION_REFLECTION_CONTENT_MIN_LENGTH = 1;
 export const SESSION_REFLECTION_CONTENT_MAX_LENGTH = 1000;
 
@@ -337,13 +396,45 @@ export function toSessionGospelReadingContent(
 }
 
 /**
- * Projects the Deep Analysis section onto the participant-visible synced
- * content. Explicitly excludes facilitator pastoral fields (`verseCommentary`,
- * `catholicDoctrine`, `youngAdultApplication`, `prayerCardTemplate`,
- * `sampleAnswer`, `leaderNote`).
+ * Projects the Deep Analysis section onto the shared synced content exposed to
+ * both Study Leader and Participant snapshots. Explicitly excludes
+ * facilitator-only `patristicNote`.
+ */
+export function toSessionDeepAnalysisContent(
+  section: DeepAnalysisSection,
+): SessionDeepAnalysisContent {
+  return {
+    title: section.title,
+    eyebrow: section.eyebrow,
+    durationLabel: section.durationLabel,
+    verseCommentary: section.verseCommentary.map((item) => ({
+      id: item.id,
+      verseCitation: item.verseCitation,
+      quotedText: item.quotedText,
+      commentary: item.commentary,
+      catechismReferences: [...item.catechismReferences],
+    })),
+    catholicDoctrine: section.catholicDoctrine.map((item) => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      references: [...item.references],
+    })),
+    youngAdultApplication: section.youngAdultApplication.map((item) => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+    })),
+  };
+}
+
+/**
+ * Projects the Discussion & Reflection section onto the participant-visible
+ * synced content. Explicitly excludes facilitator pastoral fields
+ * (`prayerCardTemplate`, `sampleAnswer`, `leaderNote`).
  */
 export function toSessionDiscussionContent(
-  section: DeepAnalysisSection,
+  section: DiscussionSection,
 ): SessionDiscussionContent {
   return {
     title: section.title,
@@ -390,7 +481,7 @@ export function toSessionClosingContent(
 
 /**
  * Projects a full `StudyDocument` onto the sanitized session study summary
- * shared with Participants over `/ws` snapshots.
+ * shared with Study Leaders and Participants over `/ws` snapshots.
  */
 export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
   return {
@@ -399,12 +490,13 @@ export function toSessionStudySummary(doc: StudyDocument): SessionStudySummary {
     liturgicalEyebrow: doc.liturgicalEyebrow,
     gospelCitation: doc.gospelCitation,
     gospelSummaryLabel: doc.gospelSummaryLabel,
-    sectionCount: 5,
+    sectionCount: 6,
     estimatedMinutes: doc.estimatedMinutes,
     openingPrayer: toSessionOpeningPrayerContent(doc.openingPrayer),
     icebreaker: toSessionIcebreakerContent(doc.icebreaker),
     gospelReading: toSessionGospelReadingContent(doc.gospelReading),
-    discussion: toSessionDiscussionContent(doc.deepAnalysis),
+    deepAnalysis: toSessionDeepAnalysisContent(doc.deepAnalysis),
+    discussion: toSessionDiscussionContent(doc.discussion),
     closing: toSessionClosingContent(doc.closing),
   };
 }
@@ -717,6 +809,200 @@ export function normalizeSessionDiscussionQuestion(
 }
 
 /**
+ * Allow-list validation for a present `deepAnalysis` payload. Returns `null`
+ * when any field is missing, empty, or exceeds its bound so the server can
+ * reject the frame with `INVALID_MESSAGE`. Enforces array bounds (1–20
+ * commentary items, 1–12 doctrine/application items, 0–16 references per item)
+ * and drops unknown/facilitator keys (such as smuggled `patristicNote`) via
+ * explicit field projection.
+ */
+export function normalizeSessionDeepAnalysisContent(
+  raw: unknown,
+): SessionDeepAnalysisContent | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeBoundedSummaryString(
+    record.title,
+    SESSION_STUDY_SUMMARY_MAX_TITLE_LENGTH,
+  );
+  const eyebrow = normalizeBoundedSummaryString(
+    record.eyebrow,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+  const durationLabel = normalizeBoundedSummaryString(
+    record.durationLabel,
+    SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+  );
+
+  if (title === null || eyebrow === null || durationLabel === null) {
+    return null;
+  }
+
+  if (
+    !Array.isArray(record.verseCommentary) ||
+    record.verseCommentary.length === 0 ||
+    record.verseCommentary.length > SESSION_DEEP_ANALYSIS_MAX_COMMENTARY_ITEMS
+  ) {
+    return null;
+  }
+
+  const verseCommentary: SessionVerseCommentaryItem[] = [];
+  for (const rawItem of record.verseCommentary) {
+    if (typeof rawItem !== 'object' || rawItem === null || Array.isArray(rawItem)) {
+      return null;
+    }
+    const itemRecord = rawItem as Record<string, unknown>;
+    if (!VERSE_COMMENTARY_IDS.includes(itemRecord.id as VerseCommentaryId)) {
+      return null;
+    }
+    const verseCitation = normalizeBoundedSummaryString(
+      itemRecord.verseCitation,
+      SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+    );
+    const quotedText = normalizeBoundedPrayerText(
+      itemRecord.quotedText,
+      SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+    );
+    const commentary = normalizeBoundedPrayerText(
+      itemRecord.commentary,
+      SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+    );
+    if (verseCitation === null || quotedText === null || commentary === null) {
+      return null;
+    }
+    if (
+      !Array.isArray(itemRecord.catechismReferences) ||
+      itemRecord.catechismReferences.length >
+        SESSION_DEEP_ANALYSIS_MAX_REFERENCES_PER_ITEM
+    ) {
+      return null;
+    }
+    const catechismReferences: string[] = [];
+    for (const rawRef of itemRecord.catechismReferences) {
+      const ref = normalizeBoundedSummaryString(
+        rawRef,
+        SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+      );
+      if (ref === null) {
+        return null;
+      }
+      catechismReferences.push(ref);
+    }
+
+    verseCommentary.push({
+      id: itemRecord.id as VerseCommentaryId,
+      verseCitation,
+      quotedText,
+      commentary,
+      catechismReferences,
+    });
+  }
+
+  if (
+    !Array.isArray(record.catholicDoctrine) ||
+    record.catholicDoctrine.length === 0 ||
+    record.catholicDoctrine.length > SESSION_DEEP_ANALYSIS_MAX_HIGHLIGHT_ITEMS
+  ) {
+    return null;
+  }
+
+  const catholicDoctrine: SessionDoctrineHighlightItem[] = [];
+  for (const rawItem of record.catholicDoctrine) {
+    if (typeof rawItem !== 'object' || rawItem === null || Array.isArray(rawItem)) {
+      return null;
+    }
+    const itemRecord = rawItem as Record<string, unknown>;
+    if (!FOUR_POINT_ITEM_IDS.includes(itemRecord.id as FourPointItemId)) {
+      return null;
+    }
+    const docTitle = normalizeBoundedSummaryString(
+      itemRecord.title,
+      SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+    );
+    const docSummary = normalizeBoundedPrayerText(
+      itemRecord.summary,
+      SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+    );
+    if (docTitle === null || docSummary === null) {
+      return null;
+    }
+    if (
+      !Array.isArray(itemRecord.references) ||
+      itemRecord.references.length > SESSION_DEEP_ANALYSIS_MAX_REFERENCES_PER_ITEM
+    ) {
+      return null;
+    }
+    const references: string[] = [];
+    for (const rawRef of itemRecord.references) {
+      const ref = normalizeBoundedSummaryString(
+        rawRef,
+        SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+      );
+      if (ref === null) {
+        return null;
+      }
+      references.push(ref);
+    }
+
+    catholicDoctrine.push({
+      id: itemRecord.id as FourPointItemId,
+      title: docTitle,
+      summary: docSummary,
+      references,
+    });
+  }
+
+  if (
+    !Array.isArray(record.youngAdultApplication) ||
+    record.youngAdultApplication.length === 0 ||
+    record.youngAdultApplication.length >
+      SESSION_DEEP_ANALYSIS_MAX_HIGHLIGHT_ITEMS
+  ) {
+    return null;
+  }
+
+  const youngAdultApplication: SessionApplicationPointItem[] = [];
+  for (const rawItem of record.youngAdultApplication) {
+    if (typeof rawItem !== 'object' || rawItem === null || Array.isArray(rawItem)) {
+      return null;
+    }
+    const itemRecord = rawItem as Record<string, unknown>;
+    if (!FOUR_POINT_ITEM_IDS.includes(itemRecord.id as FourPointItemId)) {
+      return null;
+    }
+    const appTitle = normalizeBoundedSummaryString(
+      itemRecord.title,
+      SESSION_STUDY_SUMMARY_MAX_FIELD_LENGTH,
+    );
+    const appSummary = normalizeBoundedPrayerText(
+      itemRecord.summary,
+      SESSION_STUDY_SUMMARY_MAX_PRAYER_TEXT_LENGTH,
+    );
+    if (appTitle === null || appSummary === null) {
+      return null;
+    }
+
+    youngAdultApplication.push({
+      id: itemRecord.id as FourPointItemId,
+      title: appTitle,
+      summary: appSummary,
+    });
+  }
+
+  return {
+    title,
+    eyebrow,
+    durationLabel,
+    verseCommentary,
+    catholicDoctrine,
+    youngAdultApplication,
+  };
+}
+
+/**
  * Allow-list validation for a present `discussion` payload. Returns `null`
  * when any field is missing, empty, or exceeds its bound so the server can
  * reject the frame with `INVALID_MESSAGE`. Unknown keys (e.g. smuggled
@@ -982,7 +1268,7 @@ export function normalizeSessionStudySummary(
     return null;
   }
 
-  if (record.sectionCount !== 5) {
+  if (record.sectionCount !== 6) {
     return null;
   }
 
@@ -1036,6 +1322,19 @@ export function normalizeSessionStudySummary(
   }
 
   /**
+   * Protocol v3 (bounded additive): a missing `deepAnalysis` stays valid and
+   * normalizes to `null`; a present-but-invalid payload rejects the frame with
+   * `INVALID_MESSAGE`.
+   */
+  let deepAnalysis: SessionDeepAnalysisContent | null = null;
+  if (record.deepAnalysis !== undefined && record.deepAnalysis !== null) {
+    deepAnalysis = normalizeSessionDeepAnalysisContent(record.deepAnalysis);
+    if (deepAnalysis === null) {
+      return null;
+    }
+  }
+
+  /**
    * Protocol v3 (bounded additive): a missing `discussion` stays valid and
    * normalizes to `null`; a present-but-invalid payload rejects the frame with
    * `INVALID_MESSAGE`.
@@ -1067,11 +1366,12 @@ export function normalizeSessionStudySummary(
     liturgicalEyebrow,
     gospelCitation,
     gospelSummaryLabel,
-    sectionCount: 5,
+    sectionCount: 6,
     estimatedMinutes,
     openingPrayer,
     icebreaker,
     gospelReading,
+    deepAnalysis,
     discussion,
     closing,
   };

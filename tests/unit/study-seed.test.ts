@@ -15,7 +15,7 @@ import {
 } from '../../src/shared/study';
 
 describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () => {
-  it('validates the complete 5-section default StudyDocument metadata and ordered section tuple', () => {
+  it('validates the complete 6-section default StudyDocument metadata and ordered section tuple', () => {
     const doc = getDefaultStudyDocument();
     const validation = validateStudyDocument(doc);
 
@@ -32,7 +32,7 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
     );
     expect(doc.gospelCitation).toBe('Matthew 15:21–28');
     expect(doc.estimatedMinutes).toBe(90);
-    expect(doc.sectionCount).toBe(5);
+    expect(doc.sectionCount).toBe(6);
     expect(doc.centralThemes).toHaveLength(4);
     expect(doc.sessionGoals.length).toBeGreaterThanOrEqual(3);
     expect(doc.oneSentenceMainPoint).toBe(
@@ -44,8 +44,8 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
       statusLabel: 'Analyzed',
     });
     expect(doc.detectionSummary).toEqual({
-      sectionCount: 5,
-      sectionsDetectedLabel: '5 sections detected',
+      sectionCount: 6,
+      sectionsDetectedLabel: '6 sections detected',
       detectedLabel: 'Prayer · Reading · 3 Questions',
       curatedQuestionCount: 3,
       totalQuestionCount: 12,
@@ -55,16 +55,17 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
     });
 
     const sections = getStudySections(doc);
-    expect(sections).toHaveLength(5);
+    expect(sections).toHaveLength(6);
     expect(sections.map((s) => s.sectionId)).toEqual([...STUDY_SECTION_IDS]);
-    expect(sections.map((s) => s.sectionNumber)).toEqual([1, 2, 3, 4, 5]);
+    expect(sections.map((s) => s.sectionNumber)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(sections.map((s) => s.progressPercent)).toEqual([
-      20, 40, 60, 80, 100,
+      17, 33, 50, 67, 83, 100,
     ]);
     expect(sections.map((s) => s.turnMode)).toEqual([
       'gated_prayer',
       'open_share',
       'gated_reading',
+      'none',
       'none',
       'none',
     ]);
@@ -152,26 +153,15 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
     expect(doc.icebreaker.leaderNote.length).toBeGreaterThan(20);
     expect(doc.icebreaker.examplesToListenFor).toHaveLength(8);
 
-    // Section 4: Deep Analysis & Discussion
-    const { deepAnalysis } = doc;
-    expect(deepAnalysis.title).toBe('Lord, Help Me Pray');
-    expect(deepAnalysis.durationLabel).toBe('25–50 min');
-    expect(deepAnalysis.defaultActiveQuestionIds).toEqual([
-      'q-6',
-      'q-5',
-      'q-8',
-    ]);
-    expect(deepAnalysis.reflectionQuestions).toHaveLength(12);
-    expect(deepAnalysis.reflectionQuestions.map((q) => q.number)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-    ]);
-
-    const q6 = deepAnalysis.reflectionQuestions.find((q) => q.id === 'q-6');
-    const q5 = deepAnalysis.reflectionQuestions.find((q) => q.id === 'q-5');
-    const q8 = deepAnalysis.reflectionQuestions.find((q) => q.id === 'q-8');
-    expect(q6?.curatedOrder).toBe(1);
-    expect(q5?.curatedOrder).toBe(2);
-    expect(q8?.curatedOrder).toBe(3);
+    // Section 4: Deep Analysis
+    const { deepAnalysis, discussion } = doc;
+    expect(deepAnalysis.sectionId).toBe('section_4_deep_analysis');
+    expect(deepAnalysis.sectionNumber).toBe(4);
+    expect(deepAnalysis.progressPercent).toBe(67);
+    expect(deepAnalysis.title).toBe('Deep Analysis');
+    expect(deepAnalysis.eyebrow).toBe('DEEP ANALYSIS · 20 MIN');
+    expect(deepAnalysis.durationMinutes).toBe(20);
+    expect(deepAnalysis.durationLabel).toBe('20 min');
 
     expect(deepAnalysis.verseCommentary.map((item) => item.id)).toEqual([
       ...VERSE_COMMENTARY_IDS,
@@ -195,21 +185,48 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
       ...FOUR_POINT_ITEM_IDS,
     ]);
 
-    expect(deepAnalysis.prayerCardTemplate.prompts.map((p) => p.id)).toEqual([
+    // Section 5: Discussion & Reflection
+    expect(discussion.sectionId).toBe('section_5_discussion');
+    expect(discussion.sectionNumber).toBe(5);
+    expect(discussion.progressPercent).toBe(83);
+    expect(discussion.title).toBe('Lord, Help Me Pray');
+    expect(discussion.eyebrow).toBe('DISCUSSION · 25 MIN');
+    expect(discussion.durationMinutes).toBe(25);
+    expect(discussion.durationLabel).toBe('25–50 min');
+    expect(discussion.defaultActiveQuestionIds).toEqual([
+      'q-6',
+      'q-5',
+      'q-8',
+    ]);
+    expect(discussion.reflectionQuestions).toHaveLength(12);
+    expect(discussion.reflectionQuestions.map((q) => q.number)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    ]);
+
+    const q6 = discussion.reflectionQuestions.find((q) => q.id === 'q-6');
+    const q5 = discussion.reflectionQuestions.find((q) => q.id === 'q-5');
+    const q8 = discussion.reflectionQuestions.find((q) => q.id === 'q-8');
+    expect(q6?.curatedOrder).toBe(1);
+    expect(q5?.curatedOrder).toBe(2);
+    expect(q8?.curatedOrder).toBe(3);
+
+    expect(discussion.prayerCardTemplate.prompts.map((p) => p.id)).toEqual([
       ...PRAYER_CARD_PROMPT_IDS,
     ]);
     expect(
-      deepAnalysis.prayerCardTemplate.prompts.map((p) => p.audienceLabel),
+      discussion.prayerCardTemplate.prompts.map((p) => p.audienceLabel),
     ).toEqual(['For myself', 'For someone I love', 'For the Church/world']);
     expect(
-      deepAnalysis.prayerCardTemplate.prompts.map((p) => p.templateText),
+      discussion.prayerCardTemplate.prompts.map((p) => p.templateText),
     ).toEqual([
       'Lord, help me ___.',
       'Lord, have mercy on ___.',
       'Lord, make Your house a house of prayer for ___.',
     ]);
 
-    // Section 5: Closing Prayer
+    // Section 6: Closing Prayer
+    expect(doc.closing.sectionId).toBe('section_6_closing');
+    expect(doc.closing.sectionNumber).toBe(6);
     expect(doc.closing.durationMinutes).toBe(3);
     expect(doc.closing.durationLabel).toBe('3 min');
     expect(doc.closing.summaryBullets.length).toBeGreaterThanOrEqual(3);
@@ -244,7 +261,7 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
     }
 
     const brokenCurated = getDefaultStudyDocument();
-    brokenCurated.deepAnalysis.defaultActiveQuestionIds = ['q-missing'];
+    brokenCurated.discussion.defaultActiveQuestionIds = ['q-missing'];
     const brokenCuratedResult = validateStudyDocument(brokenCurated);
     expect(brokenCuratedResult.valid).toBe(false);
 
@@ -261,7 +278,7 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
     first.centralThemes.push('Mutated Theme');
     first.icebreaker.examplesToListenFor.splice(0, 4);
     first.gospelReading.verses[0]!.text = 'Mutated Verse';
-    first.deepAnalysis.reflectionQuestions.pop();
+    first.discussion.reflectionQuestions.pop();
     first.closing.weeklyChallenges.pop();
 
     const second = getDefaultStudyDocument();
@@ -271,7 +288,7 @@ describe('Preloaded "Great Is Your Faith" StudyDocument seed & validator', () =>
     expect(second.gospelReading.verses[0]?.text).toBe(
       'At that time, Jesus withdrew to the region of Tyre and Sidon.',
     );
-    expect(second.deepAnalysis.reflectionQuestions).toHaveLength(12);
+    expect(second.discussion.reflectionQuestions).toHaveLength(12);
     expect(second.closing.weeklyChallenges).toHaveLength(4);
 
     const serialized = JSON.stringify(second);

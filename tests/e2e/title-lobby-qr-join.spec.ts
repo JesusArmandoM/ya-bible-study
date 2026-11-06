@@ -138,7 +138,7 @@ test.describe('Title Lobby + QR Join + Start Study Handoff', () => {
         pageLeader.getByTestId('title-lobby-attendee-count'),
       ).toHaveText('0');
       await expect(pageLeader.getByTestId('title-lobby-section-count')).toHaveText(
-        '5',
+        '6',
       );
       await expect(pageLeader.getByTestId('title-lobby-duration')).toHaveText(
         '90m',

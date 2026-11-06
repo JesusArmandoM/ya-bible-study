@@ -43,7 +43,7 @@ async function createLeaderSetupSession(page: Page): Promise<void> {
 }
 
 test.describe('Leader Load Your Study Setup Screen', () => {
-  test('Scenario 1: default study previews with 5-section structure (Gospel-only Section 3)', async ({
+  test('Scenario 1: default study previews with 6-section structure (Gospel-only Section 3)', async ({
     page,
   }) => {
     try {
@@ -53,28 +53,30 @@ test.describe('Leader Load Your Study Setup Screen', () => {
       const previewCard = page.getByTestId('study-preview-card');
       await expect(previewCard).toBeVisible();
       await expect(previewCard).toContainText('Great Is Your Faith.pdf');
+      await expect(previewCard).toContainText('6 sections · 12 questions');
       await expect(page.getByTestId('study-analyzed-pill')).toContainText(
         'Analyzed',
       );
-      await expect(previewCard).toContainText('5 sections detected');
+      await expect(previewCard).toContainText('6 sections detected');
       await expect(page.getByTestId('study-detection-summary')).toContainText(
-        '5 sections detected',
+        '6 sections detected',
       );
 
-      // 5-row structure list (from getStudySections)
+      // 6-row structure list (from getStudySections)
       const structureList = page.getByTestId('study-structure-list');
       for (const sectionName of [
         'Opening Prayer',
         'Icebreaker',
         'Gospel Reading',
-        'Deep Analysis & Discussion',
+        'Deep Analysis',
+        'Discussion & Reflection',
         'Closing Prayer',
       ]) {
         await expect(structureList).toContainText(sectionName);
       }
       await expect(
         page.locator('[data-testid^="study-structure-row-"]'),
-      ).toHaveCount(5);
+      ).toHaveCount(6);
 
       // Section 3 row shows only the Gospel citation
       await expect(page.getByTestId('study-structure-row-3')).toContainText(
@@ -163,7 +165,7 @@ test.describe('Leader Load Your Study Setup Screen', () => {
       await expect(page.getByTestId('study-analyzed-pill')).toContainText(
         'Analyzed',
       );
-      await expect(previewCard).toContainText('5 sections detected');
+      await expect(previewCard).toContainText('6 sections detected');
       await expect(page.getByTestId('study-structure-row-3')).toContainText(
         'Mark 4:35–41',
       );

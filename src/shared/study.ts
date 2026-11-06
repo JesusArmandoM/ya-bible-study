@@ -2,20 +2,22 @@ export type StudySectionId =
   | 'section_1_prayer'
   | 'section_2_icebreaker'
   | 'section_3_reading'
-  | 'section_4_discussion'
-  | 'section_5_closing';
+  | 'section_4_deep_analysis'
+  | 'section_5_discussion'
+  | 'section_6_closing';
 
 export const STUDY_SECTION_IDS = [
   'section_1_prayer',
   'section_2_icebreaker',
   'section_3_reading',
-  'section_4_discussion',
-  'section_5_closing',
+  'section_4_deep_analysis',
+  'section_5_discussion',
+  'section_6_closing',
 ] as const satisfies readonly StudySectionId[];
 
-export type StudySectionNumber = 1 | 2 | 3 | 4 | 5;
+export type StudySectionNumber = 1 | 2 | 3 | 4 | 5 | 6;
 
-export type StudySectionProgressPercent = 20 | 40 | 60 | 80 | 100;
+export type StudySectionProgressPercent = 17 | 33 | 50 | 67 | 83 | 100;
 
 export type StudySectionTurnMode =
   | 'gated_prayer'
@@ -37,7 +39,7 @@ export interface StudySectionBase {
 export interface OpeningPrayerSection extends StudySectionBase {
   sectionId: 'section_1_prayer';
   sectionNumber: 1;
-  progressPercent: 20;
+  progressPercent: 17;
   turnMode: 'gated_prayer';
   suggestedPrayerText: string;
   leaderPrompt: string;
@@ -48,7 +50,7 @@ export interface OpeningPrayerSection extends StudySectionBase {
 export interface IcebreakerSection extends StudySectionBase {
   sectionId: 'section_2_icebreaker';
   sectionNumber: 2;
-  progressPercent: 40;
+  progressPercent: 33;
   turnMode: 'open_share';
   introText: string;
   mainQuestion: string;
@@ -67,7 +69,7 @@ export interface GospelVerse {
 export interface GospelReadingSection extends StudySectionBase {
   sectionId: 'section_3_reading';
   sectionNumber: 3;
-  progressPercent: 60;
+  progressPercent: 50;
   turnMode: 'gated_reading';
   citation: string;
   liturgicalLabel: string;
@@ -173,18 +175,25 @@ export interface PrayerCardTemplate {
 }
 
 export interface DeepAnalysisSection extends StudySectionBase {
-  sectionId: 'section_4_discussion';
+  sectionId: 'section_4_deep_analysis';
   sectionNumber: 4;
-  progressPercent: 80;
+  progressPercent: 67;
+  turnMode: 'none';
+  /** Verse-by-verse Gospel commentary (A–J); patristicNote stays Study Leader-only. */
+  verseCommentary: VerseCommentaryItem[];
+  /** Catholic doctrine highlights (A–D) shared with Study Leader and Participants. */
+  catholicDoctrine: DoctrineHighlightItem[];
+  /** Young adult application points (A–D) shared with Study Leader and Participants. */
+  youngAdultApplication: ApplicationPointItem[];
+}
+
+export interface DiscussionSection extends StudySectionBase {
+  sectionId: 'section_5_discussion';
+  sectionNumber: 5;
+  progressPercent: 83;
   turnMode: 'none';
   defaultActiveQuestionIds: string[];
   reflectionQuestions: ReflectionQuestionItem[];
-  /** Study Leader verse-by-verse commentary; hidden from Participant views. */
-  verseCommentary: VerseCommentaryItem[];
-  /** Study Leader doctrinal guardrails; hidden from Participant views. */
-  catholicDoctrine: DoctrineHighlightItem[];
-  /** Study Leader pastoral application notes; hidden from Participant views. */
-  youngAdultApplication: ApplicationPointItem[];
   prayerCardTemplate: PrayerCardTemplate;
 }
 
@@ -201,8 +210,8 @@ export interface NextWeekAnnouncement {
 }
 
 export interface ClosingSection extends StudySectionBase {
-  sectionId: 'section_5_closing';
-  sectionNumber: 5;
+  sectionId: 'section_6_closing';
+  sectionNumber: 6;
   progressPercent: 100;
   turnMode: 'none';
   summaryBullets: string[];
@@ -216,6 +225,7 @@ export type StudySection =
   | IcebreakerSection
   | GospelReadingSection
   | DeepAnalysisSection
+  | DiscussionSection
   | ClosingSection;
 
 export type OrderedStudySections = [
@@ -223,6 +233,7 @@ export type OrderedStudySections = [
   IcebreakerSection,
   GospelReadingSection,
   DeepAnalysisSection,
+  DiscussionSection,
   ClosingSection,
 ];
 
@@ -235,7 +246,7 @@ export interface StudySourceMetadata {
 }
 
 export interface StudyDetectionSummary {
-  sectionCount: 5;
+  sectionCount: 6;
   sectionsDetectedLabel: string;
   detectedLabel: string;
   curatedQuestionCount: number;
@@ -254,7 +265,7 @@ export interface StudyDocument {
   gospelCitation: string;
   gospelSummaryLabel: string;
   estimatedMinutes: number;
-  sectionCount: 5;
+  sectionCount: 6;
   centralThemes: string[];
   sessionGoals: string[];
   oneSentenceMainPoint: string;
@@ -264,6 +275,7 @@ export interface StudyDocument {
   icebreaker: IcebreakerSection;
   gospelReading: GospelReadingSection;
   deepAnalysis: DeepAnalysisSection;
+  discussion: DiscussionSection;
   closing: ClosingSection;
 }
 
@@ -277,6 +289,7 @@ export function getStudySections(doc: StudyDocument): OrderedStudySections {
     doc.icebreaker,
     doc.gospelReading,
     doc.deepAnalysis,
+    doc.discussion,
     doc.closing,
   ];
 }
@@ -391,8 +404,8 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
   if (!isPositiveNumber(input.estimatedMinutes)) {
     errors.push('estimatedMinutes must be a positive number.');
   }
-  if (input.sectionCount !== 5) {
-    errors.push('sectionCount must equal 5.');
+  if (input.sectionCount !== 6) {
+    errors.push('sectionCount must equal 6.');
   }
   if (!isNonEmptyStringArray(input.centralThemes)) {
     errors.push('centralThemes must be a non-empty array of strings.');
@@ -423,8 +436,8 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
   if (!isPlainRecord(input.detectionSummary)) {
     errors.push('detectionSummary must be an object.');
   } else {
-    if (input.detectionSummary.sectionCount !== 5) {
-      errors.push('detectionSummary.sectionCount must equal 5.');
+    if (input.detectionSummary.sectionCount !== 6) {
+      errors.push('detectionSummary.sectionCount must equal 6.');
     }
     if (!isNonEmptyString(input.detectionSummary.sectionsDetectedLabel)) {
       errors.push(
@@ -464,7 +477,7 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
         key: 'openingPrayer',
         sectionId: 'section_1_prayer',
         sectionNumber: 1,
-        progressPercent: 20,
+        progressPercent: 17,
         turnMode: 'gated_prayer',
       },
       errors,
@@ -497,7 +510,7 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
         key: 'icebreaker',
         sectionId: 'section_2_icebreaker',
         sectionNumber: 2,
-        progressPercent: 40,
+        progressPercent: 33,
         turnMode: 'open_share',
       },
       errors,
@@ -529,7 +542,7 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
         key: 'gospelReading',
         sectionId: 'section_3_reading',
         sectionNumber: 3,
-        progressPercent: 60,
+        progressPercent: 50,
         turnMode: 'gated_reading',
       },
       errors,
@@ -594,109 +607,15 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
       input.deepAnalysis,
       {
         key: 'deepAnalysis',
-        sectionId: 'section_4_discussion',
+        sectionId: 'section_4_deep_analysis',
         sectionNumber: 4,
-        progressPercent: 80,
+        progressPercent: 67,
         turnMode: 'none',
       },
       errors,
     )
   ) {
     const analysis = input.deepAnalysis;
-    const questionIdSet = new Set<string>();
-
-    if (
-      !Array.isArray(analysis.reflectionQuestions) ||
-      analysis.reflectionQuestions.length === 0
-    ) {
-      errors.push(
-        'deepAnalysis.reflectionQuestions must be a non-empty array.',
-      );
-    } else {
-      for (const [index, question] of analysis.reflectionQuestions.entries()) {
-        if (!isPlainRecord(question)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}] must be an object.`,
-          );
-          continue;
-        }
-        if (!isNonEmptyString(question.id)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].id must be a non-empty string.`,
-          );
-        } else if (questionIdSet.has(question.id)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions contains duplicate id "${question.id}".`,
-          );
-        } else {
-          questionIdSet.add(question.id);
-        }
-        if (
-          typeof question.number !== 'number' ||
-          !Number.isInteger(question.number) ||
-          question.number < 1
-        ) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].number must be a positive integer.`,
-          );
-        }
-        if (!isNonEmptyString(question.prompt)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].prompt must be a non-empty string.`,
-          );
-        }
-        if (!isNonEmptyString(question.category)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].category must be a non-empty string.`,
-          );
-        }
-        if (typeof question.isDefaultCurated !== 'boolean') {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].isDefaultCurated must be a boolean.`,
-          );
-        }
-        const curatedOrder = question.curatedOrder;
-        if (
-          curatedOrder !== null &&
-          curatedOrder !== 1 &&
-          curatedOrder !== 2 &&
-          curatedOrder !== 3
-        ) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].curatedOrder must be 1, 2, 3, or null.`,
-          );
-        }
-        if (!isPositiveNumber(question.estimatedMinutes)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].estimatedMinutes must be a positive number.`,
-          );
-        }
-        if (!isNonEmptyString(question.sampleAnswer)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].sampleAnswer must be a non-empty string.`,
-          );
-        }
-        if (!isNonEmptyString(question.leaderNote)) {
-          errors.push(
-            `deepAnalysis.reflectionQuestions[${index}].leaderNote must be a non-empty string.`,
-          );
-        }
-      }
-    }
-
-    if (!isNonEmptyStringArray(analysis.defaultActiveQuestionIds)) {
-      errors.push(
-        'deepAnalysis.defaultActiveQuestionIds must contain at least 1 question id.',
-      );
-    } else {
-      for (const activeId of analysis.defaultActiveQuestionIds) {
-        if (!questionIdSet.has(activeId)) {
-          errors.push(
-            `deepAnalysis.defaultActiveQuestionIds references unknown question id "${activeId}".`,
-          );
-        }
-      }
-    }
 
     if (
       !Array.isArray(analysis.verseCommentary) ||
@@ -763,24 +682,134 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
         }
       }
     }
+  }
 
-    if (!isPlainRecord(analysis.prayerCardTemplate)) {
-      errors.push('deepAnalysis.prayerCardTemplate must be an object.');
+  if (
+    validateSectionBase(
+      input.discussion,
+      {
+        key: 'discussion',
+        sectionId: 'section_5_discussion',
+        sectionNumber: 5,
+        progressPercent: 83,
+        turnMode: 'none',
+      },
+      errors,
+    )
+  ) {
+    const discussion = input.discussion;
+    const questionIdSet = new Set<string>();
+
+    if (
+      !Array.isArray(discussion.reflectionQuestions) ||
+      discussion.reflectionQuestions.length === 0
+    ) {
+      errors.push(
+        'discussion.reflectionQuestions must be a non-empty array.',
+      );
     } else {
-      if (!isNonEmptyString(analysis.prayerCardTemplate.title)) {
+      for (const [index, question] of discussion.reflectionQuestions.entries()) {
+        if (!isPlainRecord(question)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}] must be an object.`,
+          );
+          continue;
+        }
+        if (!isNonEmptyString(question.id)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].id must be a non-empty string.`,
+          );
+        } else if (questionIdSet.has(question.id)) {
+          errors.push(
+            `discussion.reflectionQuestions contains duplicate id "${question.id}".`,
+          );
+        } else {
+          questionIdSet.add(question.id);
+        }
+        if (
+          typeof question.number !== 'number' ||
+          !Number.isInteger(question.number) ||
+          question.number < 1
+        ) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].number must be a positive integer.`,
+          );
+        }
+        if (!isNonEmptyString(question.prompt)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].prompt must be a non-empty string.`,
+          );
+        }
+        if (!isNonEmptyString(question.category)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].category must be a non-empty string.`,
+          );
+        }
+        if (typeof question.isDefaultCurated !== 'boolean') {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].isDefaultCurated must be a boolean.`,
+          );
+        }
+        const curatedOrder = question.curatedOrder;
+        if (
+          curatedOrder !== null &&
+          curatedOrder !== 1 &&
+          curatedOrder !== 2 &&
+          curatedOrder !== 3
+        ) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].curatedOrder must be 1, 2, 3, or null.`,
+          );
+        }
+        if (!isPositiveNumber(question.estimatedMinutes)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].estimatedMinutes must be a positive number.`,
+          );
+        }
+        if (!isNonEmptyString(question.sampleAnswer)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].sampleAnswer must be a non-empty string.`,
+          );
+        }
+        if (!isNonEmptyString(question.leaderNote)) {
+          errors.push(
+            `discussion.reflectionQuestions[${index}].leaderNote must be a non-empty string.`,
+          );
+        }
+      }
+    }
+
+    if (!isNonEmptyStringArray(discussion.defaultActiveQuestionIds)) {
+      errors.push(
+        'discussion.defaultActiveQuestionIds must contain at least 1 question id.',
+      );
+    } else {
+      for (const activeId of discussion.defaultActiveQuestionIds) {
+        if (!questionIdSet.has(activeId)) {
+          errors.push(
+            `discussion.defaultActiveQuestionIds references unknown question id "${activeId}".`,
+          );
+        }
+      }
+    }
+
+    if (!isPlainRecord(discussion.prayerCardTemplate)) {
+      errors.push('discussion.prayerCardTemplate must be an object.');
+    } else {
+      if (!isNonEmptyString(discussion.prayerCardTemplate.title)) {
         errors.push(
-          'deepAnalysis.prayerCardTemplate.title must be a non-empty string.',
+          'discussion.prayerCardTemplate.title must be a non-empty string.',
         );
       }
-      if (!isNonEmptyString(analysis.prayerCardTemplate.instructions)) {
+      if (!isNonEmptyString(discussion.prayerCardTemplate.instructions)) {
         errors.push(
-          'deepAnalysis.prayerCardTemplate.instructions must be a non-empty string.',
+          'discussion.prayerCardTemplate.instructions must be a non-empty string.',
         );
       }
-      const prompts = analysis.prayerCardTemplate.prompts;
+      const prompts = discussion.prayerCardTemplate.prompts;
       if (!Array.isArray(prompts) || prompts.length !== 3) {
         errors.push(
-          'deepAnalysis.prayerCardTemplate.prompts must contain 3 items.',
+          'discussion.prayerCardTemplate.prompts must contain 3 items.',
         );
       } else {
         for (const [index, expectedId] of PRAYER_CARD_PROMPT_IDS.entries()) {
@@ -793,7 +822,7 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
             !isNonEmptyString(item.templateText)
           ) {
             errors.push(
-              `deepAnalysis.prayerCardTemplate.prompts[${index}] must match prompt "${expectedId}".`,
+              `discussion.prayerCardTemplate.prompts[${index}] must match prompt "${expectedId}".`,
             );
           }
         }
@@ -806,8 +835,8 @@ export function validateStudyDocument(input: unknown): StudyValidationResult {
       input.closing,
       {
         key: 'closing',
-        sectionId: 'section_5_closing',
-        sectionNumber: 5,
+        sectionId: 'section_6_closing',
+        sectionNumber: 6,
         progressPercent: 100,
         turnMode: 'none',
       },

@@ -3,6 +3,7 @@ import {
   type ClosingSection,
   type CuratedQuestionOrder,
   type DeepAnalysisSection,
+  type DiscussionSection,
   type DoctrineHighlightItem,
   type FourPointItemId,
   type GospelReadingSection,
@@ -97,7 +98,7 @@ function splitSections(markdown: string): SplitSections {
     if (lower.includes('deep analysis')) return 8;
     if (lower.includes('catholic doctrine')) return 9;
     if (lower.includes('young adult')) return 10;
-    if (lower.includes('reflection question')) return 11;
+    if (lower.includes('reflection question') || lower.includes('discussion')) return 11;
     if (lower.includes('group activity') || lower.includes('prayer card')) return 12;
     if (lower.includes('weekly challenge')) return 13;
     if (lower.includes('closing summary')) return 14;
@@ -298,7 +299,7 @@ export function parseMarkdownStudy(
   const openingPrayer: OpeningPrayerSection = {
     sectionId: 'section_1_prayer',
     sectionNumber: 1,
-    progressPercent: 20,
+    progressPercent: 17,
     turnMode: 'gated_prayer',
     title: 'Opening Prayer',
     eyebrow: 'MOMENT',
@@ -359,7 +360,7 @@ export function parseMarkdownStudy(
   const icebreaker: IcebreakerSection = {
     sectionId: 'section_2_icebreaker',
     sectionNumber: 2,
-    progressPercent: 40,
+    progressPercent: 33,
     turnMode: 'open_share',
     title: icebreakerTitle,
     eyebrow: 'ICEBREAKER · 10 MIN',
@@ -570,7 +571,7 @@ export function parseMarkdownStudy(
   const gospelReading: GospelReadingSection = {
     sectionId: 'section_3_reading',
     sectionNumber: 3,
-    progressPercent: 60,
+    progressPercent: 50,
     turnMode: 'gated_reading',
     title: 'Gospel Reading',
     eyebrow: gospelCitation,
@@ -815,19 +816,30 @@ export function parseMarkdownStudy(
   };
 
   const deepAnalysis: DeepAnalysisSection = {
-    sectionId: 'section_4_discussion',
+    sectionId: 'section_4_deep_analysis',
     sectionNumber: 4,
-    progressPercent: 80,
+    progressPercent: 67,
+    turnMode: 'none',
+    title: 'Deep Analysis',
+    eyebrow: 'DEEP ANALYSIS · 20 MIN',
+    durationMinutes: 20,
+    durationLabel: '20 min',
+    verseCommentary,
+    catholicDoctrine,
+    youngAdultApplication,
+  };
+
+  const discussion: DiscussionSection = {
+    sectionId: 'section_5_discussion',
+    sectionNumber: 5,
+    progressPercent: 83,
     turnMode: 'none',
     title: 'Lord, Help Me Pray',
-    eyebrow: 'DEEP ANALYSIS · 25 MIN',
+    eyebrow: 'DISCUSSION · 25 MIN',
     durationMinutes: 25,
     durationLabel: '25–50 min',
     defaultActiveQuestionIds,
     reflectionQuestions,
-    verseCommentary,
-    catholicDoctrine,
-    youngAdultApplication,
     prayerCardTemplate,
   };
 
@@ -912,8 +924,8 @@ export function parseMarkdownStudy(
   }
 
   const closing: ClosingSection = {
-    sectionId: 'section_5_closing',
-    sectionNumber: 5,
+    sectionId: 'section_6_closing',
+    sectionNumber: 6,
     progressPercent: 100,
     turnMode: 'none',
     title: 'Closing Prayer',
@@ -927,8 +939,8 @@ export function parseMarkdownStudy(
   };
 
   const detectionSummary: StudyDetectionSummary = {
-    sectionCount: 5,
-    sectionsDetectedLabel: '5 sections detected',
+    sectionCount: 6,
+    sectionsDetectedLabel: '6 sections detected',
     detectedLabel: `${curatedQuestions.length} Curated · ${reflectionQuestions.length} Questions`,
     curatedQuestionCount: curatedQuestions.length,
     totalQuestionCount: reflectionQuestions.length,
@@ -948,7 +960,7 @@ export function parseMarkdownStudy(
     gospelCitation,
     gospelSummaryLabel,
     estimatedMinutes,
-    sectionCount: 5,
+    sectionCount: 6,
     centralThemes,
     sessionGoals,
     oneSentenceMainPoint,
@@ -962,6 +974,7 @@ export function parseMarkdownStudy(
     icebreaker,
     gospelReading,
     deepAnalysis,
+    discussion,
     closing,
   };
 
