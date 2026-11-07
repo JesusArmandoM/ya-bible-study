@@ -16,6 +16,7 @@ import { TitleLobbyScreen } from '../lobby/TitleLobbyScreen';
 import { OpeningPrayerScreen } from '../prayer/OpeningPrayerScreen';
 import { SectionPlaceholderScreen } from '../prayer/SectionPlaceholderScreen';
 import { GospelReadingScreen } from '../reading/GospelReadingScreen';
+import { DeepAnalysisScreen } from '../analysis/DeepAnalysisScreen';
 import { Sacred3DScene } from '../stage/Sacred3DScene';
 
 export interface DualDeviceFrameProps {
@@ -207,9 +208,12 @@ export function DualDeviceFrame({
                   lastSessionCommand={liveSession.lastSessionCommand}
                 />
               ) : currentSectionId === 'section_4_deep_analysis' ? (
-                <SectionPlaceholderScreen
-                  sectionIndex={3}
+                <DeepAnalysisScreen
                   role={liveSession.role ?? role}
+                  isLeader={isLeader}
+                  session={session}
+                  localStudyDocument={studyDocument}
+                  publicUrl={publicUrl}
                   onPreviousSection={handlePreviousSection}
                   onNextSection={handleNextSection}
                 />
