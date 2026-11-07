@@ -539,7 +539,7 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
       'session_updated',
       (m) => m.command === 'next_section' && m.requestId === 'next-3',
     );
-    expect(cleared.session.currentSectionId).toBe('section_4_discussion');
+    expect(cleared.session.currentSectionId).toBe('section_4_deep_analysis');
     expect(cleared.session.volunteerTurn).toBeNull();
 
     raiseHand(p1, created.sessionCode, j1.memberId, 'raise-after-next');

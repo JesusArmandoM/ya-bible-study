@@ -226,7 +226,7 @@ const PRAYER_SESSION: PublicLiveSessionSnapshot = {
 };
 
 describe('OpeningPrayerScreen — Section 1 surface', () => {
-  it('renders SECTION 1 OF 5 / 20% / Opening Prayer with role-appropriate subtitle copy', () => {
+  it('renders SECTION 1 OF 6 / 17% / Opening Prayer with role-appropriate subtitle copy', () => {
     const baseProps: Omit<OpeningPrayerScreenProps, 'role'> = {
       session: PRAYER_SESSION,
       memberId: 'participant-1',
@@ -238,9 +238,9 @@ describe('OpeningPrayerScreen — Section 1 surface', () => {
       <OpeningPrayerScreen {...baseProps} role="Participant" />,
     );
     expect(screen.getByTestId('section-one-label')).toHaveTextContent(
-      'SECTION 1 OF 5',
+      'SECTION 1 OF 6',
     );
-    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('20%');
+    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('17%');
     expect(screen.getByTestId('section-one-title')).toHaveTextContent(
       'Opening Prayer',
     );

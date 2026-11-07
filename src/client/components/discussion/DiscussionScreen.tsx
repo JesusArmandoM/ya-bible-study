@@ -25,6 +25,8 @@ export interface DiscussionScreenProps {
   memberId?: string | null;
   onSwitchQuestion: (questionId: string) => void | Promise<void>;
   onAddQuestion: (question: SessionDiscussionQuestion) => void | Promise<void>;
+  /** Study Leader: return to Section 4 (`previous_section`). */
+  onPreviousSection?: () => void | Promise<void>;
   onNextSection: () => void | Promise<void>;
   onSubmitReflection?: (input: {
     questionId: string;
@@ -42,6 +44,7 @@ export function DiscussionScreen({
   memberId,
   onSwitchQuestion,
   onAddQuestion,
+  onPreviousSection,
   onNextSection,
   onSubmitReflection,
   publicUrl = null,
@@ -92,7 +95,7 @@ export function DiscussionScreen({
   return (
     <div className="discussion-screen" data-testid="discussion-screen">
       <SectionProgressHeader
-        sectionNumber={4}
+        sectionNumber={5}
         isLeader={isLeader}
         sessionCode={session.sessionCode}
         publicUrl={publicUrl}
@@ -105,6 +108,18 @@ export function DiscussionScreen({
 
         {isLeader && (
           <div className="pastoral-trigger-container">
+            {onPreviousSection && (
+              <button
+                type="button"
+                className="section-previous-btn"
+                data-testid="previous-section-btn"
+                onClick={() => {
+                  void Promise.resolve(onPreviousSection()).catch(() => {});
+                }}
+              >
+                ← Previous
+              </button>
+            )}
             <button
               type="button"
               className="pastoral-notes-trigger-btn"

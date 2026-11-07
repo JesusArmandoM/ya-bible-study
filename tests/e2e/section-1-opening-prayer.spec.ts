@@ -123,9 +123,9 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
 
       for (const page of [pageLeader, pageParticipant]) {
         await expect(page.getByTestId('section-one-label')).toHaveText(
-          'SECTION 1 OF 5',
+          'SECTION 1 OF 6',
         );
-        await expect(page.getByTestId('section-one-percent')).toHaveText('20%');
+        await expect(page.getByTestId('section-one-percent')).toHaveText('17%');
         await expect(page.getByTestId('section-one-title')).toHaveText(
           'Opening Prayer',
         );

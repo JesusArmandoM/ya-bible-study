@@ -14,6 +14,7 @@ import { IcebreakerScreen } from '../icebreaker/IcebreakerScreen';
 import { ParticipantWaitingScreen } from '../lobby/ParticipantWaitingScreen';
 import { TitleLobbyScreen } from '../lobby/TitleLobbyScreen';
 import { OpeningPrayerScreen } from '../prayer/OpeningPrayerScreen';
+import { SectionPlaceholderScreen } from '../prayer/SectionPlaceholderScreen';
 import { GospelReadingScreen } from '../reading/GospelReadingScreen';
 import { Sacred3DScene } from '../stage/Sacred3DScene';
 
@@ -55,6 +56,14 @@ export function DualDeviceFrame({
 
   const handleNextSection = useCallback(() => {
     void liveSession.nextSection().catch(() => {});
+  }, [liveSession]);
+
+  const handlePreviousSection = useCallback(() => {
+    void liveSession.previousSection().catch(() => {});
+  }, [liveSession]);
+
+  const handleResetTurn = useCallback(() => {
+    void liveSession.resetTurn().catch(() => {});
   }, [liveSession]);
 
   const session = liveSession.session;
@@ -143,6 +152,7 @@ export function DualDeviceFrame({
                     void liveSession.overrideTurn().catch(() => {});
                   }}
                   onNextSection={handleNextSection}
+                  onResetTurn={handleResetTurn}
                   onPickRandomly={() => {
                     void randomSelection.pickRandom().catch(() => {});
                   }}
@@ -162,6 +172,7 @@ export function DualDeviceFrame({
                   memberId={liveSession.credentials?.memberId ?? null}
                   publicUrl={publicUrl}
                   onToggleHandRaised={(next) => liveSession.setHandRaised(next)}
+                  onPreviousSection={handlePreviousSection}
                   onNextSection={handleNextSection}
                 />
               ) : currentSectionId === 'section_3_reading' ? (
@@ -181,7 +192,9 @@ export function DualDeviceFrame({
                   onOverrideTurn={() => {
                     void liveSession.overrideTurn().catch(() => {});
                   }}
+                  onPreviousSection={handlePreviousSection}
                   onNextSection={handleNextSection}
+                  onResetTurn={handleResetTurn}
                   onPickRandomly={() => {
                     void randomSelection.pickRandom().catch(() => {});
                   }}
@@ -193,7 +206,14 @@ export function DualDeviceFrame({
                   }}
                   lastSessionCommand={liveSession.lastSessionCommand}
                 />
-              ) : currentSectionId === 'section_4_discussion' ? (
+              ) : currentSectionId === 'section_4_deep_analysis' ? (
+                <SectionPlaceholderScreen
+                  sectionIndex={3}
+                  role={liveSession.role ?? role}
+                  onPreviousSection={handlePreviousSection}
+                  onNextSection={handleNextSection}
+                />
+              ) : currentSectionId === 'section_5_discussion' ? (
                 <DiscussionScreen
                   role={liveSession.role ?? role}
                   session={session}
@@ -206,18 +226,20 @@ export function DualDeviceFrame({
                   onAddQuestion={(q) => {
                     void liveSession.addQuestion(q).catch(() => {});
                   }}
+                  onPreviousSection={handlePreviousSection}
                   onNextSection={handleNextSection}
                   onSubmitReflection={(input) => {
                     void liveSession.submitReflection(input).catch(() => {});
                   }}
                 />
-              ) : currentSectionId === 'section_5_closing' ? (
+              ) : currentSectionId === 'section_6_closing' ? (
                 <ClosingPrayerScreen
                   role={liveSession.role ?? role}
                   session={session}
                   localStudyDocument={studyDocument}
                   memberId={liveSession.credentials?.memberId ?? null}
                   publicUrl={publicUrl}
+                  onPreviousSection={handlePreviousSection}
                   onFinishStudy={() => {
                     void liveSession.finishStudy().catch(() => {});
                   }}

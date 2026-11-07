@@ -29,6 +29,8 @@ export interface IcebreakerScreenProps {
   memberId?: string | null;
   /** Participant self-service: raise (`true`) / lower (`false`) own hand. */
   onToggleHandRaised: (next: boolean) => void | Promise<void>;
+  /** Study Leader: return to Section 1 (`previous_section`). */
+  onPreviousSection?: () => void | Promise<void>;
   /** Study Leader: advance to Section 3 (`next_section`). */
   onNextSection?: () => void | Promise<void>;
   /** Sanitized PUBLIC_URL origin from GET /api/health (null when unset). */
@@ -78,6 +80,7 @@ export function IcebreakerScreen({
   localStudyDocument = null,
   memberId = null,
   onToggleHandRaised,
+  onPreviousSection,
   onNextSection,
   publicUrl = null,
   onShareQr,
@@ -121,7 +124,7 @@ export function IcebreakerScreen({
       className="icebreaker-screen"
       data-testid="icebreaker-screen"
       data-role={isLeader ? 'leader' : 'participant'}
-      aria-label="Section 2 of 5, Icebreaker"
+      aria-label="Section 2 of 6, Icebreaker"
     >
       <SectionProgressHeader
         sectionNumber={2}
@@ -159,20 +162,36 @@ export function IcebreakerScreen({
           />
           <div className="icebreaker-advance-zone" data-testid="icebreaker-advance-zone">
             <HandRaiseCountPill count={raisedCount} />
-            <motion.button
-              type="button"
-              className="icebreaker-advance-cta"
-              data-testid="icebreaker-advance-cta"
-              whileTap={{ scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-              onClick={() => {
-                void Promise.resolve(onNextSection?.()).catch(() => {
-                  // Failure is surfaced via the session error path.
-                });
-              }}
-            >
-              Begin Reading →
-            </motion.button>
+            <div className="leader-advance-nav-row">
+              {onPreviousSection && (
+                <button
+                  type="button"
+                  className="section-previous-btn"
+                  data-testid="previous-section-btn"
+                  onClick={() => {
+                    void Promise.resolve(onPreviousSection()).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                >
+                  ← Previous
+                </button>
+              )}
+              <motion.button
+                type="button"
+                className="icebreaker-advance-cta"
+                data-testid="icebreaker-advance-cta"
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                onClick={() => {
+                  void Promise.resolve(onNextSection?.()).catch(() => {
+                    // Failure is surfaced via the session error path.
+                  });
+                }}
+              >
+                Begin Reading →
+              </motion.button>
+            </div>
           </div>
         </>
       ) : (

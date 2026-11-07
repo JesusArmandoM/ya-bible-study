@@ -3,7 +3,7 @@ import { resolveJoinUrl } from '../../lib/runtimeUrl';
 import { RoomCodeShareSheet } from '../lobby/RoomCodeShareSheet';
 
 export interface SectionProgressHeaderProps {
-  /** 1-based study section number (1..5). */
+  /** 1-based study section number (1..6). */
   sectionNumber: number;
   /** Whether the current viewer is the Study Leader. */
   isLeader?: boolean;
@@ -15,8 +15,10 @@ export interface SectionProgressHeaderProps {
   onShareQr?: () => void;
 }
 
+const PROGRESS_PERCENTS = [17, 33, 50, 67, 83, 100] as const;
+
 /**
- * Shared `SECTION {n} OF 5 · {percent}%` progress header with the 4px gold
+ * Shared `SECTION {n} OF 6 · {percent}%` progress header with the 4px gold
  * progress bar and Study Leader persistent QR share button. Reused by all
  * active study sections; keeps the legacy-stable `section-one-*` class names
  * and test hooks so accepted assertions stay green.
@@ -28,7 +30,8 @@ export function SectionProgressHeader({
   publicUrl = null,
   onShareQr,
 }: SectionProgressHeaderProps) {
-  const percent = sectionNumber * 20;
+  const percent =
+    PROGRESS_PERCENTS[Math.min(Math.max(sectionNumber - 1, 0), 5)];
   const [shareOpen, setShareOpen] = useState(false);
   const showShare = Boolean(isLeader || onShareQr);
 
@@ -53,7 +56,7 @@ export function SectionProgressHeader({
     <>
       <div className="section-one-header">
         <span className="section-one-label" data-testid="section-one-label">
-          SECTION {sectionNumber} OF 5
+          SECTION {sectionNumber} OF 6
         </span>
         <div className="section-header-actions">
           {showShare && (
@@ -100,4 +103,3 @@ export function SectionProgressHeader({
     </>
   );
 }
-

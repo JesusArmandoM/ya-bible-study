@@ -119,9 +119,9 @@ describe('IcebreakerScreen — Scenario 1 content on both roles', () => {
   it('shows the persistent header, ICEBREAKER · 10 MIN eyebrow, and Outsiders Wanted title for both roles', () => {
     const { unmount } = renderScreen();
     expect(screen.getByTestId('section-one-label')).toHaveTextContent(
-      'SECTION 2 OF 5',
+      'SECTION 2 OF 6',
     );
-    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('40%');
+    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('33%');
     expect(screen.getByTestId('icebreaker-eyebrow')).toHaveTextContent(
       'ICEBREAKER · 10 MIN',
     );
@@ -132,9 +132,9 @@ describe('IcebreakerScreen — Scenario 1 content on both roles', () => {
 
     renderScreen({ role: 'Study Leader', localStudyDocument: SEED });
     expect(screen.getByTestId('section-one-label')).toHaveTextContent(
-      'SECTION 2 OF 5',
+      'SECTION 2 OF 6',
     );
-    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('40%');
+    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('33%');
     expect(screen.getByTestId('icebreaker-eyebrow')).toHaveTextContent(
       'ICEBREAKER · 10 MIN',
     );

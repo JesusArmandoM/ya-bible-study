@@ -116,9 +116,9 @@ async function reachIcebreaker(
   for (const page of all) {
     await expect(page.getByTestId('icebreaker-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 2 OF 5',
+      'SECTION 2 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('40%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('33%');
   }
 }
 
@@ -134,9 +134,9 @@ async function reachGospelReading(
   for (const page of all) {
     await expect(page.getByTestId('gospel-reading-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 3 OF 5',
+      'SECTION 3 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('60%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('50%');
   }
 }
 
@@ -157,12 +157,12 @@ test.describe('Section 3 — Gospel Reading sole passage presentation with gated
       await startStudyOnSection1(pageLeader, [pageParticipant]);
       await reachGospelReading(pageLeader, [pageLeader, pageParticipant]);
 
-      // Both roles see SECTION 3 OF 5 / 60%, Matthew 15:21–28 citation, and Gospel Reading title
+      // Both roles see SECTION 3 OF 6 / 50%, Matthew 15:21–28 citation, and Gospel Reading title
       for (const page of [pageLeader, pageParticipant]) {
         await expect(page.getByTestId('section-one-label')).toHaveText(
-          'SECTION 3 OF 5',
+          'SECTION 3 OF 6',
         );
-        await expect(page.getByTestId('section-one-percent')).toHaveText('60%');
+        await expect(page.getByTestId('section-one-percent')).toHaveText('50%');
         await expect(page.getByTestId('reading-title')).toHaveText(
           'Gospel Reading',
         );
@@ -413,17 +413,17 @@ test.describe('Section 3 — Gospel Reading sole passage presentation with gated
       // Leader's advance bar morphs into gold Begin Discussion → CTA
       await expect(pageLeader.getByTestId('reading-advance-cta')).toBeVisible();
       await expect(pageLeader.getByTestId('reading-advance-cta')).toHaveText(
-        'Begin Discussion →',
+        'Continue to Deep Analysis →',
       );
 
       // Leader advances all clients to Section 4
       await pageLeader.getByTestId('reading-advance-cta').click();
       for (const page of [pageLeader, pageChosen, pageBystander]) {
-        await expect(page.getByTestId('discussion-screen')).toBeVisible();
+        await expect(page.getByTestId('deep-analysis-placeholder')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(
-          'SECTION 4 OF 5',
+          'SECTION 4 OF 6',
         );
-        await expect(page.getByTestId('section-one-percent')).toHaveText('80%');
+        await expect(page.getByTestId('section-one-percent')).toHaveText('67%');
       }
     } finally {
       await closeLiveSession(pageLeader);
@@ -483,9 +483,9 @@ test.describe('Section 3 — Gospel Reading sole passage presentation with gated
       await pageLeader.getByTestId('reading-override-button').click();
       await expect(pageLeader.getByTestId('reading-advance-cta')).toBeVisible();
       await pageLeader.getByTestId('reading-advance-cta').click();
-      await expect(pageLeader.getByTestId('discussion-screen')).toBeVisible();
+      await expect(pageLeader.getByTestId('deep-analysis-placeholder')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
-        'SECTION 4 OF 5',
+        'SECTION 4 OF 6',
       );
     } finally {
       await closeLiveSession(pageLeader);

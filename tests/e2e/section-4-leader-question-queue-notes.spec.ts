@@ -115,9 +115,9 @@ async function reachIcebreaker(
   for (const page of all) {
     await expect(page.getByTestId('icebreaker-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 2 OF 5',
+      'SECTION 2 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('40%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('33%');
   }
 }
 
@@ -133,9 +133,9 @@ async function reachGospelReading(
   for (const page of all) {
     await expect(page.getByTestId('gospel-reading-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 3 OF 5',
+      'SECTION 3 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('60%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('50%');
   }
 }
 
@@ -146,15 +146,19 @@ async function reachDiscussion(
   await reachGospelReading(pageLeader, all);
   await pageLeader.getByTestId('reading-override-button').click();
   await expect(pageLeader.getByTestId('reading-advance-cta')).toContainText(
-    'Begin Discussion →',
+    'Continue to Deep Analysis →',
   );
   await pageLeader.getByTestId('reading-advance-cta').click();
   for (const page of all) {
+    await expect(page.getByTestId('deep-analysis-placeholder')).toBeVisible();
+  }
+  await pageLeader.getByTestId('deep-analysis-advance-cta').click();
+  for (const page of all) {
     await expect(page.getByTestId('discussion-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 4 OF 5',
+      'SECTION 5 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('80%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('83%');
   }
 }
 
@@ -177,12 +181,12 @@ test.describe('Section 4 Deep Analysis Leader Question Queue & Pastoral Notes (u
 
       await reachDiscussion(pageLeader, [pageLeader, pageParticipant]);
 
-      // Both roles show Section 4 header, title, and eyebrow
+      // Both roles show Section 5 header, title, and eyebrow
       for (const page of [pageLeader, pageParticipant]) {
         await expect(page.getByTestId('section-one-label')).toHaveText(
-          'SECTION 4 OF 5',
+          'SECTION 5 OF 6',
         );
-        await expect(page.getByTestId('section-one-percent')).toHaveText('80%');
+        await expect(page.getByTestId('section-one-percent')).toHaveText('83%');
         await expect(page.getByText('DEEP ANALYSIS · 25 MIN')).toBeVisible();
         await expect(page.getByText('Lord, Help Me Pray')).toBeVisible();
 
@@ -441,11 +445,11 @@ test.describe('Section 4 Deep Analysis Leader Question Queue & Pastoral Notes (u
       // Leader uses direct advance (mercy, not pace, is the goal)
       await pageLeader.getByTestId('advance-section-5-direct').click();
 
-      // All clients immediately advance to Section 5 (ClosingPrayerScreen since section-5-closing-prayer-completion)
+      // All clients immediately advance to Section 6 (ClosingPrayerScreen)
       for (const page of [pageLeader, pageParticipant]) {
         await expect(page.getByTestId('closing-prayer-screen')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(
-          'SECTION 5 OF 5',
+          'SECTION 6 OF 6',
         );
         await expect(page.getByTestId('section-one-percent')).toHaveText('100%');
       }

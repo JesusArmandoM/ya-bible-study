@@ -124,9 +124,9 @@ async function reachIcebreaker(
   for (const page of all) {
     await expect(page.getByTestId('icebreaker-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 2 OF 5',
+      'SECTION 2 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('40%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('33%');
   }
 }
 
@@ -399,9 +399,9 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
       for (const page of [pageLeader, pageParticipant]) {
         await expect(page.getByTestId('gospel-reading-screen')).toBeVisible();
         await expect(page.getByTestId('section-one-label')).toHaveText(
-          'SECTION 3 OF 5',
+          'SECTION 3 OF 6',
         );
-        await expect(page.getByTestId('section-one-percent')).toHaveText('60%');
+        await expect(page.getByTestId('section-one-percent')).toHaveText('50%');
       }
     } finally {
       await closeLiveSession(pageLeader);

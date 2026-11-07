@@ -13,6 +13,8 @@ export interface LeaderAdvanceZoneProps {
   onNextSection: () => void;
   /** Study Leader: complete the turn on the volunteer's behalf (`override_turn`). */
   onOverrideTurn: () => void;
+  /** Study Leader: reset the volunteer turn (`reset_turn`). */
+  onResetTurn?: () => void;
 }
 
 /** DESIGN.md Motion: `springMorph` (280/28) for the locked-bar <-> CTA morph. */
@@ -70,6 +72,7 @@ export function LeaderAdvanceZone({
   completedAt,
   onNextSection,
   onOverrideTurn,
+  onResetTurn,
 }: LeaderAdvanceZoneProps) {
   const reducedMotion = usePrefersReducedMotion();
   const completed = completedAt != null;
@@ -78,23 +81,35 @@ export function LeaderAdvanceZone({
     <div className="prayer-advance-zone" data-testid="prayer-advance-zone">
       <AnimatePresence initial={false} mode="wait">
         {completed ? (
-          <motion.button
-            key="prayer-advance-cta"
-            type="button"
-            className="prayer-advance-cta"
-            data-testid="prayer-advance-cta"
-            onClick={onNextSection}
-            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={
-              reducedMotion
-                ? { opacity: 0, transition: { duration: 0 } }
-                : { opacity: 0, y: -8 }
-            }
-            transition={morphTransition(reducedMotion)}
-          >
-            Continue to Section 2 →
-          </motion.button>
+          <div key="prayer-completed-advance" className="prayer-completed-advance-group">
+            <motion.button
+              key="prayer-advance-cta"
+              type="button"
+              className="prayer-advance-cta"
+              data-testid="prayer-advance-cta"
+              onClick={onNextSection}
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={
+                reducedMotion
+                  ? { opacity: 0, transition: { duration: 0 } }
+                  : { opacity: 0, y: -8 }
+              }
+              transition={morphTransition(reducedMotion)}
+            >
+              Continue to Section 2 →
+            </motion.button>
+            {onResetTurn && (
+              <button
+                type="button"
+                className="section-reset-turn-btn"
+                data-testid="reset-turn-btn"
+                onClick={onResetTurn}
+              >
+                🔄 Reset turn
+              </button>
+            )}
+          </div>
         ) : (
           <LockedAdvanceBar key="locked-advance-bar" role="Study Leader" />
         )}

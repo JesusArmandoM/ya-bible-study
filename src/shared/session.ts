@@ -46,8 +46,9 @@ export const STUDY_SECTION_IDS = [
   'section_1_prayer',
   'section_2_icebreaker',
   'section_3_reading',
-  'section_4_discussion',
-  'section_5_closing',
+  'section_4_deep_analysis',
+  'section_5_discussion',
+  'section_6_closing',
 ] as const;
 
 export type StudySectionId = (typeof STUDY_SECTION_IDS)[number];
@@ -331,6 +332,10 @@ export interface PublicLiveSessionSnapshot {
   members: PublicSessionMember[];
   /** Title/meta-only study summary once the leader dispatched `load_study`. */
   study?: SessionStudySummary | null;
+  /** Section entry ISO timestamp (additive in protocol v3). */
+  sectionEnteredAt?: string | null;
+  /** Completed gated/volunteer section IDs that bypass turn locks on revisit (additive in protocol v3). */
+  completedSectionIds?: StudySectionId[];
   /** Per-section volunteer turn state (additive in protocol v3). */
   volunteerTurn?: VolunteerTurnState | null;
   /** Discussion queue & active question state in Section 4 (additive in protocol v3). */
@@ -1652,6 +1657,8 @@ export type LeaderCommandType =
   | 'load_study'
   | 'start_study'
   | 'next_section'
+  | 'previous_section'
+  | 'reset_turn'
   | 'choose_volunteer'
   | 'override_turn'
   | 'pick_random'
@@ -1741,6 +1748,20 @@ export type ClientWsMessage =
     }
   | {
       type: 'next_section';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'previous_section';
+      sessionCode: string;
+      leaderToken: string;
+      memberId?: string;
+      requestId?: string;
+    }
+  | {
+      type: 'reset_turn';
       sessionCode: string;
       leaderToken: string;
       memberId?: string;

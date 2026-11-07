@@ -210,7 +210,7 @@ describe('WebSocket Section 5 Study Completion & Ephemeral Reflection Purging (p
     });
     await leaderPeer.waitFor('session_updated', (m) => m.command === 'override_turn');
 
-    // Advance to Section 4 (Discussion)
+    // Advance to Section 4 (Deep Analysis)
     leaderPeer.send({
       type: 'next_section',
       sessionCode,
@@ -218,7 +218,15 @@ describe('WebSocket Section 5 Study Completion & Ephemeral Reflection Purging (p
     });
     await leaderPeer.waitFor('session_updated', (m) => m.command === 'next_section');
 
-    // Participant submits a reflection in Section 4
+    // Advance to Section 5 (Discussion)
+    leaderPeer.send({
+      type: 'next_section',
+      sessionCode,
+      leaderToken,
+    });
+    await leaderPeer.waitFor('session_updated', (m) => m.command === 'next_section');
+
+    // Participant submits a reflection in Section 5
     participantPeer.send({
       type: 'submit_reflection',
       sessionCode,
@@ -235,18 +243,18 @@ describe('WebSocket Section 5 Study Completion & Ephemeral Reflection Purging (p
     const internalSession = (sessionStore as any).sessions.get(sessionCode);
     expect(internalSession.discussionState?.reflections).toHaveLength(1);
 
-    // Advance to Section 5 (Closing Prayer)
+    // Advance to Section 6 (Closing Prayer)
     leaderPeer.send({
       type: 'next_section',
       sessionCode,
       leaderToken,
     });
-    const section5Msg = await leaderPeer.waitFor(
+    const section6Msg = await leaderPeer.waitFor(
       'session_updated',
       (m) => m.command === 'next_section',
     );
-    expect(section5Msg.session.currentSectionId).toBe('section_5_closing');
-    expect(section5Msg.session.currentSectionIndex).toBe(4);
+    expect(section6Msg.session.currentSectionId).toBe('section_6_closing');
+    expect(section6Msg.session.currentSectionIndex).toBe(5);
   }
 
   it('rejects Participant attempt to finish study with FORBIDDEN_LEADER_ONLY', async () => {

@@ -459,6 +459,11 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                  onResetTurn={() => {
+                    void liveSession.resetTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                   onPickRandomly={() => {
                     void randomSelection.pickRandom().catch(() => {
                       // Failure is surfaced via the session error path.
@@ -486,6 +491,11 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   onToggleHandRaised={(next) =>
                     liveSession.setHandRaised(next)
                   }
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                   onNextSection={() => {
                     void liveSession.nextSection().catch(() => {
                       // Failure is surfaced via the session error path.
@@ -517,8 +527,18 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                   onNextSection={() => {
                     void liveSession.nextSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onResetTurn={() => {
+                    void liveSession.resetTurn().catch(() => {
                       // Failure is surfaced via the session error path.
                     });
                   }}
@@ -539,7 +559,22 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   }}
                   lastSessionCommand={liveSession.lastSessionCommand}
                 />
-              ) : liveSession.session.currentSectionId === 'section_4_discussion' ? (
+              ) : liveSession.session.currentSectionId === 'section_4_deep_analysis' ? (
+                <SectionPlaceholderScreen
+                  sectionIndex={3}
+                  role={liveSession.role ?? 'Participant'}
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onNextSection={() => {
+                    void liveSession.nextSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                />
+              ) : liveSession.session.currentSectionId === 'section_5_discussion' ? (
                 <DiscussionScreen
                   role={liveSession.role ?? 'Participant'}
                   session={liveSession.session}
@@ -556,6 +591,11 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                   onNextSection={() => {
                     void liveSession.nextSection().catch(() => {
                       // Failure is surfaced via the session error path.
@@ -567,13 +607,18 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                     });
                   }}
                 />
-              ) : liveSession.session.currentSectionId === 'section_5_closing' ? (
+              ) : liveSession.session.currentSectionId === 'section_6_closing' ? (
                 <ClosingPrayerScreen
                   role={liveSession.role ?? 'Participant'}
                   session={liveSession.session}
                   localStudyDocument={studySetup.study}
                   memberId={liveSession.credentials?.memberId ?? null}
                   publicUrl={publicUrl}
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
                   onFinishStudy={() => {
                     void liveSession.finishStudy().catch(() => {
                       // Failure is surfaced via the session error path.
@@ -584,9 +629,16 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
               ) : (
                 <SectionPlaceholderScreen
                   sectionIndex={liveSession.session.currentSectionIndex ?? 0}
+                  role={liveSession.role ?? 'Participant'}
                   isLeader={isLeader}
                   sessionCode={liveSession.session.sessionCode}
                   publicUrl={publicUrl}
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {});
+                  }}
+                  onNextSection={() => {
+                    void liveSession.nextSection().catch(() => {});
+                  }}
                 />
               )
             ) : null

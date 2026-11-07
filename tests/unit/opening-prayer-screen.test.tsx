@@ -105,9 +105,9 @@ describe('OpeningPrayerScreen — Scenario 1 content on both roles', () => {
     renderScreen();
 
     expect(screen.getByTestId('section-one-label')).toHaveTextContent(
-      'SECTION 1 OF 5',
+      'SECTION 1 OF 6',
     );
-    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('20%');
+    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('17%');
     expect(screen.getByTestId('section-one-title')).toHaveTextContent(
       'Opening Prayer',
     );

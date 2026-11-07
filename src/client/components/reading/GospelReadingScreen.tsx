@@ -42,8 +42,12 @@ export interface GospelReadingScreenProps {
   onCompleteTurn?: () => void | Promise<void>;
   /** Study Leader: complete turn on reader's behalf (`override_turn`). */
   onOverrideTurn?: () => void | Promise<void>;
+  /** Study Leader: return to Section 2 (`previous_section`). */
+  onPreviousSection?: () => void | Promise<void>;
   /** Study Leader: advance sections (`next_section`, unlocked by `completedAt`). */
   onNextSection?: () => void | Promise<void>;
+  /** Study Leader: reset reader volunteer turn (`reset_turn`). */
+  onResetTurn?: () => void | Promise<void>;
   /** Study Leader: stage a random candidate (`pick_random`). */
   onPickRandomly?: () => void | Promise<void>;
   /** Study Leader: re-roll the pending candidate (`retry_random`). */
@@ -95,7 +99,9 @@ export function GospelReadingScreen({
   onChooseVolunteer,
   onCompleteTurn,
   onOverrideTurn,
+  onPreviousSection,
   onNextSection,
+  onResetTurn,
   onPickRandomly,
   onRetryRandom,
   onConfirmRandom,
@@ -275,60 +281,86 @@ export function GospelReadingScreen({
             className="reading-advance-zone"
             data-testid="reading-advance-zone"
           >
-            <AnimatePresence initial={false} mode="wait">
-              {completedAt != null ? (
-                <motion.button
-                  key="reading-advance-cta"
+            <div className="leader-advance-nav-row">
+              {onPreviousSection && (
+                <button
                   type="button"
-                  className="reading-advance-cta"
-                  data-testid="reading-advance-cta"
-                  initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={
-                    reducedMotion
-                      ? { opacity: 0, transition: { duration: 0 } }
-                      : { opacity: 0, y: -8 }
-                  }
-                  transition={morphTransition(reducedMotion)}
+                  className="section-previous-btn"
+                  data-testid="previous-section-btn"
                   onClick={() => {
-                    if (onNextSection) {
-                      void onNextSection();
-                    }
+                    void Promise.resolve(onPreviousSection()).catch(() => {});
                   }}
                 >
-                  Begin Discussion →
-                </motion.button>
-              ) : (
-                <div key="locked-group" className="reading-locked-group">
-                  <div
-                    className="locked-advance-bar"
-                    data-testid="locked-advance-bar"
-                    data-role="leader"
-                    role="status"
-                  >
-                    <span className="locked-advance-icon" aria-hidden="true">
-                      🔒
-                    </span>
-                    <span className="locked-advance-copy">
-                      Reading proceeds: Waiting for reader to finish to advance
-                    </span>
-                  </div>
-
-                  {onOverrideTurn && (
-                    <button
-                      type="button"
-                      className="reading-override-button"
-                      data-testid="reading-override-button"
-                      onClick={() => {
-                        void onOverrideTurn();
-                      }}
-                    >
-                      Mark done (Leader override)
-                    </button>
-                  )}
-                </div>
+                  ← Previous
+                </button>
               )}
-            </AnimatePresence>
+              <AnimatePresence initial={false} mode="wait">
+                {completedAt != null ? (
+                  <motion.button
+                    key="reading-advance-cta"
+                    type="button"
+                    className="reading-advance-cta"
+                    data-testid="reading-advance-cta"
+                    initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={
+                      reducedMotion
+                        ? { opacity: 0, transition: { duration: 0 } }
+                        : { opacity: 0, y: -8 }
+                    }
+                    transition={morphTransition(reducedMotion)}
+                    onClick={() => {
+                      if (onNextSection) {
+                        void onNextSection();
+                      }
+                    }}
+                  >
+                    Continue to Deep Analysis →
+                  </motion.button>
+                ) : (
+                  <div key="locked-group" className="reading-locked-group">
+                    <div
+                      className="locked-advance-bar"
+                      data-testid="locked-advance-bar"
+                      data-role="leader"
+                      role="status"
+                    >
+                      <span className="locked-advance-icon" aria-hidden="true">
+                        🔒
+                      </span>
+                      <span className="locked-advance-copy">
+                        Reading proceeds: Waiting for reader to finish to advance
+                      </span>
+                    </div>
+
+                    {onOverrideTurn && (
+                      <button
+                        type="button"
+                        className="reading-override-button"
+                        data-testid="reading-override-button"
+                        onClick={() => {
+                          void onOverrideTurn();
+                        }}
+                      >
+                        Mark done (Leader override)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+            {completedAt != null && onResetTurn && (
+              <button
+                type="button"
+                className="section-reset-turn-btn"
+                data-testid="reset-turn-btn"
+                onClick={() => {
+                  void Promise.resolve(onResetTurn()).catch(() => {});
+                }}
+              >
+                🔄 Reset turn
+              </button>
+            )}
           </div>
         </section>
       ) : (

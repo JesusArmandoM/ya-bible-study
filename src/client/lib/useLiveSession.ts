@@ -56,6 +56,10 @@ export interface UseLiveSessionResult {
   overrideTurn: () => Promise<void>;
   /** Study Leader: advance to the next section (`next_section`). */
   nextSection: () => Promise<void>;
+  /** Study Leader: return to the previous section (`previous_section`). */
+  previousSection: () => Promise<void>;
+  /** Study Leader: reset or re-run the volunteer turn on a gated section (`reset_turn`). */
+  resetTurn: () => Promise<void>;
   /** Participant self-service: raise (`true`) or lower (`false`) own hand. */
   setHandRaised: (raised: boolean) => Promise<void>;
   /** Study Leader: lower one participant's hand. */
@@ -502,6 +506,58 @@ export function useLiveSession(
     }
   }, [client]);
 
+  const previousSection = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'previous_section',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to return to the previous section';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
+  const resetTurn = useCallback(async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const stored = client.getCredentials();
+      const response = await client.sendLeaderCommand({
+        type: 'reset_turn',
+        ...(stored?.sessionCode ? { sessionCode: stored.sessionCode } : {}),
+        ...(stored?.leaderToken ? { leaderToken: stored.leaderToken } : {}),
+        ...(stored?.memberId ? { memberId: stored.memberId } : {}),
+      });
+      if (response.type === 'session_updated') {
+        setSession(response.session);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to reset the volunteer turn';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [client]);
+
   const setHandRaised = useCallback(
     async (raised: boolean) => {
       setIsSubmitting(true);
@@ -733,6 +789,8 @@ export function useLiveSession(
     completeTurn,
     overrideTurn,
     nextSection,
+    previousSection,
+    resetTurn,
     setHandRaised,
     lowerHand,
     clearRaisedHands,

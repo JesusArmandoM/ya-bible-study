@@ -278,9 +278,9 @@ describe('WebSocket Section 3 Gospel Reading turn (protocol v3)', () => {
     });
     const sec4 = await leader.waitFor(
       'session_updated',
-      (m) => m.command === 'next_section' && m.session.currentSectionId === 'section_4_discussion',
+      (m) => m.command === 'next_section' && m.session.currentSectionId === 'section_4_deep_analysis',
     );
-    expect(sec4.session.currentSectionId).toBe('section_4_discussion');
+    expect(sec4.session.currentSectionId).toBe('section_4_deep_analysis');
     expect(sec4.session.volunteerTurn).toBeNull();
   });
 
@@ -462,9 +462,9 @@ describe('WebSocket Section 3 Gospel Reading turn (protocol v3)', () => {
     });
     const sec4 = await leader.waitFor(
       'session_updated',
-      (m) => m.command === 'next_section' && m.session.currentSectionId === 'section_4_discussion',
+      (m) => m.command === 'next_section' && m.session.currentSectionId === 'section_4_deep_analysis',
     );
-    expect(sec4.session.currentSectionId).toBe('section_4_discussion');
+    expect(sec4.session.currentSectionId).toBe('section_4_deep_analysis');
     expect(sec4.session.volunteerTurn).toBeNull();
   });
 
@@ -493,6 +493,6 @@ describe('WebSocket Section 3 Gospel Reading turn (protocol v3)', () => {
       requestId: 'adv-solo',
     });
     const sec4 = await leader.waitFor('session_updated', (m) => m.command === 'next_section');
-    expect(sec4.session.currentSectionId).toBe('section_4_discussion');
+    expect(sec4.session.currentSectionId).toBe('section_4_deep_analysis');
   });
 });

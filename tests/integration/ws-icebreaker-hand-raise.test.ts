@@ -438,7 +438,7 @@ describe('WebSocket Section 2 icebreaker open-share turn (protocol v3)', () => {
       'session_updated',
       (m) => m.command === 'next_section' && m.requestId === 'next-3',
     );
-    expect(sec4.session.currentSectionId).toBe('section_4_discussion');
+    expect(sec4.session.currentSectionId).toBe('section_4_deep_analysis');
     expect(sec4.session.volunteerTurn).toBeNull();
 
     // Raises in Section 4 are back to INVALID_STATE_TRANSITION.

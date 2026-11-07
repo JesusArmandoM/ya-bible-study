@@ -252,11 +252,18 @@ test.describe('Desktop Dual Side-by-Side Mode (1440x900)', () => {
       // Complete Section 3 turn via leader override or reader Done
       await leaderFrame.getByTestId('reading-override-button').click();
       await expect(leaderFrame.getByTestId('reading-advance-cta')).toContainText(
-        'Begin Discussion →',
+        'Continue to Deep Analysis →',
       );
       await leaderFrame.getByTestId('reading-advance-cta').click();
 
-      // --- SECTION 4: Discussion Question Queue & Reflections ---
+      // Section 4: Deep Analysis placeholder -> Advance to Discussion
+      await expect(leaderFrame.getByTestId('deep-analysis-placeholder')).toBeVisible();
+      await expect(
+        participantFrame.getByTestId('deep-analysis-placeholder'),
+      ).toBeVisible();
+      await leaderFrame.getByTestId('deep-analysis-advance-cta').click();
+
+      // --- SECTION 5: Discussion Question Queue & Reflections ---
       await expect(leaderFrame.getByTestId('discussion-screen')).toBeVisible();
       await expect(
         participantFrame.getByTestId('discussion-screen'),
