@@ -170,10 +170,14 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
     leaderPeer.send({ type: 'override_turn', sessionCode, leaderToken });
     await leaderPeer.waitFor('session_updated');
     leaderPeer.send({ type: 'next_section', sessionCode, leaderToken });
-    const sec4Updated = await leaderPeer.waitFor('session_updated');
+    await leaderPeer.waitFor('session_updated'); // Now in Section 4 Deep Analysis
 
-    expect(sec4Updated.session.currentSectionId).toBe('section_4_discussion');
-    expect(sec4Updated.session.volunteerTurn).toBeNull();
+    // Section 4: advance to Section 5 Discussion
+    leaderPeer.send({ type: 'next_section', sessionCode, leaderToken });
+    const sec5Updated = await leaderPeer.waitFor('session_updated');
+
+    expect(sec5Updated.session.currentSectionId).toBe('section_5_discussion');
+    expect(sec5Updated.session.volunteerTurn).toBeNull();
 
     return {
       leaderPeer,
@@ -182,7 +186,7 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
       leaderToken,
       leaderMemberId,
       participantMemberId,
-      sec4Snapshot: sec4Updated.session,
+      sec4Snapshot: sec5Updated.session,
     };
   }
 
@@ -364,7 +368,7 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
     expect(dupErr.code).toBe('INVALID_MESSAGE');
   });
 
-  it('allows advancing to Section 5 without any turn gate ("mercy, not pace, is the goal")', async () => {
+  it('allows advancing to Section 6 without any turn gate ("mercy, not pace, is the goal")', async () => {
     const { leaderPeer, participantPeer, sessionCode, leaderToken, participantMemberId } =
       await setupRoomAdvancedToSection4();
 
@@ -377,7 +381,7 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
     const partErr = await participantPeer.waitFor('session_error');
     expect(partErr.code).toBe('FORBIDDEN_LEADER_ONLY');
 
-    // Leader advances unconditionally into Section 5
+    // Leader advances unconditionally into Section 6
     leaderPeer.send({
       type: 'next_section',
       sessionCode,
@@ -385,15 +389,15 @@ describe('WebSocket Section 4 Deep Analysis discussion & question queue (protoco
     });
     const leaderUpdated = await leaderPeer.waitFor(
       'session_updated',
-      (m) => m.session.currentSectionId === 'section_5_closing',
+      (m) => m.session.currentSectionId === 'section_6_closing',
     );
-    expect(leaderUpdated.session.currentSectionId).toBe('section_5_closing');
-    expect(leaderUpdated.session.currentSectionIndex).toBe(4);
+    expect(leaderUpdated.session.currentSectionId).toBe('section_6_closing');
+    expect(leaderUpdated.session.currentSectionIndex).toBe(5);
 
     const participantUpdated = await participantPeer.waitFor(
       'session_updated',
-      (m) => m.session.currentSectionId === 'section_5_closing',
+      (m) => m.session.currentSectionId === 'section_6_closing',
     );
-    expect(participantUpdated.session.currentSectionId).toBe('section_5_closing');
+    expect(participantUpdated.session.currentSectionId).toBe('section_6_closing');
   });
 });

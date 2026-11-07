@@ -30,7 +30,9 @@ export function LiveSessionStatsCard({ session }: LiveSessionStatsCardProps) {
       aria-label="Session metrics"
     >
       <div className="closing-stat-col" data-testid="stat-sections">
-        <span className="closing-stat-value">5</span>
+        <span className="closing-stat-value">
+          {session.study?.sectionCount ?? 6}
+        </span>
         <span className="closing-stat-label">SECTIONS</span>
       </div>
 

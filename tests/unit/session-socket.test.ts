@@ -768,18 +768,19 @@ describe('sessionSocket reflection submission (protocol v3, additive)', () => {
     });
     await leaderClient.sendLeaderCommand({ type: 'start_study' });
 
-    // Advance through turns to Section 4
+    // Advance through turns to Section 5 Discussion
     await leaderClient.sendLeaderCommand({ type: 'override_turn' });
     await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s2
     await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s3
     await leaderClient.sendLeaderCommand({ type: 'override_turn' });
-    const s4 = await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s4
+    await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s4 (deep analysis)
+    const s5 = await leaderClient.sendLeaderCommand({ type: 'next_section' }); // to s5 (discussion)
 
-    if (s4.type !== 'session_updated') {
+    if (s5.type !== 'session_updated') {
       throw new Error('next_section must resolve on session_updated.');
     }
-    expect(s4.session.currentSectionId).toBe('section_4_discussion');
-    const qId = s4.session.discussionState?.activeQuestionId!;
+    expect(s5.session.currentSectionId).toBe('section_5_discussion');
+    const qId = s5.session.discussionState?.activeQuestionId!;
     expect(qId).toBeDefined();
 
     // Submit reflection from participant

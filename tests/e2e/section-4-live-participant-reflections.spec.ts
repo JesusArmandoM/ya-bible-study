@@ -125,15 +125,21 @@ async function reachDiscussion(
   // Section 3: complete turn & advance to Section 4
   await pageLeader.getByTestId('reading-override-button').click();
   await expect(pageLeader.getByTestId('reading-advance-cta')).toContainText(
-    'Begin Discussion →',
+    'Continue to Deep Analysis →',
   );
   await pageLeader.getByTestId('reading-advance-cta').click();
   for (const page of all) {
+    await expect(page.getByTestId('deep-analysis-placeholder')).toBeVisible();
+  }
+
+  // Section 4: advance to Section 5 Discussion
+  await pageLeader.getByTestId('deep-analysis-advance-cta').click();
+  for (const page of all) {
     await expect(page.getByTestId('discussion-screen')).toBeVisible();
     await expect(page.getByTestId('section-one-label')).toHaveText(
-      'SECTION 4 OF 5',
+      'SECTION 5 OF 6',
     );
-    await expect(page.getByTestId('section-one-percent')).toHaveText('80%');
+    await expect(page.getByTestId('section-one-percent')).toHaveText('83%');
   }
 }
 

@@ -52,6 +52,8 @@ export interface OpeningPrayerScreenProps {
   onOverrideTurn?: () => void | Promise<void>;
   /** Study Leader: advance sections (`next_section`, unlocked by `completedAt`). */
   onNextSection?: () => void | Promise<void>;
+  /** Study Leader: reset the volunteer turn (`reset_turn`). */
+  onResetTurn?: () => void | Promise<void>;
   /** Study Leader: stage a random candidate (`pick_random`). */
   onPickRandomly?: () => void | Promise<void>;
   /** Study Leader: re-roll the pending candidate (`retry_random`). */
@@ -105,6 +107,7 @@ export function OpeningPrayerScreen({
   onCompleteTurn,
   onOverrideTurn,
   onNextSection,
+  onResetTurn,
   onPickRandomly,
   onRetryRandom,
   onConfirmRandom,
@@ -331,6 +334,15 @@ export function OpeningPrayerScreen({
                 // Failure is surfaced via the session error path.
               });
             }}
+            onResetTurn={
+              onResetTurn
+                ? () => {
+                    void Promise.resolve(onResetTurn()).catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }
+                : undefined
+            }
           />
         </>
       ) : isChosenVolunteer ? (

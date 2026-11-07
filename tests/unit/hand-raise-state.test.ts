@@ -34,8 +34,9 @@ describe('createVolunteerTurnForSection — turn creation', () => {
   it('maps future sections onto their turn modes without changing the turn shape', () => {
     expect(volunteerTurnModeForSection('section_2_icebreaker')).toBe('open_share');
     expect(volunteerTurnModeForSection('section_3_reading')).toBe('gated_reading');
-    expect(volunteerTurnModeForSection('section_4_discussion')).toBe('open_share');
-    expect(volunteerTurnModeForSection('section_5_closing')).toBe('open_share');
+    expect(volunteerTurnModeForSection('section_4_deep_analysis')).toBe('open_share');
+    expect(volunteerTurnModeForSection('section_5_discussion')).toBe('open_share');
+    expect(volunteerTurnModeForSection('section_6_closing')).toBe('open_share');
 
     const readingTurn = createVolunteerTurnForSection('section_3_reading');
     expect(readingTurn.mode).toBe('gated_reading');

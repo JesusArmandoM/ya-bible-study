@@ -158,11 +158,10 @@ describe('PrayerCardModal', () => {
           '[For myself] Lord, help me trust Your timing when answers seem slow.',
         isAnonymous: true,
       });
+      expect(screen.getByTestId('prayer-share-feedback-self')).toHaveTextContent(
+        'Shared to group! ✓',
+      );
     });
-
-    expect(screen.getByTestId('prayer-share-feedback-self')).toHaveTextContent(
-      'Shared to group! ✓',
-    );
   });
 
   it('invokes canvas render and export when Export CTA is clicked', async () => {

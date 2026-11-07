@@ -19,8 +19,8 @@ function makeSection5Session(
   return {
     sessionCode: 'FAITH5',
     status: 'in_progress',
-    currentSectionIndex: 4,
-    currentSectionId: 'section_5_closing',
+    currentSectionIndex: 5,
+    currentSectionId: 'section_6_closing',
     createdAt: '2026-10-31T20:00:00.000Z',
     startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
     endedAt: null,
@@ -74,14 +74,14 @@ describe('ClosingPrayerScreen component (Section 5)', () => {
       />,
     );
 
-    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 5 OF 5');
+    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 6 OF 6');
     expect(screen.getByTestId('section-one-percent')).toHaveTextContent('100%');
     expect(screen.getByText('WRAPPING UP')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Closing Prayer' })).toBeInTheDocument();
     expect(useSacredStageStore.getState().stage).toBe('star-of-faith');
   });
 
-  it('renders LiveSessionStatsCard with 5 sections, elapsed duration, and participant count', () => {
+  it('renders LiveSessionStatsCard with 6 sections, elapsed duration, and participant count', () => {
     const session = makeSection5Session();
     render(
       <ClosingPrayerScreen
@@ -94,7 +94,7 @@ describe('ClosingPrayerScreen component (Section 5)', () => {
     const statsCard = screen.getByTestId('session-stats-card');
     expect(statsCard).toBeInTheDocument();
 
-    expect(screen.getByTestId('stat-sections')).toHaveTextContent('5');
+    expect(screen.getByTestId('stat-sections')).toHaveTextContent('6');
     expect(screen.getByTestId('stat-sections')).toHaveTextContent('SECTIONS');
 
     expect(screen.getByTestId('stat-duration')).toHaveTextContent('42m');

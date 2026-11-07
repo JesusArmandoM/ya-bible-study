@@ -5,11 +5,41 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `leader-persistent-qr-code-reshare` / `leader-bidirectional-section-navigation`
+- Current next ready feature: `fullscreen-3d-section-entry-animations`
 - Current blocker: `none`
 - Last verified at: `2026-11-06`
 
 ## Session Log
+
+### Session 038
+
+- Date: `2026-11-06`
+- Goal: Implement and self-verify feature `leader-bidirectional-section-navigation` per `docs/specs/leader-bidirectional-section-navigation.md` in worktree `feature/leader-bidirectional-section-navigation` (`PORT=3103`, `API_PORT=3203`, `PLAYWRIGHT_PORT=3303`).
+- Completed:
+  - Promoted runtime `/ws` to 6 interactive sections: `STUDY_SECTION_IDS = ['section_1_prayer', 'section_2_icebreaker', 'section_3_reading', 'section_4_deep_analysis', 'section_5_discussion', 'section_6_closing']`.
+  - Updated `InternalLiveSession` and `PublicLiveSessionSnapshot` with `sectionEnteredAt: string | null` and `completedSectionIds: StudySectionId[]`.
+  - Implemented Study Leader-exclusive `previous_section` command over `/ws` allowing backward navigation across Sections 2–6, stamping `sectionEnteredAt`, preserving and restoring section turns.
+  - Added completed gated section bypass so previously completed sections (`section_1_prayer`, `section_3_reading`) remain unlocked upon return without requiring another turn completion.
+  - Implemented Study Leader-exclusive `reset_turn` command over `/ws` to clear completed gated status and re-open volunteer turns on completed gated sections.
+  - Created dedicated Section 4 Deep Analysis placeholder screen (`SECTION 4 OF 6`, `67%`) in `SectionPlaceholderScreen.tsx` with Study Leader navigation controls (`← Previous` to Section 3 and `Continue to Discussion →` to Section 5) and participant waiting bar.
+  - Updated `SectionProgressHeader.tsx` to 6 sections (`SECTION X OF 6`) with percentages `[17, 33, 50, 67, 83, 100]%`.
+  - Updated `LiveSessionStatsCard.tsx` to display `{session.study?.sectionCount ?? 6}` (`6 SECTIONS`).
+  - Added `← Previous` button on Sections 2–6 for Study Leader; Participant DOM never renders `previous_section` or `reset_turn` controls.
+  - Updated `LockedAdvanceBar.tsx` and `OpeningPrayerScreen.tsx` with optional `onResetTurn` prop and `🔄 Reset turn` button when turn is completed.
+  - Updated `IcebreakerScreen.tsx`, `GospelReadingScreen.tsx`, `DiscussionScreen.tsx`, and `ClosingPrayerScreen.tsx` with `onPreviousSection` and `← Previous` button for Study Leader.
+  - Updated `App.tsx` and `DualDeviceFrame.tsx` to route all 6 sections and wire `onPreviousSection` and `onResetTurn`.
+  - Updated `ARCHITECTURE.md` and `CONSTRAINTS.md` to reflect 6-section runtime and bidirectional navigation.
+  - Created dedicated integration suite `tests/integration/ws-bidirectional-navigation.test.ts` (6 tests).
+  - Created dedicated E2E suite `tests/e2e/leader-bidirectional-section-navigation.spec.ts` (1 test).
+- Verification run:
+  - `./init.sh` passed exit code 0 (TypeScript clean across 3 tsconfigs, 58 Vitest suites / 519 tests passed, production build clean).
+  - Dedicated integration suite: `npx vitest run tests/integration/ws-bidirectional-navigation.test.ts` passed 6/6 tests.
+  - Dedicated E2E suite: `npx playwright test tests/e2e/leader-bidirectional-section-navigation.spec.ts` passed 1/1 test in 23.7s on mobile-chromium 390x844.
+  - Downstream Playwright E2E suites passed: `section-5-closing-prayer-completion.spec.ts`, `section-4-leader-question-queue-notes.spec.ts`, `section-4-live-participant-reflections.spec.ts`, `section-4-lord-help-me-prayer-card.spec.ts`, `section-3-gospel-reading-turn.spec.ts`, `section-2-icebreaker.spec.ts`, `section-1-opening-prayer.spec.ts`, `section-1-chosen-volunteer-prayer-gate.spec.ts`, `title-lobby-qr-join.spec.ts`, `desktop-dual-side-by-side-mode.spec.ts`, `post-join-fullscreen-lobby-isolation.spec.ts`, `mobile-wake-lock-foreground-resync.spec.ts`.
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
+- Evidence captured: Marked `leader-bidirectional-section-navigation` as `"status": "passing"` with full evidence in `feature_list.json`.
+- Files updated: `feature_list.json`, `PROGRESS.md`, `ARCHITECTURE.md`, `CONSTRAINTS.md`, `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/lib/useLiveSession.ts`, `src/client/components/sections/SectionProgressHeader.tsx`, `src/client/components/closing/LiveSessionStatsCard.tsx`, `src/client/components/prayer/SectionPlaceholderScreen.tsx`, `src/client/components/prayer/LockedAdvanceBar.tsx`, `src/client/components/prayer/OpeningPrayerScreen.tsx`, `src/client/components/icebreaker/IcebreakerScreen.tsx`, `src/client/components/reading/GospelReadingScreen.tsx`, `src/client/components/discussion/DiscussionScreen.tsx`, `src/client/components/closing/ClosingPrayerScreen.tsx`, `src/client/App.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `src/client/styles/global.css`, `tests/integration/ws-bidirectional-navigation.test.ts`, `tests/e2e/leader-bidirectional-section-navigation.spec.ts`, updated unit and E2E suites.
+- Next best step: Run independent validation with `$feature-validator`.
 
 ### Session 037
 

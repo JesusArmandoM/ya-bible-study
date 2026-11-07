@@ -500,11 +500,21 @@
       "six-section-study-model-parser",
       "section-5-closing-prayer-completion"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "Vitest and Playwright tests verifying Study Leader can navigate forward and backward across all 6 sections, Participant attempts to send 'previous_section' are rejected with FORBIDDEN_LEADER_ONLY, and revisiting a completed gated section preserves its unlocked forward state unless 'reset_turn' is triggered."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-11-06 (Session 037, implementer self-verification per docs/specs/leader-bidirectional-section-navigation.md): Upgraded runtime /ws to 6 interactive sections: STUDY_SECTION_IDS = ['section_1_prayer', 'section_2_icebreaker', 'section_3_reading', 'section_4_deep_analysis', 'section_5_discussion', 'section_6_closing'] with progress percents [17, 33, 50, 67, 83, 100]% and SectionProgressHeader rendering SECTION X OF 6.",
+      "2026-11-06: Added leader-exclusive previous_section command over /ws allowing Study Leader to navigate backward across Sections 2–6, stamping sectionEnteredAt ISO timestamp and restoring preserved volunteer turns.",
+      "2026-11-06: Added completedSectionIds: StudySectionId[] to InternalLiveSession and PublicLiveSessionSnapshot so returning to completed gated sections (section_1_prayer, section_3_reading) bypasses turn gating and preserves unlocked forward navigation (Continue to...).",
+      "2026-11-06: Added leader-exclusive reset_turn command over /ws to clear completed gated status and re-open volunteer turns on completed gated sections.",
+      "2026-11-06: Implemented dedicated Section 4 Deep Analysis placeholder screen (SECTION 4 OF 6, 67%) with Study Leader navigation controls (← Previous to Section 3 and Continue to Discussion → to Section 5) and participant waiting bar.",
+      "2026-11-06: Added ← Previous button on Sections 2–6 for Study Leader; Participant DOM never renders previous_section or reset_turn controls.",
+      "2026-11-06: ./init.sh exited 0 — TypeScript typecheck clean across client/server/root, 58 Vitest test suites (519 tests) passed including dedicated suite tests/integration/ws-bidirectional-navigation.test.ts (6 tests verifying previous_section, reset_turn, completedSectionIds bypass, index bounds, and role gating), and production build cleanly emitted dist/client + dist/server.",
+      "2026-11-06: Dedicated E2E suite tests/e2e/leader-bidirectional-section-navigation.spec.ts passed 1/1 on mobile-chromium 390x844 in 23.7s against single-port server, verifying full 6-section forward/backward navigation, turn reset, unlocked return navigation, and participant control gating.",
+      "2026-11-06: Regression test suites verified clean across all updated specs. Terminology invariant checked: grep -rn 'Assistant' src/ returned 0 matches (exit code 1)."
+    ],
     "notes": "Follow docs/domain-model.md Bidirectional Leader Navigation and completedSectionIds[] rules."
   },
   {

@@ -79,10 +79,13 @@ interface InternalLiveSession {
   createdAt: string;
   startedAt: string | null;
   endedAt: string | null;
+  sectionEnteredAt: string | null;
+  completedSectionIds: StudySectionId[];
   lastActivityAt: number;
   nextParticipantPaletteIndex: number;
   study: SessionStudySummary | null;
   volunteerTurn: VolunteerTurnState | null;
+  sectionTurns: Map<StudySectionId, VolunteerTurnState>;
   discussionState: SessionDiscussionState | null;
   members: Map<string, InternalSessionMember>;
   /** Single unref'd random-selection countdown expiry timer. */
@@ -246,6 +249,8 @@ function toPublicSnapshot(
     createdAt: session.createdAt,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
+    sectionEnteredAt: session.sectionEnteredAt,
+    completedSectionIds: [...session.completedSectionIds],
     connectedMemberCount,
     connectedParticipantCount,
     members,
@@ -445,6 +450,8 @@ export class LiveSessionStore {
       case 'load_study':
       case 'start_study':
       case 'next_section':
+      case 'previous_section':
+      case 'reset_turn':
       case 'choose_volunteer':
       case 'override_turn':
       case 'pick_random':
@@ -529,10 +536,13 @@ export class LiveSessionStore {
       createdAt: isoNow,
       startedAt: null,
       endedAt: null,
+      sectionEnteredAt: null,
+      completedSectionIds: [],
       lastActivityAt: currentNow,
       nextParticipantPaletteIndex: 0,
       study: null,
       volunteerTurn: null,
+      sectionTurns: new Map(),
       discussionState: null,
       members,
       randomExpiryTimer: undefined,
@@ -1123,9 +1133,13 @@ export class LiveSessionStore {
       session.currentSectionIndex = 0;
       session.currentSectionId = STUDY_SECTION_IDS[0];
       session.startedAt = session.startedAt ?? isoNow;
+      session.sectionEnteredAt = isoNow;
       session.volunteerTurn = session.currentSectionId
         ? createVolunteerTurnForSection(session.currentSectionId)
         : null;
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
       return;
@@ -1234,6 +1248,15 @@ export class LiveSessionStore {
       }
 
       session.volunteerTurn = applyCompleteTurn(session.volunteerTurn, isoNow);
+      if (
+        session.currentSectionId &&
+        !session.completedSectionIds.includes(session.currentSectionId)
+      ) {
+        session.completedSectionIds.push(session.currentSectionId);
+      }
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
       return;
@@ -1242,7 +1265,7 @@ export class LiveSessionStore {
     if (command === 'switch_question') {
       if (
         session.status !== 'in_progress' ||
-        session.currentSectionId !== 'section_4_discussion' ||
+        session.currentSectionId !== 'section_5_discussion' ||
         !session.discussionState
       ) {
         this.sendError(
@@ -1288,7 +1311,7 @@ export class LiveSessionStore {
     if (command === 'add_question') {
       if (
         session.status !== 'in_progress' ||
-        session.currentSectionId !== 'section_4_discussion' ||
+        session.currentSectionId !== 'section_5_discussion' ||
         !session.discussionState
       ) {
         this.sendError(
@@ -1349,6 +1372,7 @@ export class LiveSessionStore {
 
       if (
         session.currentSectionId === 'section_1_prayer' &&
+        !session.completedSectionIds.includes('section_1_prayer') &&
         session.volunteerTurn?.completedAt == null
       ) {
         this.sendError(
@@ -1362,6 +1386,7 @@ export class LiveSessionStore {
 
       if (
         session.currentSectionId === 'section_3_reading' &&
+        !session.completedSectionIds.includes('section_3_reading') &&
         session.volunteerTurn?.completedAt == null
       ) {
         this.sendError(
@@ -1385,21 +1410,36 @@ export class LiveSessionStore {
         return;
       }
 
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
+
       session.currentSectionIndex = nextIndex;
       session.currentSectionId = nextSectionId;
-      /**
-       * Entering the Icebreaker opens a fresh open-share hand-raise turn.
-       * Entering the Gospel Reading opens a fresh gated-reading turn.
-       * Advancing into Section 4 (or Section 5) clears the turn.
-       */
-      session.volunteerTurn =
-        nextSectionId === 'section_2_icebreaker' ||
-        nextSectionId === 'section_3_reading'
-          ? createVolunteerTurnForSection(nextSectionId)
-          : null;
+      session.sectionEnteredAt = isoNow;
       this.cancelRandomExpiryTimer(session);
 
-      if (nextSectionId === 'section_4_discussion' && !session.discussionState) {
+      if (
+        nextSectionId === 'section_1_prayer' ||
+        nextSectionId === 'section_2_icebreaker' ||
+        nextSectionId === 'section_3_reading'
+      ) {
+        const savedTurn = session.sectionTurns.get(nextSectionId);
+        if (savedTurn) {
+          session.volunteerTurn = savedTurn;
+        } else if (session.completedSectionIds.includes(nextSectionId)) {
+          session.volunteerTurn = {
+            ...createVolunteerTurnForSection(nextSectionId),
+            completedAt: isoNow,
+          };
+        } else {
+          session.volunteerTurn = createVolunteerTurnForSection(nextSectionId);
+        }
+      } else {
+        session.volunteerTurn = null;
+      }
+
+      if (nextSectionId === 'section_5_discussion' && !session.discussionState) {
         const discussion = session.study?.discussion;
         if (discussion && discussion.questions.length > 0) {
           const defaultIds = discussion.defaultActiveQuestionIds;
@@ -1431,6 +1471,109 @@ export class LiveSessionStore {
 
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
+    if (command === 'previous_section') {
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionIndex === null
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'Study must be in progress before navigating sections.',
+          requestId,
+        );
+        return;
+      }
+
+      if (session.currentSectionIndex <= 0) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'Session is already on the initial study section.',
+          requestId,
+        );
+        return;
+      }
+
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
+
+      const prevIndex = session.currentSectionIndex - 1;
+      const prevSectionId = STUDY_SECTION_IDS[prevIndex];
+      session.currentSectionIndex = prevIndex;
+      session.currentSectionId = prevSectionId ?? null;
+      session.sectionEnteredAt = isoNow;
+      this.cancelRandomExpiryTimer(session);
+
+      if (
+        prevSectionId === 'section_1_prayer' ||
+        prevSectionId === 'section_2_icebreaker' ||
+        prevSectionId === 'section_3_reading'
+      ) {
+        const savedTurn = session.sectionTurns.get(prevSectionId);
+        if (savedTurn) {
+          session.volunteerTurn = savedTurn;
+        } else if (session.completedSectionIds.includes(prevSectionId)) {
+          session.volunteerTurn = {
+            ...createVolunteerTurnForSection(prevSectionId),
+            completedAt: isoNow,
+          };
+        } else {
+          session.volunteerTurn = createVolunteerTurnForSection(prevSectionId);
+        }
+      } else {
+        session.volunteerTurn = null;
+      }
+
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
+    }
+
+    if (command === 'reset_turn') {
+      if (
+        session.status !== 'in_progress' ||
+        session.currentSectionId === null
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'Study must be in progress before resetting volunteer turn.',
+          requestId,
+        );
+        return;
+      }
+
+      const isInteractiveVolunteerSection =
+        session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_2_icebreaker' ||
+        session.currentSectionId === 'section_3_reading';
+
+      if (!isInteractiveVolunteerSection) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'Volunteer turn can only be reset on interactive volunteer sections.',
+          requestId,
+        );
+        return;
+      }
+
+      session.completedSectionIds = session.completedSectionIds.filter(
+        (id) => id !== session.currentSectionId,
+      );
+      this.cancelRandomExpiryTimer(session);
+      session.volunteerTurn = createVolunteerTurnForSection(
+        session.currentSectionId,
+      );
+      session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      session.lastActivityAt = currentNow;
+      this.broadcastSessionUpdated(session, command, socket, requestId);
+      return;
     }
   }
 
@@ -1553,6 +1696,15 @@ export class LiveSessionStore {
         session.volunteerTurn,
         new Date(this.now()).toISOString(),
       );
+      if (
+        session.currentSectionId &&
+        !session.completedSectionIds.includes(session.currentSectionId)
+      ) {
+        session.completedSectionIds.push(session.currentSectionId);
+      }
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
       session.lastActivityAt = this.now();
       this.broadcastSessionUpdated(session, command, socket, requestId);
       return;
@@ -1661,7 +1813,7 @@ export class LiveSessionStore {
 
     if (
       session.status !== 'in_progress' ||
-      session.currentSectionId !== 'section_4_discussion' ||
+      session.currentSectionId !== 'section_5_discussion' ||
       !session.discussionState
     ) {
       this.sendError(

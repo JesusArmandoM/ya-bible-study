@@ -320,15 +320,15 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await pageLeader.getByTestId('prayer-advance-cta').click();
       await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
-        'SECTION 2 OF 5',
+        'SECTION 2 OF 6',
       );
-      await expect(pageLeader.getByTestId('section-one-percent')).toHaveText('40%');
+      await expect(pageLeader.getByTestId('section-one-percent')).toHaveText('33%');
       await expect(pageParticipant.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageParticipant.getByTestId('section-one-label')).toHaveText(
-        'SECTION 2 OF 5',
+        'SECTION 2 OF 6',
       );
       await expect(pageParticipant.getByTestId('section-one-percent')).toHaveText(
-        '40%',
+        '33%',
       );
     } finally {
       await closeLiveSession(pageLeader);
@@ -584,14 +584,14 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await pageLeader.getByTestId('prayer-advance-cta').click();
       await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
-        'SECTION 2 OF 5',
+        'SECTION 2 OF 6',
       );
       await expect(pageLeader.getByTestId('section-one-percent')).toHaveText(
-        '40%',
+        '33%',
       );
       await expect(pageBystander.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageBystander.getByTestId('section-one-label')).toHaveText(
-        'SECTION 2 OF 5',
+        'SECTION 2 OF 6',
       );
     } finally {
       await closeLiveSession(pageLeader);
@@ -651,7 +651,7 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageChosen.getByTestId('icebreaker-screen')).toBeVisible();
       await expect(pageChosen.getByTestId('section-one-label')).toHaveText(
-        'SECTION 2 OF 5',
+        'SECTION 2 OF 6',
       );
     } finally {
       await closeLiveSession(pageLeader);

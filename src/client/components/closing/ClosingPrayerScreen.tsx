@@ -18,6 +18,8 @@ export interface ClosingPrayerScreenProps {
   session: PublicLiveSessionSnapshot;
   localStudyDocument?: StudyDocument | null;
   memberId?: string | null;
+  /** Study Leader: return to Section 5 (`previous_section`). */
+  onPreviousSection?: () => void | Promise<void>;
   onFinishStudy: () => void | Promise<void>;
   isSubmitting?: boolean;
 }
@@ -27,6 +29,7 @@ export function ClosingPrayerScreen({
   session,
   localStudyDocument,
   memberId,
+  onPreviousSection,
   onFinishStudy,
   isSubmitting = false,
 }: ClosingPrayerScreenProps) {
@@ -45,7 +48,7 @@ export function ClosingPrayerScreen({
 
   return (
     <div className="closing-screen-container" data-testid="closing-prayer-screen">
-      <SectionProgressHeader sectionNumber={5} />
+      <SectionProgressHeader sectionNumber={6} />
 
       <header className="closing-header-lockup">
         <span className="closing-eyebrow">WRAPPING UP</span>
@@ -68,22 +71,37 @@ export function ClosingPrayerScreen({
 
       <div className="closing-bottom-zone">
         {isLeader ? (
-          <motion.button
-            type="button"
-            className="closing-finish-btn"
-            data-testid="finish-study-btn"
-            disabled={isSubmitting}
-            whileTap={{ scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-            onClick={() => {
-              void onFinishStudy();
-            }}
-          >
-            <span className="closing-finish-icon" aria-hidden="true">
-              ✓
-            </span>
-            <span>Finish study</span>
-          </motion.button>
+          <div className="leader-advance-nav-row">
+            {onPreviousSection && (
+              <button
+                type="button"
+                className="section-previous-btn"
+                data-testid="previous-section-btn"
+                disabled={isSubmitting}
+                onClick={() => {
+                  void Promise.resolve(onPreviousSection()).catch(() => {});
+                }}
+              >
+                ← Previous
+              </button>
+            )}
+            <motion.button
+              type="button"
+              className="closing-finish-btn"
+              data-testid="finish-study-btn"
+              disabled={isSubmitting}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+              onClick={() => {
+                void onFinishStudy();
+              }}
+            >
+              <span className="closing-finish-icon" aria-hidden="true">
+                ✓
+              </span>
+              <span>Finish study</span>
+            </motion.button>
+          </div>
         ) : (
           <div
             className="closing-waiting-bar"

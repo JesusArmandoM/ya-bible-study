@@ -277,7 +277,7 @@ test.describe('Post-Join Fullscreen Isolation & Participant Waiting View', () =>
       ).toHaveText('1');
       await expect(
         pageLeader.getByTestId('title-lobby-section-count'),
-      ).toHaveText('5');
+      ).toHaveText('6');
       await expect(pageLeader.getByTestId('title-lobby-duration')).toHaveText(
         '90m',
       );

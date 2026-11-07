@@ -178,9 +178,13 @@ describe('WebSocket Section 4 live participant reflections (named & anonymous pr
     leaderPeer.send({ type: 'override_turn', sessionCode, leaderToken });
     await leaderPeer.waitFor('session_updated');
     leaderPeer.send({ type: 'next_section', sessionCode, leaderToken });
+    await leaderPeer.waitFor('session_updated'); // Now in Section 4 Deep Analysis
+
+    // Section 4: advance to Section 5 Discussion
+    leaderPeer.send({ type: 'next_section', sessionCode, leaderToken });
     const s4Snapshot = await leaderPeer.waitFor(
       'session_updated',
-      (m) => m.session.currentSectionId === 'section_4_discussion',
+      (m) => m.session.currentSectionId === 'section_5_discussion',
     );
 
     return {

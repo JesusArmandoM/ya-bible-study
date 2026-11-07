@@ -50,8 +50,8 @@ function makeSession(
   return {
     sessionCode: 'ABC123',
     status: 'in_progress',
-    currentSectionIndex: 3,
-    currentSectionId: 'section_4_discussion',
+    currentSectionIndex: 4,
+    currentSectionId: 'section_5_discussion',
     createdAt: '2026-10-29T19:30:00.000Z',
     startedAt: '2026-10-29T19:31:00.000Z',
     endedAt: null,
@@ -112,13 +112,13 @@ describe('DiscussionScreen — Section 4 Deep Analysis & Discussion', () => {
   });
 
   describe('Scenario 1: Initial Section 4 state and default curated queue', () => {
-    it('renders SECTION 4 OF 5, 80%, title, and 3 default questions for Study Leader', () => {
+    it('renders SECTION 5 OF 6, 83%, title, and 3 default questions for Study Leader', () => {
       renderScreen({ role: 'Study Leader' });
 
       expect(screen.getByTestId('section-one-label').textContent).toBe(
-        'SECTION 4 OF 5',
+        'SECTION 5 OF 6',
       );
-      expect(screen.getByTestId('section-one-percent').textContent).toBe('80%');
+      expect(screen.getByTestId('section-one-percent').textContent).toBe('83%');
       expect(screen.getByText('DEEP ANALYSIS · 25 MIN')).toBeTruthy();
       expect(screen.getByText('Lord, Help Me Pray')).toBeTruthy();
 
@@ -154,9 +154,9 @@ describe('DiscussionScreen — Section 4 Deep Analysis & Discussion', () => {
       renderScreen({ role: 'Participant', localStudyDocument: null });
 
       expect(screen.getByTestId('section-one-label').textContent).toBe(
-        'SECTION 4 OF 5',
+        'SECTION 5 OF 6',
       );
-      expect(screen.getByTestId('section-one-percent').textContent).toBe('80%');
+      expect(screen.getByTestId('section-one-percent').textContent).toBe('83%');
       expect(screen.getByTestId('participant-question-progress').textContent).toBe(
         'QUESTION 1 OF 3',
       );

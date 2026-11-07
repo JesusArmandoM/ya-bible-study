@@ -96,7 +96,7 @@ describe('GospelReadingScreen — Section 3 Gospel Reading Turn', () => {
   });
 
   describe('Scenario 1: Sole Gospel Reading presentation (both roles)', () => {
-    it('renders SECTION 3 OF 5, 60%, title, and Matthew 15:21–28 citation for Study Leader', () => {
+    it('renders SECTION 3 OF 6, 50%, title, and Matthew 15:21–28 citation for Study Leader', () => {
       renderScreen({
         role: 'Study Leader',
         memberId: 'leader-1',
@@ -104,9 +104,9 @@ describe('GospelReadingScreen — Section 3 Gospel Reading Turn', () => {
       });
 
       expect(screen.getByTestId('section-one-label')).toHaveTextContent(
-        'SECTION 3 OF 5',
+        'SECTION 3 OF 6',
       );
-      expect(screen.getByTestId('section-one-percent')).toHaveTextContent('60%');
+      expect(screen.getByTestId('section-one-percent')).toHaveTextContent('50%');
       expect(screen.getByTestId('reading-title')).toHaveTextContent(
         'Gospel Reading',
       );
@@ -119,16 +119,16 @@ describe('GospelReadingScreen — Section 3 Gospel Reading Turn', () => {
       );
     });
 
-    it('renders SECTION 3 OF 5, 60%, and solely Gospel passage for Participant without Mass tabs', () => {
+    it('renders SECTION 3 OF 6, 50%, and solely Gospel passage for Participant without Mass tabs', () => {
       renderScreen({
         role: 'Participant',
         memberId: 'member-1',
       });
 
       expect(screen.getByTestId('section-one-label')).toHaveTextContent(
-        'SECTION 3 OF 5',
+        'SECTION 3 OF 6',
       );
-      expect(screen.getByTestId('section-one-percent')).toHaveTextContent('60%');
+      expect(screen.getByTestId('section-one-percent')).toHaveTextContent('50%');
       expect(screen.getByTestId('scripture-card')).toBeInTheDocument();
 
       // Sole Gospel Reading Invariant: assert DOM contains no Old Testament, Psalm, or Epistle tabs
@@ -290,7 +290,7 @@ describe('GospelReadingScreen — Section 3 Gospel Reading Turn', () => {
       expect(overrideTurn).toHaveBeenCalledTimes(1);
     });
 
-    it('Study Leader locked bar morphs into Begin Discussion → when completedAt is set', () => {
+    it('Study Leader locked bar morphs into Continue to Deep Analysis → when completedAt is set', () => {
       const nextSection = vi.fn();
       const session = makeSession({
         selectedMemberId: 'member-1',
@@ -307,7 +307,7 @@ describe('GospelReadingScreen — Section 3 Gospel Reading Turn', () => {
       expect(screen.queryByTestId('locked-advance-bar')).not.toBeInTheDocument();
       const cta = screen.getByTestId('reading-advance-cta');
       expect(cta).toBeInTheDocument();
-      expect(cta).toHaveTextContent('Begin Discussion →');
+      expect(cta).toHaveTextContent('Continue to Deep Analysis →');
 
       fireEvent.click(cta);
       expect(nextSection).toHaveBeenCalledTimes(1);

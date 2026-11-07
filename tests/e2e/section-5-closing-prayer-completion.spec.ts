@@ -122,14 +122,20 @@ async function reachSection5(
   // Section 3: complete turn & advance to Section 4
   await pageLeader.getByTestId('reading-override-button').click();
   await expect(pageLeader.getByTestId('reading-advance-cta')).toContainText(
-    'Begin Discussion →',
+    'Continue to Deep Analysis →',
   );
   await pageLeader.getByTestId('reading-advance-cta').click();
+  for (const page of all) {
+    await expect(page.getByTestId('deep-analysis-placeholder')).toBeVisible();
+  }
+
+  // Section 4 -> Section 5 Discussion
+  await pageLeader.getByTestId('deep-analysis-advance-cta').click();
   for (const page of all) {
     await expect(page.getByTestId('discussion-screen')).toBeVisible();
   }
 
-  // Section 4 -> Section 5 via direct advance button
+  // Section 5 -> Section 6 Closing Prayer via direct advance button
   await pageLeader.getByTestId('advance-section-5-direct').click();
   for (const page of all) {
     await expect(page.getByTestId('closing-prayer-screen')).toBeVisible();
@@ -158,7 +164,7 @@ test.describe('Section 5 Closing Prayer & Session Completion (Scenarios 1–8)',
 
       // Both roles see 100% progress header
       for (const page of [pageLeader, pageMary]) {
-        await expect(page.getByTestId('section-one-label')).toHaveText('SECTION 5 OF 5');
+        await expect(page.getByTestId('section-one-label')).toHaveText('SECTION 6 OF 6');
         await expect(page.getByTestId('section-one-percent')).toHaveText('100%');
         await expect(page.getByTestId('sacred-3d-scene')).toHaveAttribute(
           'data-stage',
@@ -171,7 +177,7 @@ test.describe('Section 5 Closing Prayer & Session Completion (Scenarios 1–8)',
         // Stats card
         const statsCard = page.getByTestId('session-stats-card');
         await expect(statsCard).toBeVisible();
-        await expect(page.getByTestId('stat-sections')).toContainText('5');
+        await expect(page.getByTestId('stat-sections')).toContainText('6');
         await expect(page.getByTestId('stat-duration')).toContainText('m');
         await expect(page.getByTestId('stat-participants')).toContainText('1');
       }
@@ -271,7 +277,11 @@ test.describe('Section 5 Closing Prayer & Session Completion (Scenarios 1–8)',
       await pageLeader.getByTestId('reading-override-button').click();
       await pageLeader.getByTestId('reading-advance-cta').click();
 
-      // Section 4
+      // Section 4 -> Section 5 Discussion
+      await expect(pageLeader.getByTestId('deep-analysis-placeholder')).toBeVisible();
+      await pageLeader.getByTestId('deep-analysis-advance-cta').click();
+
+      // Section 5 Discussion
       await expect(pageLeader.getByTestId('discussion-screen')).toBeVisible();
       await expect(pageMary.getByTestId('discussion-screen')).toBeVisible();
 
