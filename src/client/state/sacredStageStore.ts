@@ -145,9 +145,8 @@ export function resolveSacredStage(context: SacredStageContext): ResolvedSacredS
     case 'section-2-icebreaker':
       return { stage: 'sanctuary-emblem', accentMode: 'hospitality' };
     case 'section-3-gospel':
-      return { stage: 'gospel-codex', accentMode: 'default' };
     case 'section-4-deep-analysis':
-      return { stage: 'sanctuary-emblem', accentMode: 'lantern-scroll' };
+      return { stage: 'gospel-codex', accentMode: 'default' };
     case 'section-5-discussion':
       return { stage: 'sanctuary-emblem', accentMode: 'community-flame' };
     case 'section-6-closing':

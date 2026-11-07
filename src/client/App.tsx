@@ -6,6 +6,7 @@ import { OpeningPrayerScreen } from './components/prayer/OpeningPrayerScreen';
 import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholderScreen';
 import { IcebreakerScreen } from './components/icebreaker/IcebreakerScreen';
 import { GospelReadingScreen } from './components/reading/GospelReadingScreen';
+import { DeepAnalysisScreen } from './components/analysis/DeepAnalysisScreen';
 import { DiscussionScreen } from './components/discussion/DiscussionScreen';
 import { ClosingPrayerScreen } from './components/closing/ClosingPrayerScreen';
 import { DesktopDualSideBySideScreen } from './components/dual/DesktopDualSideBySideScreen';
@@ -612,9 +613,12 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   lastSessionCommand={liveSession.lastSessionCommand}
                 />
               ) : liveSession.session.currentSectionId === 'section_4_deep_analysis' ? (
-                <SectionPlaceholderScreen
-                  sectionIndex={3}
+                <DeepAnalysisScreen
                   role={liveSession.role ?? 'Participant'}
+                  isLeader={isLeader}
+                  session={liveSession.session}
+                  localStudyDocument={studySetup.study}
+                  publicUrl={publicUrl}
                   onPreviousSection={() => {
                     void liveSession.previousSection().catch(() => {
                       // Failure is surfaced via the session error path.
