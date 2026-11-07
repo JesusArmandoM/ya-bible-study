@@ -1,6 +1,7 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { create, type UseBoundStore } from 'zustand';
 import type { StoreApi } from 'zustand/vanilla';
+import type { StudySectionId } from '../../shared/session';
 
 export const SACRED_STAGE_VARIANTS = [
   'sanctuary-emblem',
@@ -19,7 +20,11 @@ export type SacredImpulseKind =
   | 'confirm-burst'
   | 'completion-pulse';
 
-export type SacredAccentMode = 'default' | 'hospitality';
+export type SacredAccentMode =
+  | 'default'
+  | 'hospitality'
+  | 'lantern-scroll'
+  | 'community-flame';
 
 export type SacredSessionScreen =
   | 'welcome'
@@ -28,6 +33,9 @@ export type SacredSessionScreen =
   | 'section-1-prayer'
   | 'section-2-icebreaker'
   | 'section-3-gospel'
+  | 'section-4-deep-analysis'
+  | 'section-5-discussion'
+  | 'section-6-closing'
   | 'section-4-discussion'
   | 'section-5-closing';
 
@@ -137,7 +145,11 @@ export function resolveSacredStage(context: SacredStageContext): ResolvedSacredS
     case 'section-2-icebreaker':
       return { stage: 'sanctuary-emblem', accentMode: 'hospitality' };
     case 'section-3-gospel':
+    case 'section-4-deep-analysis':
       return { stage: 'gospel-codex', accentMode: 'default' };
+    case 'section-5-discussion':
+      return { stage: 'sanctuary-emblem', accentMode: 'community-flame' };
+    case 'section-6-closing':
     case 'section-5-closing':
       return { stage: 'star-of-faith', accentMode: 'default' };
     case 'welcome':
@@ -147,6 +159,102 @@ export function resolveSacredStage(context: SacredStageContext): ResolvedSacredS
     default:
       return { stage: 'sanctuary-emblem', accentMode: 'default' };
   }
+}
+
+export interface SectionEntryConfig {
+  sectionId: StudySectionId;
+  sectionNumber: number;
+  title: string;
+  description: string;
+  stage: SacredStageVariant;
+  accentMode: SacredAccentMode;
+  emblemLabel: string;
+  primaryColor: string;
+  secondaryColor: string;
+  glowColor: string;
+}
+
+export const SECTION_ENTRY_CONFIGS: Record<StudySectionId, SectionEntryConfig> = {
+  section_1_prayer: {
+    sectionId: 'section_1_prayer',
+    sectionNumber: 1,
+    title: 'Opening Prayer',
+    description: 'Prepare our hearts in humility and mercy',
+    stage: 'prayer-orb',
+    accentMode: 'default',
+    emblemLabel: 'Prayer Orb',
+    primaryColor: '#B855C8',
+    secondaryColor: '#E2A83E',
+    glowColor: 'rgba(184, 85, 200, 0.35)',
+  },
+  section_2_icebreaker: {
+    sectionId: 'section_2_icebreaker',
+    sectionNumber: 2,
+    title: 'Icebreaker',
+    description: 'Outsiders Wanted',
+    stage: 'sanctuary-emblem',
+    accentMode: 'hospitality',
+    emblemLabel: 'Hospitality Rings',
+    primaryColor: '#E2A83E',
+    secondaryColor: '#FDE68A',
+    glowColor: 'rgba(226, 168, 62, 0.35)',
+  },
+  section_3_reading: {
+    sectionId: 'section_3_reading',
+    sectionNumber: 3,
+    title: 'Gospel Reading',
+    description: 'Proclamation of Matthew 15:21–28',
+    stage: 'gospel-codex',
+    accentMode: 'default',
+    emblemLabel: 'Gospel Codex',
+    primaryColor: '#6E75F5',
+    secondaryColor: '#E2A83E',
+    glowColor: 'rgba(110, 117, 245, 0.35)',
+  },
+  section_4_deep_analysis: {
+    sectionId: 'section_4_deep_analysis',
+    sectionNumber: 4,
+    title: 'Deep Analysis',
+    description: 'Verse-by-Verse Gospel Breakdown & Catholic Doctrine',
+    stage: 'sanctuary-emblem',
+    accentMode: 'lantern-scroll',
+    emblemLabel: 'Lantern & Scroll',
+    primaryColor: '#10B981',
+    secondaryColor: '#E2A83E',
+    glowColor: 'rgba(16, 185, 129, 0.35)',
+  },
+  section_5_discussion: {
+    sectionId: 'section_5_discussion',
+    sectionNumber: 5,
+    title: 'Discussion & Reflection',
+    description: 'Lord, Help Me Pray',
+    stage: 'sanctuary-emblem',
+    accentMode: 'community-flame',
+    emblemLabel: 'Community Flame',
+    primaryColor: '#E2A83E',
+    secondaryColor: '#B855C8',
+    glowColor: 'rgba(226, 168, 62, 0.35)',
+  },
+  section_6_closing: {
+    sectionId: 'section_6_closing',
+    sectionNumber: 6,
+    title: 'Closing Prayer',
+    description: 'Sending Forth in Faith',
+    stage: 'star-of-faith',
+    accentMode: 'default',
+    emblemLabel: 'Star of Faith',
+    primaryColor: '#E2A83E',
+    secondaryColor: '#FDE68A',
+    glowColor: 'rgba(226, 168, 62, 0.35)',
+  },
+};
+
+export function getSectionEntryConfig(sectionId: StudySectionId): SectionEntryConfig {
+  const config = SECTION_ENTRY_CONFIGS[sectionId];
+  if (!config) {
+    return SECTION_ENTRY_CONFIGS.section_1_prayer;
+  }
+  return config;
 }
 
 export interface SacredStageImpulse {

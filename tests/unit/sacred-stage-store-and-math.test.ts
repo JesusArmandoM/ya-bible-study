@@ -80,6 +80,10 @@ describe('sacredStageStore and resolveSacredStage', () => {
       stage: 'gospel-codex',
       accentMode: 'default',
     });
+    expect(resolveSacredStage({ screen: 'section-4-deep-analysis' })).toEqual({
+      stage: 'gospel-codex',
+      accentMode: 'default',
+    });
     expect(resolveSacredStage({ screen: 'section-4-discussion' })).toEqual({
       stage: 'sanctuary-emblem',
       accentMode: 'default',
