@@ -28,6 +28,7 @@ export type SacredSessionScreen =
   | 'section-1-prayer'
   | 'section-2-icebreaker'
   | 'section-3-gospel'
+  | 'section-4-deep-analysis'
   | 'section-4-discussion'
   | 'section-5-closing';
 
@@ -137,6 +138,7 @@ export function resolveSacredStage(context: SacredStageContext): ResolvedSacredS
     case 'section-2-icebreaker':
       return { stage: 'sanctuary-emblem', accentMode: 'hospitality' };
     case 'section-3-gospel':
+    case 'section-4-deep-analysis':
       return { stage: 'gospel-codex', accentMode: 'default' };
     case 'section-5-closing':
       return { stage: 'star-of-faith', accentMode: 'default' };
