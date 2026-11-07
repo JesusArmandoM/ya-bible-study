@@ -227,6 +227,14 @@ export function DualDeviceFrame({
                   onToggleHandRaised={(next) => liveSession.setHandRaised(next)}
                   onPreviousSection={handlePreviousSection}
                   onNextSection={handleNextSection}
+                  onCompleteTurn={() => {
+                    void liveSession.completeTurn().catch(() => {});
+                  }}
+                  onOverrideTurn={() => {
+                    void liveSession.overrideTurn().catch(() => {});
+                  }}
+                  onResetTurn={handleResetTurn}
+                  lastSessionCommand={liveSession.lastSessionCommand}
                 />
               ) : currentSectionId === 'section_3_reading' ? (
                 <GospelReadingScreen

@@ -212,33 +212,33 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
         await expect(page.getByTestId('prayer-count-pill-hint')).toHaveCount(0);
       }
 
-      // Participant 1 taps the orb: instant optimistic raised state.
+      // Participant 1 taps the orb: under First-Hand-Wins, immediately wins turn.
       const orbA = pageA.getByTestId('hand-raise-orb');
       await expect(orbA).toHaveAttribute('aria-pressed', 'false');
       await orbA.click();
-      await expect(orbA).toHaveAttribute('aria-pressed', 'true');
-      await expect(orbA).toContainText('Hand Raised');
-      await expect(orbA).toContainText('Tap again to lower');
+      await expect(pageA.getByTestId('prayer-chosen-view')).toBeVisible();
+      await expect(pageA.getByTestId('prayer-chosen-pill')).toHaveText('YOU WERE CHOSEN');
+      await expect(pageA.getByTestId('prayer-done-button')).toBeVisible();
 
-      // Within a round trip the leader queue shows the row.
+      // Within a round trip the leader queue shows the row and active volunteer banner.
       const firstRow = pageLeader.getByTestId('prayer-queue-row').first();
       await expect(firstRow).toHaveAttribute('data-member-id', /.+/);
       await expect(firstRow).toContainText('DA'); // centered initials
       await expect(firstRow).toContainText('Daniel');
+      await expect(pageLeader.getByTestId('prayer-chosen-banner')).toContainText(
+        'Daniel is praying — waiting for Done',
+      );
       await expect(
         pageLeader.getByTestId('prayer-queue-row-time').first(),
       ).toContainText(/Raised (just now|\d+[smh] ago)/);
       await expect(pageLeader.getByTestId('prayer-queue-count')).toHaveText(
         '1 hand raised',
       );
-      for (const page of [pageA, pageB]) {
-        await expect(page.getByTestId('prayer-count-pill-text')).toHaveText(
-          '1 person has raised their hand',
-        );
-        await expect(page.getByTestId('prayer-count-pill-hint')).toHaveText(
-          'The leader will choose shortly',
-        );
-      }
+
+      // Participant 2 (bystander) sees who was chosen.
+      await expect(
+        pageB.getByTestId('prayer-active-volunteer-note'),
+      ).toHaveText('Daniel is praying now');
 
       // Participant 2 raises: leader reads 2 hands, rows ordered by raise time.
       await pageB.getByTestId('hand-raise-orb').click();
@@ -249,15 +249,14 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
       expect(rows.map((text) => (text.includes('Daniel') ? 'DA' : 'MA'))).toEqual(
         ['DA', 'MA'],
       );
-      for (const page of [pageA, pageB]) {
-        await expect(page.getByTestId('prayer-count-pill-text')).toHaveText(
-          '2 people have raised their hand',
-        );
-      }
+      await expect(pageB.getByTestId('hand-raise-orb')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
 
-      // Scenario 3: Participant 1 lowers — the row exits everywhere.
-      await pageA.getByTestId('hand-raise-orb').click();
-      await expect(pageA.getByTestId('hand-raise-orb')).toHaveAttribute(
+      // Scenario 3: Participant 2 lowers — Maria's row exits everywhere.
+      await pageB.getByTestId('hand-raise-orb').click();
+      await expect(pageB.getByTestId('hand-raise-orb')).toHaveAttribute(
         'aria-pressed',
         'false',
       );
@@ -266,17 +265,17 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
       );
       await expect(pageLeader.getByTestId('prayer-queue-row')).toHaveCount(1);
       await expect(pageLeader.getByTestId('prayer-queue-row')).toContainText(
-        'Maria',
+        'Daniel',
       );
 
-      // Re-raise re-appends at the END of the queue (order: Maria, Daniel).
-      await pageA.getByTestId('hand-raise-orb').click();
+      // Re-raise re-appends Maria to the queue.
+      await pageB.getByTestId('hand-raise-orb').click();
       await expect(pageLeader.getByTestId('prayer-queue-count')).toHaveText(
         '2 hands raised',
       );
       rows = await pageLeader.getByTestId('prayer-queue-row').allInnerTexts();
       expect(rows.map((text) => (text.includes('Daniel') ? 'DA' : 'MA'))).toEqual(
-        ['MA', 'DA'],
+        ['DA', 'MA'],
       );
 
       // Protocol-level idempotency over raw /ws: duplicate raise_hand frames
@@ -338,7 +337,7 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
       rows = await pageLeader.getByTestId('prayer-queue-row').allInnerTexts();
       expect(
         rows.map((text) => (text.includes('Daniel') ? 'DA' : text.includes('Maria') ? 'MA' : 'EZ')),
-      ).toEqual(['MA', 'DA', 'EZ']);
+      ).toEqual(['DA', 'MA', 'EZ']);
     } finally {
       await closeLiveSession(pageLeader);
       await Promise.allSettled([
@@ -387,13 +386,12 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
         pageParticipant.getByTestId('prayer-queue-row'),
       ).toHaveCount(0);
 
-      // Per-row lower removes only that row on every client.
+      // Per-row lower removes only that row from the queue. Lowering does not
+      // revoke selection: Daniel remains chosen.
       await lowerRow.click();
       await expect(pageLeader.getByTestId('prayer-queue-row')).toHaveCount(0);
       await expect(pageLeader.getByTestId('prayer-queue-empty')).toBeVisible();
-      await expect(
-        pageParticipant.getByTestId('prayer-count-pill-text'),
-      ).toHaveText('No one has raised their hand yet');
+      await expect(pageParticipant.getByTestId('prayer-chosen-view')).toBeVisible();
 
       // Locked bar copy per role — and zero advance controls in either DOM.
       await expect(pageLeader.getByTestId('locked-advance-bar')).toContainText(
@@ -441,12 +439,15 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
       await pageParticipant.getByTestId('hand-raise-orb').click();
       await expect(pageLeader.getByTestId('prayer-queue-row')).toHaveCount(1);
 
-      // Participant reload: their own hand is still raised on their screen.
+      // Participant reload: their chosen volunteer state survives the reload.
       await pageParticipant.reload();
       await expect(pageParticipant.getByTestId('active-session-banner')).toBeVisible();
       await expect(
-        pageParticipant.getByTestId('hand-raise-orb'),
-      ).toHaveAttribute('aria-pressed', 'true');
+        pageParticipant.getByTestId('prayer-chosen-view'),
+      ).toBeVisible();
+      await expect(
+        pageParticipant.getByTestId('prayer-chosen-pill'),
+      ).toHaveText('YOU WERE CHOSEN');
 
       // Leader reload: the queue order and row survive the resync.
       await pageLeader.reload();
@@ -456,11 +457,11 @@ test.describe('Section 1 — Opening Prayer hand raise + leader queue', () => {
         'Daniel',
       );
 
-      // A late joiner's session_joined snapshot restores the same turn state.
+      // A late joiner's session_joined snapshot restores the same turn state and sees who was chosen.
       await joinAsParticipant(pageLate, sessionCode, 'Maria');
       await expect(pageLate.getByTestId('section-one-handoff')).toBeVisible();
-      await expect(pageLate.getByTestId('prayer-count-pill-text')).toHaveText(
-        '1 person has raised their hand',
+      await expect(pageLate.getByTestId('prayer-active-volunteer-note')).toHaveText(
+        'Daniel is praying now',
       );
 
       // Privacy: no leader secrets reach a Participant client.

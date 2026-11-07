@@ -15,7 +15,7 @@ export interface ReadingDoneViewProps {
 }
 
 const INSTRUCTION_TEXT =
-  "Proclaim the Gospel reading aloud for the group. When finished, tap 'Done Reading'.";
+  "Proclaim the Gospel reading aloud for the group. When you finish, tap 'Done' so the Study Leader can continue.";
 
 /**
  * Exclusive chosen-volunteer Gospel Reading view: `YOU WERE CHOSEN` pill,
@@ -107,7 +107,7 @@ export function ReadingDoneView({
             void onCompleteTurn();
           }}
         >
-          Done Reading
+          <span aria-hidden="true">✓</span> Done Reading
         </motion.button>
       )}
     </section>

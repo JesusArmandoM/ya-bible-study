@@ -454,11 +454,12 @@ describe('WebSocket chosen-volunteer prayer gate (protocol v3)', () => {
     expect(noOp.session.volunteerTurn?.selectedMemberId).toBe(j1.memberId);
     expect(noOp.session.volunteerTurn?.completedAt).toBeTruthy();
 
-    // After advancing past Section 1 the turn is gone -> INVALID_STATE_TRANSITION.
+    // After advancing past Section 1, Section 2 is active with an open volunteer turn,
+    // so unselected P1 attempting complete_turn yields UNAUTHORIZED_MEMBER.
     nextSection(leader, created, 'next-1');
     await leader.waitFor('session_updated', (m) => m.command === 'next_section');
     completeTurn(p1, created.sessionCode, j1.memberId, 'after-1');
-    await expectError(p1, 'INVALID_STATE_TRANSITION', 'after-1');
+    await expectError(p1, 'UNAUTHORIZED_MEMBER', 'after-1');
   }, 15_000);
 
   it('Scenario 3: choose_volunteer target validation and reassignment rules', async () => {

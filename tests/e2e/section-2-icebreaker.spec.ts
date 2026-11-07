@@ -301,7 +301,7 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
     }
   });
 
-  test('Scenario 3: live hand-raise count syncs 0 → 1 → 2 → 1 → 2 on all three screens', async ({
+  test('Scenario 3: first hand raise immediately assigns volunteer under First-Hand-Wins', async ({
     browser,
   }, testInfo) => {
     testInfo.setTimeout(90_000);
@@ -313,13 +313,6 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
     const pageSecond = await secondContext.newPage();
 
     const all = [pageLeader, pageFirst, pageSecond];
-    const expectCountEverywhere = async (copy: string) => {
-      for (const page of all) {
-        await expect(
-          page.getByTestId('icebreaker-count-pill-text'),
-        ).toHaveText(copy);
-      }
-    };
 
     try {
       const sessionCode = await createLeaderInLobby(pageLeader);
@@ -328,33 +321,45 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
       await startStudyOnSection1(pageLeader, [pageFirst, pageSecond]);
       await reachIcebreaker(pageLeader, all);
 
-      await expectCountEverywhere('0 PEOPLE HAVE RAISED THEIR HAND');
+      // Initially 0 people have raised hand.
+      for (const page of all) {
+        await expect(
+          page.getByTestId('icebreaker-count-pill-text'),
+        ).toHaveText('0 PEOPLE HAVE RAISED THEIR HAND');
+      }
 
-      // Daniel raises: 0 -> 1.
+      // Daniel is first to raise: immediately wins turn under First-Hand-Wins.
       await pageFirst.getByTestId('hand-raise-orb').click();
-      await expectCountEverywhere('1 PERSON HAS RAISED THEIR HAND');
-      await expect(pageFirst.getByTestId('hand-raise-orb')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      );
+
+      // Daniel sees the prominent YOU WERE CHOSEN view with Done button.
       await expect(
-        pageFirst.getByTestId('icebreaker-orb-caption'),
-      ).toHaveText('Tap again to lower');
-
-      // Maria raises: 1 -> 2.
-      await pageSecond.getByTestId('hand-raise-orb').click();
-      await expectCountEverywhere('2 PEOPLE HAVE RAISED THEIR HAND');
-
-      // Maria lowers: 2 -> 1.
-      await pageSecond.getByTestId('hand-raise-orb').click();
-      await expectCountEverywhere('1 PERSON HAS RAISED THEIR HAND');
+        pageFirst.getByTestId('icebreaker-chosen-view'),
+      ).toBeVisible();
       await expect(
-        pageSecond.getByTestId('icebreaker-orb-caption'),
-      ).toHaveText('Tap to raise your hand');
+        pageFirst.getByTestId('icebreaker-chosen-pill'),
+      ).toHaveText('YOU WERE CHOSEN');
+      await expect(
+        pageFirst.getByTestId('icebreaker-chosen-title'),
+      ).toHaveText("It's your turn to share");
+      await expect(
+        pageFirst.getByTestId('icebreaker-done-button'),
+      ).toBeVisible();
 
-      // Maria re-raises: 1 -> 2 (single count entry, raise order preserved).
-      await pageSecond.getByTestId('hand-raise-orb').click();
-      await expectCountEverywhere('2 PEOPLE HAVE RAISED THEIR HAND');
+      // Maria (non-chosen participant) sees who was chosen.
+      await expect(
+        pageSecond.getByTestId('icebreaker-active-volunteer-note'),
+      ).toHaveText('Daniel is sharing');
+
+      // Study Leader sees who was chosen and forward advancement is locked.
+      await expect(
+        pageLeader.getByTestId('icebreaker-chosen-banner'),
+      ).toHaveText('Daniel is sharing — waiting for Done');
+      await expect(
+        pageLeader.getByTestId('locked-advance-bar'),
+      ).toBeVisible();
+      await expect(
+        pageLeader.getByTestId('icebreaker-override-button'),
+      ).toBeVisible();
     } finally {
       await closeLiveSession(pageLeader);
       await Promise.allSettled([
@@ -365,7 +370,7 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
     }
   });
 
-  test('Scenario 4: only the Study Leader advances — Begin Reading → reaches Section 3 with hands still raised', async ({
+  test('Scenario 4: volunteer turn gates Section 2 advance — Done Sharing unlocks Begin Reading →', async ({
     browser,
   }, testInfo) => {
     testInfo.setTimeout(90_000);
@@ -380,18 +385,27 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
       await startStudyOnSection1(pageLeader, [pageParticipant]);
       await reachIcebreaker(pageLeader, [pageLeader, pageParticipant]);
 
-      // A raised hand is up — Section 2 → 3 needs no completion precondition.
+      // Daniel raises hand and is immediately chosen.
       await pageParticipant.getByTestId('hand-raise-orb').click();
       await expect(
-        pageParticipant.getByTestId('icebreaker-count-pill-text'),
-      ).toHaveText('1 PERSON HAS RAISED THEIR HAND');
+        pageParticipant.getByTestId('icebreaker-chosen-view'),
+      ).toBeVisible();
 
-      // Participants have no advance control at any point.
+      // Participant has no advance control at any point.
       await expect(
         pageParticipant.getByTestId('icebreaker-advance-cta'),
       ).toHaveCount(0);
 
-      // The Study Leader taps Begin Reading → and everyone lands on Section 3.
+      // Study Leader cannot advance while volunteer turn is incomplete.
+      await expect(pageLeader.getByTestId('locked-advance-bar')).toBeVisible();
+
+      // Daniel completes turn with Done Sharing.
+      await pageParticipant.getByTestId('icebreaker-done-button').click();
+      await expect(
+        pageParticipant.getByTestId('icebreaker-done-completed'),
+      ).toBeVisible();
+
+      // The Study Leader's Begin Reading → CTA is now unlocked.
       await expect(pageLeader.getByTestId('icebreaker-advance-cta')).toContainText(
         'Begin Reading →',
       );
@@ -412,7 +426,7 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
     }
   });
 
-  test('Scenario 5: reconnect and late join restore the raised queue, exact count, and own raised state', async ({
+  test('Scenario 5: reconnect and late join restore the chosen volunteer and room announcement', async ({
     browser,
   }, testInfo) => {
     testInfo.setTimeout(90_000);
@@ -430,40 +444,34 @@ test.describe('Section 2 — Icebreaker "Outsiders Wanted" prompt with live hand
       await startStudyOnSection1(pageLeader, [pageFirst, pageSecond]);
       await reachIcebreaker(pageLeader, [pageLeader, pageFirst, pageSecond]);
 
-      // Two raised hands before the reload.
+      // Daniel raises hand and is chosen.
       await pageFirst.getByTestId('hand-raise-orb').click();
-      await pageSecond.getByTestId('hand-raise-orb').click();
       await expect(
-        pageLeader.getByTestId('icebreaker-count-pill-text'),
-      ).toHaveText('2 PEOPLE HAVE RAISED THEIR HAND');
+        pageFirst.getByTestId('icebreaker-chosen-view'),
+      ).toBeVisible();
 
-      // Daniel reloads: the snapshot restores his own raised state and the count.
+      // Daniel reloads: the snapshot restores his chosen volunteer view.
       await pageFirst.reload();
       await expect(pageFirst.getByTestId('icebreaker-screen')).toBeVisible();
-      await expect(pageFirst.getByTestId('hand-raise-orb')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      );
       await expect(
-        pageFirst.getByTestId('icebreaker-orb-caption'),
-      ).toHaveText('Tap again to lower');
+        pageFirst.getByTestId('icebreaker-chosen-view'),
+      ).toBeVisible();
       await expect(
-        pageFirst.getByTestId('icebreaker-count-pill-text'),
-      ).toHaveText('2 PEOPLE HAVE RAISED THEIR HAND');
+        pageFirst.getByTestId('icebreaker-chosen-pill'),
+      ).toHaveText('YOU WERE CHOSEN');
+      await expect(
+        pageFirst.getByTestId('icebreaker-done-button'),
+      ).toBeVisible();
 
-      // A late joiner sees the exact count immediately.
+      // A late joiner sees the room announcement note immediately.
       const lateContext = await browser.newContext();
       const pageLate = await lateContext.newPage();
       try {
         await joinAsParticipant(pageLate, sessionCode, 'Ruth');
         await expect(pageLate.getByTestId('icebreaker-screen')).toBeVisible();
         await expect(
-          pageLate.getByTestId('icebreaker-count-pill-text'),
-        ).toHaveText('2 PEOPLE HAVE RAISED THEIR HAND');
-        await expect(pageLate.getByTestId('hand-raise-orb')).toHaveAttribute(
-          'aria-pressed',
-          'false',
-        );
+          pageLate.getByTestId('icebreaker-active-volunteer-note'),
+        ).toHaveText('Daniel is sharing');
       } finally {
         await lateContext.close();
       }

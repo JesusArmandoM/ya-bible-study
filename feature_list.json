@@ -555,11 +555,14 @@
     "depends_on": [
       "leader-bidirectional-section-navigation"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Integration and Playwright multi-client tests verifying the first Participant to tap 'Raise Hand' in Sections 1, 2, or 3 is immediately assigned selectedMemberId, everyone sees who was chosen, and only the winner sees 'YOU WERE CHOSEN!' and the 'Done' button."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-11-06 (Worktree session): Implemented First-Hand-Wins auto-assignment across Sections 1, 2, and 3 in src/server/sessionStore.ts (on first raise_hand during open turn, selectedMemberId auto-assigned to binding.memberId while preserving winner on subsequent raises; turn gated until Done or leader override). Implemented Section 2 chosen volunteer view (icebreaker-chosen-view, icebreaker-chosen-pill 'YOU WERE CHOSEN', icebreaker-done-button 'Done Sharing'), participant active volunteer announcement note (icebreaker-active-volunteer-note), leader active volunteer banner (icebreaker-chosen-banner) with locked progression and override (icebreaker-override-button) in src/client/components/icebreaker/IcebreakerScreen.tsx. Wired onCompleteTurn and onOverrideTurn in App.tsx and DualDeviceFrame.tsx. Added design-token styling in src/client/styles/global.css. Added new dedicated integration suite tests/integration/ws-first-hand-wins.test.ts (3/3 passing). Added new multi-client Playwright E2E suite tests/e2e/first-hand-wins-volunteer-assignment.spec.ts (verifies instant auto-selection, prominent YOU WERE CHOSEN view, Done gating, and room announcements across Sections 1, 2, and 3; passed in 18.7s). Adapted existing integration suites (ws-hand-raise.test.ts, ws-icebreaker-hand-raise.test.ts, ws-volunteer-gate.test.ts) and E2E suites (section-1-opening-prayer.spec.ts, section-1-chosen-volunteer-prayer-gate.spec.ts, section-2-icebreaker.spec.ts, section-3-gospel-reading-turn.spec.ts). Full Playwright batch of 23 tests passed in 5.6m. ./init.sh passed cleanly (tsc typecheck clean, 60 Vitest files / 528 tests passed, production build passed). Zero occurrences of 'Assistant' in src/.",
+      "2026-11-06 (Independent Validator): Verdict ACCEPT. Re-ran ./init.sh (exit 0; typecheck clean, 62/62 Vitest suites / 543 tests passed, production build clean), Playwright E2E tests/e2e/first-hand-wins-volunteer-assignment.spec.ts on PLAYWRIGHT_PORT=3306 (1/1 passed in 18.7s), verified 0 matches for 'Assistant' in src/, and confirmed full compliance with docs/specs/first-hand-wins-volunteer-assignment.md."
+    ],
     "notes": "Follow docs/domain-model.md Path A — First-Hand-Wins and DESIGN.md override #4."
   },
   {

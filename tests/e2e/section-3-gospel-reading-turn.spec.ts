@@ -274,19 +274,22 @@ test.describe('Section 3 — Gospel Reading sole passage presentation with gated
         '0 / 2',
       );
 
-      // Daniel volunteers by tapping the Read aloud orb
+      // Daniel volunteers by tapping the Read aloud orb; under First-Hand-Wins,
+      // Daniel immediately wins the volunteer turn and receives the chosen view.
       await pageDaniel.getByTestId('read-aloud-orb').click();
-      await expect(pageDaniel.getByTestId('read-aloud-orb')).toHaveAttribute(
-        'data-raised',
-        'true',
-      );
+      await expect(
+        pageDaniel.getByTestId('reading-chosen-view'),
+      ).toBeVisible();
+      await expect(
+        pageDaniel.getByTestId('reading-chosen-pill'),
+      ).toHaveText('YOU WERE CHOSEN');
 
       // Leader sees counter update to 1 / 2
       await expect(pageLeader.getByTestId('reader-count-chip')).toHaveText(
         '1 / 2',
       );
 
-      // Leader assigns Maria directly by tapping her avatar in the roster strip
+      // Leader can reassign to Maria directly by tapping her avatar in the roster strip
       const mariaAvatar = pageLeader.locator(
         '[data-testid^="roster-avatar-"][data-member-id]',
       ).filter({ hasText: 'Maria' });

@@ -242,11 +242,11 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
       j1.memberId,
     );
 
-    // Reserved follow-up fields stay null in every flow of this feature.
+    // First-Hand-Wins: Blake was first to raise, so selectedMemberId is Blake.
     for (const view of [echoed, leaderView, p2View]) {
       expect(view.session.volunteerTurn?.candidateMemberId).toBeNull();
       expect(view.session.volunteerTurn?.candidateExpiresAt).toBeNull();
-      expect(view.session.volunteerTurn?.selectedMemberId).toBeNull();
+      expect(view.session.volunteerTurn?.selectedMemberId).toBe(j1.memberId);
       expect(view.session.volunteerTurn?.completedAt).toBeNull();
     }
 
@@ -493,6 +493,16 @@ describe('WebSocket hand-raise / volunteer turn lifecycle (protocol v3)', () => 
       (m) => m.command === 'lower_hand',
     );
     expect(loweredIn2.session.volunteerTurn?.raisedHands).toEqual([]);
+
+    // Section 2 turn was assigned to Blake via First-Hand-Wins; leader overrides to finish turn.
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'override-sec-2',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'override_turn');
 
     // Leaving Section 2 into Section 3 creates the fresh Section 3 reading turn.
     leader.send({
