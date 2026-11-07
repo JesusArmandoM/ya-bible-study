@@ -11,17 +11,17 @@ describe('SectionProgressHeader', () => {
     });
   });
 
-  it('renders section label and percentage correctly for any section (1..5)', () => {
+  it('renders section label and percentage correctly for any section (1..6)', () => {
     const { rerender } = render(<SectionProgressHeader sectionNumber={1} />);
-    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 1 OF 5');
-    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('20%');
+    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 1 OF 6');
+    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('17%');
 
     rerender(<SectionProgressHeader sectionNumber={3} />);
-    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 3 OF 5');
-    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('60%');
+    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 3 OF 6');
+    expect(screen.getByTestId('section-one-percent')).toHaveTextContent('50%');
 
-    rerender(<SectionProgressHeader sectionNumber={5} />);
-    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 5 OF 5');
+    rerender(<SectionProgressHeader sectionNumber={6} />);
+    expect(screen.getByTestId('section-one-label')).toHaveTextContent('SECTION 6 OF 6');
     expect(screen.getByTestId('section-one-percent')).toHaveTextContent('100%');
   });
 

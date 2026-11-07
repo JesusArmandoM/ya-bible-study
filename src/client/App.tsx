@@ -637,7 +637,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                     void liveSession.previousSection().catch(() => {});
                   }}
                   onNextSection={() => {
-                    void liveSession.advanceSection().catch(() => {});
+                    void liveSession.nextSection().catch(() => {});
                   }}
                 />
               )
