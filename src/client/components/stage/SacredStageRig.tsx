@@ -99,6 +99,8 @@ export function SacredStageRig({
   const rigRootRef = useRef<THREE.Group>(null);
   const sanctuaryGroupRef = useRef<THREE.Group>(null);
   const hospitalityRingsRef = useRef<THREE.Group>(null);
+  const lanternScrollRef = useRef<THREE.Group>(null);
+  const communityFlameRef = useRef<THREE.Group>(null);
   const prayerOrbGroupRef = useRef<THREE.Group>(null);
   const prayerOrbMaterialRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const chosenAuraGroupRef = useRef<THREE.Group>(null);
@@ -163,9 +165,17 @@ export function SacredStageRig({
   // Update target light colors when stage changes.
   useEffect(() => {
     const meta = SACRED_STAGE_METADATA[stage];
-    targetPrimaryColorRef.current.set(meta.primaryColor);
-    targetSecondaryColorRef.current.set(meta.secondaryColor);
-  }, [stage]);
+    if (stage === 'sanctuary-emblem' && accentMode === 'lantern-scroll') {
+      targetPrimaryColorRef.current.set('#10B981');
+      targetSecondaryColorRef.current.set('#E2A83E');
+    } else if (stage === 'sanctuary-emblem' && accentMode === 'community-flame') {
+      targetPrimaryColorRef.current.set('#E2A83E');
+      targetSecondaryColorRef.current.set('#B855C8');
+    } else {
+      targetPrimaryColorRef.current.set(meta.primaryColor);
+      targetSecondaryColorRef.current.set(meta.secondaryColor);
+    }
+  }, [stage, accentMode]);
 
   // Ensure frameloop="demand" (reducedMotion) re-renders immediately on mount and stage/accent/pause changes.
   useEffect(() => {
@@ -244,6 +254,20 @@ export function SacredStageRig({
           0.85 + 0.15 * frame.hospitalityWeight,
         );
         hospitalityRingsRef.current.rotation.z = frame.idleAngle * 0.45;
+      }
+    }
+    if (lanternScrollRef.current) {
+      const lanternVisible = accentMode === 'lantern-scroll' && stage === 'sanctuary-emblem';
+      lanternScrollRef.current.visible = lanternVisible;
+      if (lanternVisible) {
+        lanternScrollRef.current.rotation.y = frame.idleAngle * 0.4;
+      }
+    }
+    if (communityFlameRef.current) {
+      const flameVisible = accentMode === 'community-flame' && stage === 'sanctuary-emblem';
+      communityFlameRef.current.visible = flameVisible;
+      if (flameVisible) {
+        communityFlameRef.current.rotation.y = -frame.idleAngle * 0.35;
       }
     }
 
@@ -431,6 +455,82 @@ export function SacredStageRig({
                 emissiveIntensity={0.42}
                 metalness={0.82}
                 roughness={0.24}
+              />
+            </mesh>
+          </group>
+
+          <group
+            ref={lanternScrollRef}
+            visible={accentMode === 'lantern-scroll'}
+          >
+            <mesh scale={0.42}>
+              <octahedronGeometry args={[1, 0]} />
+              <meshPhysicalMaterial
+                color="#10B981"
+                emissive="#065F46"
+                emissiveIntensity={0.7}
+                metalness={0.2}
+                roughness={0.12}
+                clearcoat={1}
+                clearcoatRoughness={0.08}
+                transmission={0.25}
+              />
+            </mesh>
+            <mesh rotation={[Math.PI * 0.25, -Math.PI * 0.2, 0]}>
+              <torusGeometry args={[1.32, 0.03, 16, 64]} />
+              <meshStandardMaterial
+                color="#E2A83E"
+                emissive="#9A6B16"
+                emissiveIntensity={0.45}
+                metalness={0.85}
+                roughness={0.22}
+              />
+            </mesh>
+            <mesh rotation={[-Math.PI * 0.35, Math.PI * 0.15, 0]}>
+              <torusGeometry args={[1.18, 0.024, 16, 64]} />
+              <meshStandardMaterial
+                color="#34D399"
+                emissive="#059669"
+                emissiveIntensity={0.48}
+                metalness={0.65}
+                roughness={0.25}
+              />
+            </mesh>
+          </group>
+
+          <group
+            ref={communityFlameRef}
+            visible={accentMode === 'community-flame'}
+          >
+            <mesh scale={0.38} position={[0, 0.08, 0]}>
+              <coneGeometry args={[0.7, 1.2, 24]} />
+              <meshPhysicalMaterial
+                color="#E2A83E"
+                emissive="#B855C8"
+                emissiveIntensity={0.65}
+                metalness={0.45}
+                roughness={0.18}
+                clearcoat={0.9}
+              />
+            </mesh>
+            <mesh rotation={[Math.PI * 0.4, 0.2, 0]}>
+              <torusGeometry args={[1.25, 0.026, 16, 64]} />
+              <meshStandardMaterial
+                color="#F472B6"
+                emissive="#9D174D"
+                emissiveIntensity={0.5}
+                metalness={0.7}
+                roughness={0.24}
+              />
+            </mesh>
+            <mesh rotation={[-Math.PI * 0.28, -0.35, 0]}>
+              <torusGeometry args={[1.38, 0.024, 16, 64]} />
+              <meshStandardMaterial
+                color="#E2A83E"
+                emissive="#926014"
+                emissiveIntensity={0.45}
+                metalness={0.85}
+                roughness={0.22}
               />
             </mesh>
           </group>

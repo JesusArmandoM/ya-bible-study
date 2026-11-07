@@ -208,6 +208,12 @@ export function Sacred3DScene({
       : 'always';
 
   const metadata = SACRED_STAGE_METADATA[stage];
+  const effectiveGlowColor =
+    stage === 'sanctuary-emblem' && accentMode === 'lantern-scroll'
+      ? 'rgba(16, 185, 129, 0.28)'
+      : stage === 'sanctuary-emblem' && accentMode === 'community-flame'
+        ? 'rgba(226, 168, 62, 0.28)'
+        : metadata.glowColor;
   const rootClassName = className
     ? `sacred-stage-container ${className}`
     : 'sacred-stage-container';
@@ -234,7 +240,7 @@ export function Sacred3DScene({
         className="sacred-stage-ambient"
         aria-hidden="true"
         style={{
-          background: `radial-gradient(circle at 50% 50%, ${metadata.glowColor} 0%, transparent 72%)`,
+          background: `radial-gradient(circle at 50% 50%, ${effectiveGlowColor} 0%, transparent 72%)`,
         }}
       />
 

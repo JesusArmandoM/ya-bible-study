@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SanctuaryRole } from '../../../shared/health';
+import type { StudySectionId } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
 import type { SessionSocketClient } from '../../lib/sessionSocket';
 import { useLiveSession } from '../../lib/useLiveSession';
@@ -18,6 +19,7 @@ import { SectionPlaceholderScreen } from '../prayer/SectionPlaceholderScreen';
 import { GospelReadingScreen } from '../reading/GospelReadingScreen';
 import { DeepAnalysisScreen } from '../analysis/DeepAnalysisScreen';
 import { Sacred3DScene } from '../stage/Sacred3DScene';
+import { SectionEntryOverlay } from '../stage/SectionEntryOverlay';
 
 export interface DualDeviceFrameProps {
   role: SanctuaryRole;
@@ -73,6 +75,49 @@ export function DualDeviceFrame({
   const isWaitingView =
     !isLeader && (session?.status === 'lobby' || session?.status === 'setup');
 
+  const [isSectionEntryActive, setIsSectionEntryActive] = useState<boolean>(false);
+  const [entrySectionId, setEntrySectionId] = useState<StudySectionId | null>(null);
+  const lastSectionIdRef = useRef<StudySectionId | null>(null);
+  const prevStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!session) {
+      lastSectionIdRef.current = null;
+      prevStatusRef.current = null;
+      setIsSectionEntryActive(false);
+      setEntrySectionId(null);
+      return;
+    }
+
+    const currentStatus = session.status;
+    const currentSection = session.currentSectionId;
+    const sectionEnteredAt = session.sectionEnteredAt;
+
+    if (currentStatus === 'in_progress' && currentSection) {
+      const statusChangedToInProgress =
+        prevStatusRef.current !== 'in_progress' && currentStatus === 'in_progress';
+      const sectionChanged =
+        lastSectionIdRef.current !== null && lastSectionIdRef.current !== currentSection;
+
+      const isRecent =
+        !sectionEnteredAt ||
+        Date.now() - new Date(sectionEnteredAt).getTime() < 5000;
+
+      if (statusChangedToInProgress || sectionChanged) {
+        if (isRecent) {
+          setEntrySectionId(currentSection);
+          setIsSectionEntryActive(true);
+        }
+      } else if (lastSectionIdRef.current === null && isRecent) {
+        setEntrySectionId(currentSection);
+        setIsSectionEntryActive(true);
+      }
+      lastSectionIdRef.current = currentSection;
+    }
+
+    prevStatusRef.current = currentStatus;
+  }, [session?.status, session?.currentSectionId, session?.sectionEnteredAt]);
+
   const frameHeaderLabel = isLeader
     ? 'STUDY LEADER'
     : `PARTICIPANT: ${displayName}`;
@@ -99,12 +144,18 @@ export function DualDeviceFrame({
       <div className="dual-device-chassis" data-testid={`${testId}-chassis`}>
         <div className="dual-device-screen-scroll">
           <SacredStageProvider store={stageStore}>
-            <div
+            <SectionEntryOverlay
+              active={isSectionEntryActive && Boolean(entrySectionId)}
+              sectionId={entrySectionId ?? currentSectionId ?? 'section_1_prayer'}
+              onDismiss={() => setIsSectionEntryActive(false)}
+              stageStore={stageStore}
               className="dual-frame-stage-wrapper"
-              data-stage-layout={isWaitingView ? 'waiting' : 'default'}
+              stageLayout={isWaitingView ? 'waiting' : 'default'}
+              hasSession={true}
+              role={role}
             >
               <Sacred3DScene store={stageStore} />
-            </div>
+            </SectionEntryOverlay>
 
             {liveSession.connectionStatus === 'connecting' && !session ? (
               <div
@@ -129,6 +180,7 @@ export function DualDeviceFrame({
                 <ParticipantWaitingScreen />
               )
             ) : session?.status === 'in_progress' ? (
+              isSectionEntryActive ? null : (
               currentSectionId === 'section_1_prayer' ? (
                 <OpeningPrayerScreen
                   role={liveSession.role ?? role}
@@ -253,6 +305,7 @@ export function DualDeviceFrame({
                 <div className="dual-frame-fallback">
                   <span>Preparing Section...</span>
                 </div>
+              )
               )
             ) : (
               <div

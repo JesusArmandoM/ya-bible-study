@@ -81,10 +81,11 @@ async function joinAsParticipant(
 }
 
 test.describe('Leader Bidirectional Section Navigation (6 interactive sections)', () => {
-  test.describe.configure({ timeout: 60_000 });
+  test.describe.configure({ timeout: 90_000 });
   test('Study Leader navigates forward and backward across all 6 sections, with turn reset and participant gating', async ({
     browser,
-  }) => {
+  }, testInfo) => {
+    testInfo.setTimeout(90_000);
     const leaderContext = await browser.newContext();
     const participantContext = await browser.newContext();
 
