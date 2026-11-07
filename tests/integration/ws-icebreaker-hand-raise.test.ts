@@ -386,11 +386,23 @@ describe('WebSocket Section 2 icebreaker open-share turn (protocol v3)', () => {
     );
     expect(raised.session.volunteerTurn?.candidateMemberId).toBeNull();
     expect(raised.session.volunteerTurn?.candidateExpiresAt).toBeNull();
-    expect(raised.session.volunteerTurn?.selectedMemberId).toBeNull();
+    expect(raised.session.volunteerTurn?.selectedMemberId).toBe(j1.memberId);
     expect(raised.session.volunteerTurn?.completedAt).toBeNull();
 
-    // Scenario 4: Section 2 -> 3 is the leader's unconditional next_section —
-    // no completion precondition, raised hands do not block it.
+    // Section 2 turn is assigned to Daniel via First-Hand-Wins; leader overrides before advancing.
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'override-2',
+    });
+    await leader.waitFor(
+      'session_updated',
+      (m) => m.command === 'override_turn',
+    );
+
+    // Scenario 4: Section 2 -> 3 advances once completed.
     leader.send({
       type: 'next_section',
       sessionCode: created.sessionCode,
@@ -548,17 +560,31 @@ describe('WebSocket Section 2 icebreaker open-share turn (protocol v3)', () => {
     ).toEqual([]);
   });
 
-  it('locks Section-1-scoped commands out of Section 2: choose_volunteer / override_turn / complete_turn stay INVALID_STATE_TRANSITION', async () => {
+  it('supports Section 2 volunteer turn commands: choose_volunteer, complete_turn, and override_turn', async () => {
     const { leader, created } = await createLeader();
     const { participant: p1, joined: j1 } = await joinParticipant(
       created.sessionCode,
       'Daniel',
     );
+    const { participant: p2, joined: j2 } = await joinParticipant(
+      created.sessionCode,
+      'Nora',
+    );
     await loadStudy(leader, created);
     await startStudy(leader, created);
     await advanceToIcebreaker(leader, created);
 
-    // choose_volunteer passes target validation, then hits the state gate.
+    // Before anyone is selected, non-chosen member cannot complete_turn.
+    p1.send({
+      type: 'complete_turn',
+      sessionCode: created.sessionCode,
+      memberId: j1.memberId,
+      requestId: 'done-before-assign',
+    });
+    const doneBeforeAssign = await p1.waitFor('session_error');
+    expect(doneBeforeAssign.code).toBe('UNAUTHORIZED_MEMBER');
+
+    // choose_volunteer assigns Daniel in Section 2.
     leader.send({
       type: 'choose_volunteer',
       sessionCode: created.sessionCode,
@@ -567,51 +593,34 @@ describe('WebSocket Section 2 icebreaker open-share turn (protocol v3)', () => {
       targetMemberId: j1.memberId,
       requestId: 'choose-in-sec-2',
     });
-    const chooseError = await leader.waitFor('session_error');
-    expect(chooseError.requestId).toBe('choose-in-sec-2');
-    expect(chooseError.code).toBe('INVALID_STATE_TRANSITION');
+    const chooseSuccess = await leader.waitFor(
+      'session_updated',
+      (m) => m.command === 'choose_volunteer',
+    );
+    expect(chooseSuccess.session.volunteerTurn?.selectedMemberId).toBe(j1.memberId);
 
-    // override_turn is a Section 1 gate too.
-    leader.send({
-      type: 'override_turn',
+    // Nora (not chosen) cannot complete_turn.
+    p2.send({
+      type: 'complete_turn',
       sessionCode: created.sessionCode,
-      leaderToken: created.leaderToken,
-      memberId: created.memberId,
-      requestId: 'override-in-sec-2',
+      memberId: j2.memberId,
+      requestId: 'done-wrong-member',
     });
-    const overrideError = await leader.waitFor('session_error');
-    expect(overrideError.requestId).toBe('override-in-sec-2');
-    expect(overrideError.code).toBe('INVALID_STATE_TRANSITION');
+    const doneWrong = await p2.waitFor('session_error');
+    expect(doneWrong.code).toBe('UNAUTHORIZED_MEMBER');
 
-    // complete_turn has no Section 1 turn to complete in Section 2.
+    // Daniel (chosen) completes turn with complete_turn.
     p1.send({
       type: 'complete_turn',
       sessionCode: created.sessionCode,
       memberId: j1.memberId,
       requestId: 'done-in-sec-2',
     });
-    const doneError = await p1.waitFor('session_error');
-    expect(doneError.requestId).toBe('done-in-sec-2');
-    expect(doneError.code).toBe('INVALID_STATE_TRANSITION');
-
-    // None of the rejected frames mutated the open-share turn.
-    const probe = await connectPeer();
-    probe.send({
-      type: 'join_session',
-      sessionCode: created.sessionCode,
-      displayName: 'Nora',
-      requestId: 'join-probe',
-    });
-    const joined = await probe.waitFor('session_joined');
-    expect(joined.session.volunteerTurn).toEqual({
-      sectionId: 'section_2_icebreaker',
-      mode: 'open_share',
-      raisedHands: [],
-      candidateMemberId: null,
-      candidateExpiresAt: null,
-      selectedMemberId: null,
-      completedAt: null,
-    });
+    const doneSuccess = await p1.waitFor(
+      'session_updated',
+      (m) => m.command === 'complete_turn',
+    );
+    expect(doneSuccess.session.volunteerTurn?.completedAt).not.toBeNull();
   });
 
   it('Scenario 5: raised queue, exact count, and own raised state survive reconnects and late joins (deep copies, stripped secrets)', async () => {

@@ -5,15 +5,45 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `fullscreen-3d-section-entry-animations`
+- Current next ready feature: `fullscreen-3d-random-picker-reveal`
 - Current blocker: `none`
 - Last verified at: `2026-11-06`
 
 ## Session Log
 
-### Session 038
+### Session 040
 
 - Date: `2026-11-06`
+- Goal: Implement and self-verify feature `first-hand-wins-volunteer-assignment` (Issue #46) per `docs/specs/first-hand-wins-volunteer-assignment.md` in worktree `feature/first-hand-wins-volunteer-assignment` (`PORT=3106`, `API_PORT=3206`, `PLAYWRIGHT_PORT=3306`).
+- Completed:
+  - Server-side First-Hand-Wins auto-assignment (`src/server/sessionStore.ts`):
+    - In `handleTurnCommand` for `command === 'raise_hand'`: when `session.volunteerTurn` is open (`selectedMemberId === null && candidateMemberId === null && completedAt === null`), automatically sets `selectedMemberId = binding.memberId` via `applySelectVolunteer`.
+    - Subsequent `raise_hand` calls maintain the original `selectedMemberId` while appending to `raisedHands`.
+    - Section 2 Icebreaker is now recognized as a full turn section (`complete_turn`, `choose_volunteer`, `override_turn`, and forward gating in `next_section`).
+  - Section 2 Icebreaker screen updates (`src/client/components/icebreaker/IcebreakerScreen.tsx`):
+    - Added high-visibility chosen volunteer view (`icebreaker-chosen-view`, `icebreaker-chosen-pill` with "YOU WERE CHOSEN", `icebreaker-chosen-title` "It's your turn to share", `IcebreakerPromptCard`, and `icebreaker-done-button` with "✓ Done Sharing" calling `onCompleteTurn`).
+    - Added non-chosen volunteer room announcement note (`icebreaker-active-volunteer-note`: `"<DisplayName> is sharing"`).
+    - Added Study Leader active volunteer banner (`icebreaker-chosen-banner`: `"<DisplayName> is sharing — waiting for Done"`), locked forward progression bar, and leader override (`icebreaker-override-button` calling `onOverrideTurn`).
+    - Wired `onCompleteTurn` and `onOverrideTurn` in `App.tsx` and `DualDeviceFrame.tsx`.
+  - Section 3 Gospel Reading screen updates (`src/client/components/reading/GospelReadingScreen.tsx` & `ReadingDoneView.tsx`):
+    - Added Study Leader active volunteer banner (`reading-chosen-banner`: `"<DisplayName> is reading aloud — waiting for Done"`).
+    - Updated `ReadingDoneView.tsx` copy and CTA button (`✓ Done Reading`).
+  - Added CSS design-token styling in `src/client/styles/global.css` for icebreaker chosen view, pills, status cards, and leader banners.
+  - Added new integration suite `tests/integration/ws-first-hand-wins.test.ts` (3 tests verifying auto-assignment on first raise, winner persistence, gating, and unauthorized completion rejection across Sections 1, 2, and 3).
+  - Added new multi-client Playwright E2E suite `tests/e2e/first-hand-wins-volunteer-assignment.spec.ts` (1 test verifying instant auto-assignment, high-visibility YOU WERE CHOSEN view, Done gating, and room announcements across Sections 1, 2, and 3, passing in 18.7s).
+  - Adapted existing integration suites (`ws-hand-raise.test.ts`, `ws-icebreaker-hand-raise.test.ts`, `ws-volunteer-gate.test.ts`) and existing Playwright suites (`section-1-opening-prayer.spec.ts`, `section-1-chosen-volunteer-prayer-gate.spec.ts`, `section-2-icebreaker.spec.ts`, `section-3-gospel-reading-turn.spec.ts`) for instant auto-selection.
+- Verification run:
+  - `./init.sh` passed exit code 0:
+    - TypeScript typecheck passed cleanly across all 3 tsconfigs.
+    - Vitest unit + integration tests: 60/60 files passed, 528/528 tests passed.
+    - Production build: Vite client + tsc server passed cleanly.
+  - Dedicated integration suite: `npx vitest run tests/integration/ws-first-hand-wins.test.ts` passed 3/3 tests.
+  - Dedicated E2E suite: `npx playwright test tests/e2e/first-hand-wins-volunteer-assignment.spec.ts` passed in 18.7s on mobile-chromium 390x844.
+  - Comprehensive Playwright batch: 23 tests across `first-hand-wins-volunteer-assignment.spec.ts`, `section-1-opening-prayer.spec.ts`, `section-1-chosen-volunteer-prayer-gate.spec.ts`, `section-2-icebreaker.spec.ts`, `section-3-gospel-reading-turn.spec.ts`, `ws-room-lifecycle.spec.ts` passed (23/23 passed in 5.6m).
+  - Invariant check: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
+  - WebGL budget: all views maintain <= 1 canvas.
+- Files updated: `feature_list.json`, `PROGRESS.md`, `src/server/sessionStore.ts`, `src/client/components/icebreaker/IcebreakerScreen.tsx`, `src/client/components/reading/GospelReadingScreen.tsx`, `src/client/components/reading/ReadingDoneView.tsx`, `src/client/App.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `src/client/styles/global.css`, `tests/integration/ws-first-hand-wins.test.ts`, `tests/e2e/first-hand-wins-volunteer-assignment.spec.ts`, and updated test suites.
+- Status: `first-hand-wins-volunteer-assignment` is ready for validation.
 ### Session 039
 
 - Date: `2026-11-06`

@@ -1178,6 +1178,7 @@ export class LiveSessionStore {
 
       const isOpenSection =
         session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_2_icebreaker' ||
         session.currentSectionId === 'section_3_reading';
       if (
         session.status !== 'in_progress' ||
@@ -1190,6 +1191,8 @@ export class LiveSessionStore {
           'INVALID_STATE_TRANSITION',
           session.currentSectionId === 'section_3_reading'
             ? 'A volunteer can only be chosen while the Gospel Reading turn is open.'
+            : session.currentSectionId === 'section_2_icebreaker'
+            ? 'A volunteer can only be chosen while the Icebreaker turn is open.'
             : 'A volunteer can only be chosen while the Opening Prayer turn is open.',
           requestId,
         );
@@ -1207,6 +1210,9 @@ export class LiveSessionStore {
         session.volunteerTurn,
         rawTarget,
       );
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
       this.broadcastSessionUpdated(session, command, socket, requestId);
       return;
     }
@@ -1219,6 +1225,7 @@ export class LiveSessionStore {
        */
       const isOpenSection =
         session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_2_icebreaker' ||
         session.currentSectionId === 'section_3_reading';
       if (
         session.status !== 'in_progress' ||
@@ -1230,6 +1237,8 @@ export class LiveSessionStore {
           'INVALID_STATE_TRANSITION',
           session.currentSectionId === 'section_3_reading'
             ? 'The Gospel Reading turn can only be completed during the Gospel Reading section.'
+            : session.currentSectionId === 'section_2_icebreaker'
+            ? 'The Icebreaker turn can only be completed during the Icebreaker section.'
             : 'The Opening Prayer turn can only be completed during the Opening Prayer section.',
           requestId,
         );
@@ -1241,6 +1250,8 @@ export class LiveSessionStore {
           'INVALID_STATE_TRANSITION',
           session.currentSectionId === 'section_3_reading'
             ? 'The Gospel Reading turn is already completed.'
+            : session.currentSectionId === 'section_2_icebreaker'
+            ? 'The Icebreaker turn is already completed.'
             : 'The Opening Prayer turn is already completed.',
           requestId,
         );
@@ -1379,6 +1390,21 @@ export class LiveSessionStore {
           socket,
           'INVALID_STATE_TRANSITION',
           'The Opening Prayer turn must be completed before advancing.',
+          requestId,
+        );
+        return;
+      }
+
+      if (
+        session.currentSectionId === 'section_2_icebreaker' &&
+        !session.completedSectionIds.includes('section_2_icebreaker') &&
+        session.volunteerTurn?.selectedMemberId != null &&
+        session.volunteerTurn?.completedAt == null
+      ) {
+        this.sendError(
+          socket,
+          'INVALID_STATE_TRANSITION',
+          'The Icebreaker turn must be completed before advancing.',
           requestId,
         );
         return;
@@ -1645,6 +1671,8 @@ export class LiveSessionStore {
         command === 'complete_turn'
           ? session.currentSectionId === 'section_3_reading'
             ? 'Only the Participant bound to this connection can complete the Gospel Reading turn.'
+            : session.currentSectionId === 'section_2_icebreaker'
+            ? 'Only the Participant bound to this connection can complete the Icebreaker turn.'
             : 'Only the Participant bound to this connection can complete the Opening Prayer turn.'
           : 'Only the Participant bound to this connection can raise or lower a hand.',
         requestId,
@@ -1655,8 +1683,9 @@ export class LiveSessionStore {
     if (command === 'complete_turn') {
       const isTurnSection =
         session.currentSectionId === 'section_1_prayer' ||
+        session.currentSectionId === 'section_2_icebreaker' ||
         session.currentSectionId === 'section_3_reading';
-      // (2) state gate: an open Section 1 or Section 3 volunteer turn must exist.
+      // (2) state gate: an open Section 1, 2, or 3 volunteer turn must exist.
       if (
         session.status !== 'in_progress' ||
         !isTurnSection ||
@@ -1667,6 +1696,8 @@ export class LiveSessionStore {
           'INVALID_STATE_TRANSITION',
           session.currentSectionId === 'section_3_reading'
             ? 'The Gospel Reading turn can only be completed during the Gospel Reading section.'
+            : session.currentSectionId === 'section_2_icebreaker'
+            ? 'The Icebreaker turn can only be completed during the Icebreaker section.'
             : 'The Opening Prayer turn can only be completed during the Opening Prayer section.',
           requestId,
         );
@@ -1680,6 +1711,8 @@ export class LiveSessionStore {
           'UNAUTHORIZED_MEMBER',
           session.currentSectionId === 'section_3_reading'
             ? 'Only the chosen volunteer can complete the Gospel Reading turn.'
+            : session.currentSectionId === 'section_2_icebreaker'
+            ? 'Only the chosen volunteer can complete the Icebreaker turn.'
             : 'Only the chosen volunteer can complete the Opening Prayer turn.',
           requestId,
         );
@@ -1742,6 +1775,23 @@ export class LiveSessionStore {
       command === 'raise_hand',
       isoNow,
     );
+
+    if (
+      command === 'raise_hand' &&
+      session.volunteerTurn.selectedMemberId === null &&
+      session.volunteerTurn.candidateMemberId === null &&
+      session.volunteerTurn.completedAt === null
+    ) {
+      session.volunteerTurn = applySelectVolunteer(
+        session.volunteerTurn,
+        binding.memberId,
+      );
+    }
+
+    if (session.currentSectionId && session.volunteerTurn) {
+      session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+    }
+
     session.lastActivityAt = this.now();
     this.broadcastSessionUpdated(session, command, socket, requestId);
   }

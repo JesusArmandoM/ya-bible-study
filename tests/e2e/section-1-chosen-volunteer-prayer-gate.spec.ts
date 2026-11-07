@@ -234,28 +234,9 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await joinAsParticipant(pageParticipant, sessionCode, 'Daniel');
       await startStudyOnSection1(pageLeader, [pageParticipant]);
 
-      // Daniel raises his hand.
+      // Daniel raises his hand; under First-Hand-Wins, Daniel immediately
+      // wins the volunteer turn and receives the prominent YOU WERE CHOSEN view.
       await pageParticipant.getByTestId('hand-raise-orb').click();
-      await expect(pageParticipant.getByTestId('hand-raise-orb')).toContainText(
-        'Hand Raised',
-      );
-      await expect(
-        pageParticipant.getByTestId('prayer-count-pill-text'),
-      ).toHaveText('1 person has raised their hand');
-      await expect(
-        pageParticipant.getByTestId('prayer-count-pill-hint'),
-      ).toHaveText('The leader will choose shortly');
-      await expect(pageLeader.getByTestId('prayer-queue-count')).toHaveText(
-        '1 hand raised',
-      );
-
-      // Leader chooses Daniel from the queue row.
-      const choosePill = pageLeader.getByTestId('prayer-queue-choose');
-      await expect(choosePill).toHaveAttribute(
-        'aria-label',
-        'Choose Daniel to pray',
-      );
-      await choosePill.click();
 
       // Chosen-only view: exclusive Done action, chosen copy, aria-live.
       await expect(pageParticipant.getByTestId('prayer-chosen-view')).toBeVisible();
@@ -273,7 +254,7 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
         'Done',
       );
 
-      // Leader: chosen banner, queue chip REPLACING the Choose pill, override
+      // Leader: chosen banner, queue chip showing Chosen, override
       // outside the locked bar, and the byte-identical locked copy.
       await expect(pageLeader.getByTestId('prayer-chosen-banner')).toContainText(
         'Daniel is praying — waiting for Done',
@@ -360,7 +341,6 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await expect(pageLeader.getByTestId('prayer-queue-count')).toHaveText(
         '1 hand raised',
       );
-      await pageLeader.getByTestId('prayer-queue-choose').click();
       await expect(pageLeader.getByTestId('prayer-chosen-banner')).toContainText(
         'Daniel is praying — waiting for Done',
       );
@@ -536,7 +516,6 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await expect(pageLeader.getByTestId('prayer-queue-count')).toHaveText(
         '1 hand raised',
       );
-      await pageLeader.getByTestId('prayer-queue-choose').click();
       await expect(pageLeader.getByTestId('prayer-chosen-banner')).toContainText(
         'Daniel is praying — waiting for Done',
       );
@@ -621,7 +600,6 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await expect(pageLeader.getByTestId('prayer-queue-count')).toHaveText(
         '1 hand raised',
       );
-      await pageLeader.getByTestId('prayer-queue-choose').click();
       await expect(pageChosen.getByTestId('prayer-chosen-view')).toBeVisible();
 
       // Reload: the selection is session state (not socket state) — the chosen
@@ -680,7 +658,6 @@ test.describe('Section 1 — chosen volunteer prayer gate', () => {
       await startStudyOnSection1(pageLeader, [pageChosen, pageChurn]);
 
       await pageChosen.getByTestId('hand-raise-orb').click();
-      await pageLeader.getByTestId('prayer-queue-choose').click();
       await expect(pageChosen.getByTestId('prayer-chosen-view')).toBeVisible();
 
       // Hand churn plus clear-hands wipes the queue but not the selection.

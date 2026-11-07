@@ -374,10 +374,10 @@ describe('sessionSocket turn commands (protocol v3 hand-raise framing)', () => {
     expect(raised.session.volunteerTurn?.raisedHands).toEqual([
       { memberId: joined.memberId, raisedAt: expect.any(String) },
     ]);
-    // Reserved follow-up fields stay null in this feature.
+    // First-Hand-Wins: first participant to raise immediately becomes selectedMemberId.
     expect(raised.session.volunteerTurn?.candidateMemberId).toBeNull();
     expect(raised.session.volunteerTurn?.candidateExpiresAt).toBeNull();
-    expect(raised.session.volunteerTurn?.selectedMemberId).toBeNull();
+    expect(raised.session.volunteerTurn?.selectedMemberId).toBe(joined.memberId);
     expect(raised.session.volunteerTurn?.completedAt).toBeNull();
 
     // Idempotent re-raise keeps a single row with the original raisedAt.

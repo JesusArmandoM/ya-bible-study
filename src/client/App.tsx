@@ -501,6 +501,22 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                       // Failure is surfaced via the session error path.
                     });
                   }}
+                  onCompleteTurn={() => {
+                    void liveSession.completeTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onOverrideTurn={() => {
+                    void liveSession.overrideTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onResetTurn={() => {
+                    void liveSession.resetTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  lastSessionCommand={liveSession.lastSessionCommand}
                 />
               ) : liveSession.session.currentSectionId === 'section_3_reading' ? (
                 <GospelReadingScreen

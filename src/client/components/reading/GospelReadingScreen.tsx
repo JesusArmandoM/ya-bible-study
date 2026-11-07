@@ -258,6 +258,16 @@ export function GospelReadingScreen({
             fullText={fullText}
           />
 
+          {selectedMember && completedAt === null && (
+            <div
+              className="reading-chosen-banner"
+              data-testid="reading-chosen-banner"
+              role="status"
+            >
+              {`${selectedMember.displayName} is reading aloud — waiting for Done`}
+            </div>
+          )}
+
           <LeaderReaderCard
             raisedCount={raisedMemberIds.size}
             totalParticipants={participants.length}
