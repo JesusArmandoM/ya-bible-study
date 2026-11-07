@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import type { HealthResponse } from '../shared/health';
-import { toSessionStudySummary, type SessionStudySummary } from '../shared/session';
+import { toSessionStudySummary, type SessionStudySummary, type StudySectionId } from '../shared/session';
 import { OpeningPrayerScreen } from './components/prayer/OpeningPrayerScreen';
 import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholderScreen';
 import { IcebreakerScreen } from './components/icebreaker/IcebreakerScreen';
@@ -13,6 +13,7 @@ import { ParticipantWaitingScreen } from './components/lobby/ParticipantWaitingS
 import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
+import { SectionEntryOverlay } from './components/stage/SectionEntryOverlay';
 import { SessionResilienceChip } from './components/session/SessionResilienceChip';
 import { ActiveSessionBanner } from './components/welcome/ActiveSessionBanner';
 import { LeaderAccessSheet } from './components/welcome/LeaderAccessSheet';
@@ -26,6 +27,7 @@ import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion';
 import { useRandomSelection } from './lib/useRandomSelection';
 import { useStudySetup } from './lib/useStudySetup';
 import {
+  defaultSacredStageStore,
   SACRED_STAGE_METADATA,
   SACRED_STAGE_VARIANTS,
   useSacredStageStore,
@@ -121,6 +123,53 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
     (studySetup.study ? toSessionStudySummary(studySetup.study) : null);
 
   const hadSessionRef = useRef(false);
+  const [isSectionEntryActive, setIsSectionEntryActive] = useState<boolean>(false);
+  const [entrySectionId, setEntrySectionId] = useState<StudySectionId | null>(null);
+  const lastSectionIdRef = useRef<StudySectionId | null>(null);
+  const prevStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const session = liveSession.session;
+    if (!session) {
+      lastSectionIdRef.current = null;
+      prevStatusRef.current = null;
+      setIsSectionEntryActive(false);
+      setEntrySectionId(null);
+      return;
+    }
+
+    const currentStatus = session.status;
+    const currentSectionId = session.currentSectionId;
+    const sectionEnteredAt = session.sectionEnteredAt;
+
+    if (currentStatus === 'in_progress' && currentSectionId) {
+      const statusChangedToInProgress =
+        prevStatusRef.current !== 'in_progress' && currentStatus === 'in_progress';
+      const sectionChanged =
+        lastSectionIdRef.current !== null && lastSectionIdRef.current !== currentSectionId;
+
+      const isRecent =
+        !sectionEnteredAt ||
+        Date.now() - new Date(sectionEnteredAt).getTime() < 5000;
+
+      if (statusChangedToInProgress || sectionChanged) {
+        if (isRecent) {
+          setEntrySectionId(currentSectionId);
+          setIsSectionEntryActive(true);
+        }
+      } else if (lastSectionIdRef.current === null && isRecent) {
+        setEntrySectionId(currentSectionId);
+        setIsSectionEntryActive(true);
+      }
+      lastSectionIdRef.current = currentSectionId;
+    }
+
+    prevStatusRef.current = currentStatus;
+  }, [
+    liveSession.session?.status,
+    liveSession.session?.currentSectionId,
+    liveSession.session?.sectionEnteredAt,
+  ]);
 
   const clearJoinUrlPath = () => {
     if (
@@ -286,16 +335,18 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
           </header>
         )}
 
-        <div
+        <SectionEntryOverlay
           key="persistent-sacred-stage"
-          className={
-            hasSession ? 'post-join-stage-shell' : 'sanctuary-stage-card'
-          }
+          active={hasSession && isSectionEntryActive && Boolean(entrySectionId)}
+          sectionId={entrySectionId ?? liveSession.session?.currentSectionId ?? 'section_1_prayer'}
+          onDismiss={() => setIsSectionEntryActive(false)}
+          stageStore={defaultSacredStageStore}
+          className={hasSession ? '' : 'sanctuary-stage-card'}
+          stageLayout={stageLayout}
+          hasSession={hasSession}
           role={hasSession ? undefined : 'region'}
-          aria-label={hasSession ? undefined : 'Sanctuary readiness'}
-          data-health={hasSession ? undefined : healthState}
-          data-stage-layout={hasSession ? stageLayout : undefined}
-          data-testid={hasSession ? 'post-join-stage-shell' : undefined}
+          ariaLabel={hasSession ? undefined : 'Sanctuary readiness'}
+          dataHealth={hasSession ? undefined : healthState}
         >
           {!hasSession && (
             <div key="stage-header" className="sanctuary-stage-header">
@@ -354,7 +405,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
               {stageSummary}
             </p>
           )}
-        </div>
+        </SectionEntryOverlay>
 
         {liveSession.session ? (
           isLeader && sessionStatus === 'setup' ? (
@@ -419,6 +470,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
               }}
             />
           ) : sessionStatus === 'in_progress' ? (
+              isSectionEntryActive ? null : (
               liveSession.session.currentSectionId === 'section_1_prayer' ? (
                 <OpeningPrayerScreen
                   role={liveSession.role ?? 'Participant'}
@@ -640,6 +692,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                     void liveSession.nextSection().catch(() => {});
                   }}
                 />
+              )
               )
             ) : null
         ) : activeSheet === 'leader' ? (

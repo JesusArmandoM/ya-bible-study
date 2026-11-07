@@ -2,18 +2,57 @@
 
 ## Current Verified State
 
-- Repository root: `/Users/armando/Documents/YA Bible Study`
+- Repository root: `/Users/armando/Documents/ya-bible-study-worktrees/fullscreen-3d-section-entry-animations`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `fullscreen-3d-section-entry-animations`
+- Current next ready feature: `first-hand-wins-volunteer-assignment`
 - Current blocker: `none`
 - Last verified at: `2026-11-06`
 
 ## Session Log
 
-### Session 038
+### Session 040
 
 - Date: `2026-11-06`
+- Goal: Implement and self-verify feature `fullscreen-3d-section-entry-animations` per `docs/specs/fullscreen-3d-section-entry-animations.md` on branch `feature/fullscreen-3d-section-entry-animations` (`PORT=3105`, `API_PORT=3205`, `PLAYWRIGHT_PORT=3305`).
+- Completed:
+  - Created `SectionEntryOverlay.tsx` (`src/client/components/stage/SectionEntryOverlay.tsx`) with `data-testid="section-entry-overlay"` covering viewport on study start and every section change (forward or backward).
+  - Added distinct 3D sacred emblem models/variants across all 6 sections:
+    1. Section 1 Opening Prayer: violet Prayer Orb (`#B855C8`) — *"Prepare our hearts in humility and mercy"*.
+    2. Section 2 Icebreaker: amber/bronze Hospitality Rings (`#E2A83E`) — *"Outsiders Wanted"*.
+    3. Section 3 Gospel Reading: indigo-periwinkle Gospel Codex (`#6E75F5`) — *"Proclamation of Matthew 15:21–28"*.
+    4. Section 4 Deep Analysis: emerald/gold Lantern & Scroll Crystal (`#10B981` / `#E2A83E`) — *"Verse-by-Verse Gospel Breakdown & Catholic Doctrine"*.
+    5. Section 5 Discussion & Reflection: rose-gold Community Flame (`#E2A83E` / `#B855C8`) — *"Lord, Help Me Pray"*.
+    6. Section 6 Closing Prayer: golden Star of Faith (`#E2A83E`) — *"Sending Forth in Faith"*.
+  - Configured 3D rig geometry, lighting, glow colors, and SVG fallbacks in `SacredStageRig.tsx`, `SacredFallbackEmblem.tsx`, and `Sacred3DScene.tsx`.
+  - Added full section metadata mapping (`SECTION_ENTRY_CONFIGS`, `getSectionEntryConfig`) and `SacredAccentMode` in `sacredStageStore.ts`.
+  - Preserved single persistent WebGL Canvas budget (`<= 1` in standalone, `<= 2` in dual mode) by rendering persistent `<Sacred3DScene>` inside the stage wrapper without canvas unmounting.
+  - Implemented ref-stabilized auto-dismiss timer (~3.2s normal, 800ms for `prefers-reduced-motion`, 200ms in jsdom) with smooth opacity fade-out, immune to parent re-render resets.
+  - Connected `SectionEntryOverlay` into `src/client/App.tsx` and `src/client/components/dual/DualDeviceFrame.tsx`.
+  - Added unit test suite `tests/unit/section-entry-overlay.test.tsx` (9 tests) covering all 6 section emblems, badges, titles, descriptions, auto-dismiss timing, reduced motion, and canvas persistence (9/9 passed).
+  - Added Playwright E2E suite `tests/e2e/fullscreen-3d-section-entry-animations.spec.ts` covering Scenarios 1–4 across all 6 sections forward and backward and dual mode canvas budget (2/2 passed in 48.8s).
+- Verification run:
+  - `./init.sh` passed exit code 0:
+    - TypeScript check clean across 3 tsconfigs (`tsconfig.client.json`, `tsconfig.server.json`, `tsconfig.json`).
+    - Vitest: 60/60 test files passed, 534/534 tests passed.
+    - Production build: clean emit for client and server bundles.
+  - Playwright E2E: `tests/e2e/fullscreen-3d-section-entry-animations.spec.ts` passed 2/2 tests in 48.8s.
+  - Playwright E2E: `tests/e2e/leader-bidirectional-section-navigation.spec.ts` passed 1/1 test in 1.1m.
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches.
+- Files updated:
+  - `src/client/components/stage/SectionEntryOverlay.tsx` (new)
+  - `src/client/state/sacredStageStore.ts`
+  - `src/client/components/stage/SacredStageRig.tsx`
+  - `src/client/components/stage/SacredFallbackEmblem.tsx`
+  - `src/client/components/stage/Sacred3DScene.tsx`
+  - `src/client/App.tsx`
+  - `src/client/components/dual/DualDeviceFrame.tsx`
+  - `src/client/styles/global.css`
+  - `tests/unit/section-entry-overlay.test.tsx` (new)
+  - `tests/e2e/fullscreen-3d-section-entry-animations.spec.ts` (new)
+  - `tests/e2e/leader-bidirectional-section-navigation.spec.ts`
+  - `feature_list.json`
+  - `PROGRESS.md`
 ### Session 039
 
 - Date: `2026-11-06`

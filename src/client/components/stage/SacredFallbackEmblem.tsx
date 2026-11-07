@@ -54,6 +54,54 @@ function renderStageArtwork(
               />
             </>
           )}
+          {accentMode === 'lantern-scroll' && (
+            <>
+              <circle
+                cx="64"
+                cy="64"
+                r="48"
+                stroke="#10B981"
+                strokeWidth="1.8"
+                strokeOpacity="0.75"
+                fill="none"
+              />
+              <ellipse
+                cx="64"
+                cy="64"
+                rx="46"
+                ry="22"
+                transform="rotate(32 64 64)"
+                stroke="#E2A83E"
+                strokeWidth="1.6"
+                strokeOpacity="0.7"
+                fill="none"
+              />
+            </>
+          )}
+          {accentMode === 'community-flame' && (
+            <>
+              <circle
+                cx="64"
+                cy="64"
+                r="48"
+                stroke="#E2A83E"
+                strokeWidth="1.8"
+                strokeOpacity="0.75"
+                fill="none"
+              />
+              <ellipse
+                cx="64"
+                cy="64"
+                rx="44"
+                ry="20"
+                transform="rotate(-30 64 64)"
+                stroke="#F472B6"
+                strokeWidth="1.6"
+                strokeOpacity="0.7"
+                fill="none"
+              />
+            </>
+          )}
           <path
             d="M64 20C67.4 45.2 82.8 60.6 108 64C82.8 67.4 67.4 82.8 64 108C60.6 82.8 45.2 67.4 20 64C45.2 60.6 60.6 45.2 64 20Z"
             fill="url(#sacredGoldGrad)"
