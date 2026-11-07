@@ -206,6 +206,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
   if (isDualMode) {
     return (
       <DesktopDualSideBySideScreen
+        publicUrl={publicUrl}
         onExit={() => {
           setIsDualMode(false);
           if (typeof window !== 'undefined') {
@@ -424,6 +425,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   session={liveSession.session}
                   localStudyDocument={studySetup.study}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onToggleHandRaised={(next) =>
                     liveSession.setHandRaised(next)
                   }
@@ -485,6 +487,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   session={liveSession.session}
                   localStudyDocument={studySetup.study}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onToggleHandRaised={(next) =>
                     liveSession.setHandRaised(next)
                   }
@@ -505,6 +508,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   session={liveSession.session}
                   localStudyDocument={studySetup.study}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onToggleHandRaised={(next) =>
                     liveSession.setHandRaised(next)
                   }
@@ -576,6 +580,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   session={liveSession.session}
                   localStudyDocument={studySetup.study}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onSwitchQuestion={(questionId) => {
                     void liveSession.switchQuestion(questionId).catch(() => {
                       // Failure is surfaced via the session error path.
@@ -608,6 +613,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   session={liveSession.session}
                   localStudyDocument={studySetup.study}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onPreviousSection={() => {
                     void liveSession.previousSection().catch(() => {
                       // Failure is surfaced via the session error path.
@@ -624,6 +630,15 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                 <SectionPlaceholderScreen
                   sectionIndex={liveSession.session.currentSectionIndex ?? 0}
                   role={liveSession.role ?? 'Participant'}
+                  isLeader={isLeader}
+                  sessionCode={liveSession.session.sessionCode}
+                  publicUrl={publicUrl}
+                  onPreviousSection={() => {
+                    void liveSession.previousSection().catch(() => {});
+                  }}
+                  onNextSection={() => {
+                    void liveSession.advanceSection().catch(() => {});
+                  }}
                 />
               )
             ) : null

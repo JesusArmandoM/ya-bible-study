@@ -26,6 +26,7 @@ export interface DualDeviceFrameProps {
   testId?: string;
   studyDocument?: StudyDocument | null;
   className?: string;
+  publicUrl?: string | null;
 }
 
 export function DualDeviceFrame({
@@ -36,6 +37,7 @@ export function DualDeviceFrame({
   testId = 'device-frame',
   studyDocument,
   className,
+  publicUrl = null,
 }: DualDeviceFrameProps) {
   const isLeader = role === 'Study Leader';
 
@@ -119,6 +121,7 @@ export function DualDeviceFrame({
                   attendeeCount={session.connectedParticipantCount}
                   sessionCode={session.sessionCode}
                   isStarting={liveSession.isSubmitting}
+                  publicUrl={publicUrl}
                   onStartStudy={handleStartStudy}
                 />
               ) : (
@@ -131,6 +134,7 @@ export function DualDeviceFrame({
                   session={session}
                   localStudyDocument={studyDocument}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onToggleHandRaised={(next) => liveSession.setHandRaised(next)}
                   onLowerHand={(id) => {
                     void liveSession.lowerHand(id).catch(() => {});
@@ -166,6 +170,7 @@ export function DualDeviceFrame({
                   session={session}
                   localStudyDocument={studyDocument}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onToggleHandRaised={(next) => liveSession.setHandRaised(next)}
                   onPreviousSection={handlePreviousSection}
                   onNextSection={handleNextSection}
@@ -176,6 +181,7 @@ export function DualDeviceFrame({
                   session={session}
                   localStudyDocument={studyDocument}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onToggleHandRaised={(next) => liveSession.setHandRaised(next)}
                   onChooseVolunteer={(id) => {
                     void liveSession.chooseVolunteer(id).catch(() => {});
@@ -213,6 +219,7 @@ export function DualDeviceFrame({
                   session={session}
                   localStudyDocument={studyDocument}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onSwitchQuestion={(id) => {
                     void liveSession.switchQuestion(id).catch(() => {});
                   }}
@@ -231,6 +238,7 @@ export function DualDeviceFrame({
                   session={session}
                   localStudyDocument={studyDocument}
                   memberId={liveSession.credentials?.memberId ?? null}
+                  publicUrl={publicUrl}
                   onPreviousSection={handlePreviousSection}
                   onFinishStudy={() => {
                     void liveSession.finishStudy().catch(() => {});

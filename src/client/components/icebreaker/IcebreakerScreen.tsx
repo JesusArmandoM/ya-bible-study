@@ -33,6 +33,10 @@ export interface IcebreakerScreenProps {
   onPreviousSection?: () => void | Promise<void>;
   /** Study Leader: advance to Section 3 (`next_section`). */
   onNextSection?: () => void | Promise<void>;
+  /** Sanitized PUBLIC_URL origin from GET /api/health (null when unset). */
+  publicUrl?: string | null;
+  /** Optional custom share trigger handler (overrides internal share sheet state). */
+  onShareQr?: () => void;
 }
 
 const PARTICIPANT_SUBCOPY =
@@ -78,6 +82,8 @@ export function IcebreakerScreen({
   onToggleHandRaised,
   onPreviousSection,
   onNextSection,
+  publicUrl = null,
+  onShareQr,
 }: IcebreakerScreenProps) {
   const isLeader = role === 'Study Leader';
   const setStage = useSacredStageStore((s) => s.setStage);
@@ -120,7 +126,13 @@ export function IcebreakerScreen({
       data-role={isLeader ? 'leader' : 'participant'}
       aria-label="Section 2 of 6, Icebreaker"
     >
-      <SectionProgressHeader sectionNumber={2} />
+      <SectionProgressHeader
+        sectionNumber={2}
+        isLeader={isLeader}
+        sessionCode={session.sessionCode}
+        publicUrl={publicUrl}
+        onShareQr={onShareQr}
+      />
 
       <div className="icebreaker-heading">
         <span className="icebreaker-eyebrow" data-testid="icebreaker-eyebrow">

@@ -62,6 +62,10 @@ export interface OpeningPrayerScreenProps {
   onConfirmRandom?: () => void | Promise<void>;
   /** Command of the latest `session_updated` broadcast (completion pulse). */
   lastSessionCommand?: SessionUpdatedCommand | null;
+  /** Sanitized PUBLIC_URL origin from GET /api/health (null when unset). */
+  publicUrl?: string | null;
+  /** Optional custom share trigger handler (overrides internal share sheet state). */
+  onShareQr?: () => void;
 }
 
 const LEADER_SUBTITLE_FALLBACK = 'Waiting for someone to volunteer to pray';
@@ -112,6 +116,8 @@ export function OpeningPrayerScreen({
   onRetryRandom,
   onConfirmRandom,
   lastSessionCommand = null,
+  publicUrl = null,
+  onShareQr,
 }: OpeningPrayerScreenProps) {
   const isLeader = role === 'Study Leader';
   const setStage = useSacredStageStore((s) => s.setStage);
@@ -227,7 +233,13 @@ export function OpeningPrayerScreen({
       data-role={isLeader ? 'leader' : 'participant'}
       aria-label="Section 1 of 5, Opening Prayer"
     >
-      <SectionProgressHeader sectionNumber={1} />
+      <SectionProgressHeader
+        sectionNumber={1}
+        isLeader={isLeader}
+        sessionCode={session.sessionCode}
+        publicUrl={publicUrl}
+        onShareQr={onShareQr}
+      />
 
       <div className="prayer-heading">
         <span className="prayer-eyebrow" data-testid="prayer-eyebrow">

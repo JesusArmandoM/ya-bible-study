@@ -22,6 +22,8 @@ export interface ClosingPrayerScreenProps {
   onPreviousSection?: () => void | Promise<void>;
   onFinishStudy: () => void | Promise<void>;
   isSubmitting?: boolean;
+  publicUrl?: string | null;
+  onShareQr?: () => void;
 }
 
 export function ClosingPrayerScreen({
@@ -32,6 +34,8 @@ export function ClosingPrayerScreen({
   onPreviousSection,
   onFinishStudy,
   isSubmitting = false,
+  publicUrl = null,
+  onShareQr,
 }: ClosingPrayerScreenProps) {
   const setStage = useSacredStageStore((s) => s.setStage);
   const isLeader = role === 'Study Leader';
@@ -48,7 +52,13 @@ export function ClosingPrayerScreen({
 
   return (
     <div className="closing-screen-container" data-testid="closing-prayer-screen">
-      <SectionProgressHeader sectionNumber={6} />
+      <SectionProgressHeader
+        sectionNumber={6}
+        isLeader={isLeader}
+        sessionCode={session.sessionCode}
+        publicUrl={publicUrl}
+        onShareQr={onShareQr}
+      />
 
       <header className="closing-header-lockup">
         <span className="closing-eyebrow">WRAPPING UP</span>

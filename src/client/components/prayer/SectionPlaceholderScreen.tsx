@@ -5,6 +5,14 @@ export interface SectionPlaceholderScreenProps {
   /** 0-based `currentSectionIndex` from the live session snapshot. */
   sectionIndex: number;
   role?: SanctuaryRole;
+  /** Whether the current viewer is the Study Leader. */
+  isLeader?: boolean;
+  /** Active session code used by the QR share sheet. */
+  sessionCode?: string;
+  /** Optional sanitized public URL origin (e.g. from /api/health). */
+  publicUrl?: string | null;
+  /** Optional custom share trigger handler (overrides internal share sheet state). */
+  onShareQr?: () => void;
   onPreviousSection?: () => void | Promise<void>;
   onNextSection?: () => void | Promise<void>;
 }
@@ -18,11 +26,15 @@ export interface SectionPlaceholderScreenProps {
 export function SectionPlaceholderScreen({
   sectionIndex,
   role = 'Participant',
+  isLeader = false,
+  sessionCode,
+  publicUrl = null,
+  onShareQr,
   onPreviousSection,
   onNextSection,
 }: SectionPlaceholderScreenProps) {
   const sectionNumber = Math.min(Math.max(sectionIndex + 1, 1), 6);
-  const isLeader = role === 'Study Leader';
+  const effectiveIsLeader = Boolean(isLeader || role === 'Study Leader');
 
   if (sectionIndex === 3) {
     return (
@@ -32,7 +44,13 @@ export function SectionPlaceholderScreen({
         data-section-number={4}
         aria-label="Section 4 of 6, Deep Analysis"
       >
-        <SectionProgressHeader sectionNumber={4} />
+        <SectionProgressHeader
+          sectionNumber={4}
+          isLeader={effectiveIsLeader}
+          sessionCode={sessionCode}
+          publicUrl={publicUrl}
+          onShareQr={onShareQr}
+        />
 
         <div className="section-placeholder-header">
           <span
@@ -55,7 +73,7 @@ export function SectionPlaceholderScreen({
           in the next update.
         </p>
 
-        {isLeader ? (
+        {effectiveIsLeader ? (
           <div
             className="leader-advance-nav-row"
             data-testid="deep-analysis-advance-zone"
@@ -111,7 +129,13 @@ export function SectionPlaceholderScreen({
       data-section-number={sectionNumber}
       aria-label={`Section ${sectionNumber} of 6`}
     >
-      <SectionProgressHeader sectionNumber={sectionNumber} />
+      <SectionProgressHeader
+        sectionNumber={sectionNumber}
+        isLeader={effectiveIsLeader}
+        sessionCode={sessionCode}
+        publicUrl={publicUrl}
+        onShareQr={onShareQr}
+      />
       <p className="section-placeholder-copy">
         This section arrives in a later update.
       </p>

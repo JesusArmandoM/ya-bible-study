@@ -14,6 +14,9 @@
 ### Session 038
 
 - Date: `2026-11-06`
+### Session 039
+
+- Date: `2026-11-06`
 - Goal: Implement and self-verify feature `leader-bidirectional-section-navigation` per `docs/specs/leader-bidirectional-section-navigation.md` in worktree `feature/leader-bidirectional-section-navigation` (`PORT=3103`, `API_PORT=3203`, `PLAYWRIGHT_PORT=3303`).
 - Completed:
   - Promoted runtime `/ws` to 6 interactive sections: `STUDY_SECTION_IDS = ['section_1_prayer', 'section_2_icebreaker', 'section_3_reading', 'section_4_deep_analysis', 'section_5_discussion', 'section_6_closing']`.
@@ -37,9 +40,29 @@
   - Dedicated E2E suite: `npx playwright test tests/e2e/leader-bidirectional-section-navigation.spec.ts` passed 1/1 test in 23.7s on mobile-chromium 390x844.
   - Downstream Playwright E2E suites passed: `section-5-closing-prayer-completion.spec.ts`, `section-4-leader-question-queue-notes.spec.ts`, `section-4-live-participant-reflections.spec.ts`, `section-4-lord-help-me-prayer-card.spec.ts`, `section-3-gospel-reading-turn.spec.ts`, `section-2-icebreaker.spec.ts`, `section-1-opening-prayer.spec.ts`, `section-1-chosen-volunteer-prayer-gate.spec.ts`, `title-lobby-qr-join.spec.ts`, `desktop-dual-side-by-side-mode.spec.ts`, `post-join-fullscreen-lobby-isolation.spec.ts`, `mobile-wake-lock-foreground-resync.spec.ts`.
   - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches (exit code 1).
-- Evidence captured: Marked `leader-bidirectional-section-navigation` as `"status": "passing"` with full evidence in `feature_list.json`.
+- Evidence captured: Marked `leader-bidirectional-section-navigation` as `"status": "accepted"` with full evidence in `feature_list.json`.
 - Files updated: `feature_list.json`, `PROGRESS.md`, `ARCHITECTURE.md`, `CONSTRAINTS.md`, `src/shared/session.ts`, `src/server/sessionStore.ts`, `src/client/lib/useLiveSession.ts`, `src/client/components/sections/SectionProgressHeader.tsx`, `src/client/components/closing/LiveSessionStatsCard.tsx`, `src/client/components/prayer/SectionPlaceholderScreen.tsx`, `src/client/components/prayer/LockedAdvanceBar.tsx`, `src/client/components/prayer/OpeningPrayerScreen.tsx`, `src/client/components/icebreaker/IcebreakerScreen.tsx`, `src/client/components/reading/GospelReadingScreen.tsx`, `src/client/components/discussion/DiscussionScreen.tsx`, `src/client/components/closing/ClosingPrayerScreen.tsx`, `src/client/App.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `src/client/styles/global.css`, `tests/integration/ws-bidirectional-navigation.test.ts`, `tests/e2e/leader-bidirectional-section-navigation.spec.ts`, updated unit and E2E suites.
-- Next best step: Run independent validation with `$feature-validator`.
+- Next best step: Merge to main and launch Wave 3 parallel features.
+
+### Session 038
+
+- Date: `2026-11-06`
+- Goal: Implement, self-verify, and validate `leader-persistent-qr-code-reshare` per `docs/specs/leader-persistent-qr-code-reshare.md`.
+- Completed:
+  - Enhanced `SectionProgressHeader.tsx` to accept `isLeader`, `sessionCode`, `publicUrl`, and `onShareQr`.
+  - Added Sacred Gold outline pill button `Share QR` (`data-testid="section-share-qr-trigger"`) visible exclusively to the Study Leader across all active study sections.
+  - Clicking `Share QR` opens `RoomCodeShareSheet` with offline QR SVG, room code, and copyable join link from any active section.
+  - Wired props through `OpeningPrayerScreen.tsx`, `IcebreakerScreen.tsx`, `GospelReadingScreen.tsx`, `DiscussionScreen.tsx`, `ClosingPrayerScreen.tsx`, and `SectionPlaceholderScreen.tsx`.
+  - Passed `publicUrl` through `App.tsx` and `DesktopDualSideBySideScreen.tsx` / `DualDeviceFrame.tsx` to active section screens.
+  - Added `.section-header-actions` and `.section-share-qr-trigger` styles in `src/client/styles/global.css`.
+- Verification run:
+  - `./init.sh` passed exit code 0 (TypeScript check clean across 3 tsconfigs, 58 Vitest suites / 519 tests passed, production client and server builds clean).
+  - Added unit test `tests/unit/section-progress-header.test.tsx` (6/6 passed).
+  - Added Playwright E2E suite `tests/e2e/leader-persistent-qr-code-reshare.spec.ts` (2/2 passed) verifying multi-client active section QR re-share, late-joining participant direct hydration into Section 1 without lobby waiting, uninterrupted leader modal, and desktop dual mode frame isolation.
+  - Terminology invariant: `grep -rn "Assistant" src/` returned 0 matches.
+  - Zero diff on `src/server/` and `src/shared/`.
+- Evidence captured: Marked `leader-persistent-qr-code-reshare` as `accepted` in `feature_list.json`.
+- Files updated: `docs/specs/leader-persistent-qr-code-reshare.md`, `src/client/components/sections/SectionProgressHeader.tsx`, `src/client/styles/global.css`, `src/client/App.tsx`, `src/client/components/prayer/OpeningPrayerScreen.tsx`, `src/client/components/icebreaker/IcebreakerScreen.tsx`, `src/client/components/reading/GospelReadingScreen.tsx`, `src/client/components/discussion/DiscussionScreen.tsx`, `src/client/components/closing/ClosingPrayerScreen.tsx`, `src/client/components/prayer/SectionPlaceholderScreen.tsx`, `src/client/components/dual/DesktopDualSideBySideScreen.tsx`, `src/client/components/dual/DualDeviceFrame.tsx`, `tests/unit/section-progress-header.test.tsx`, `tests/e2e/leader-persistent-qr-code-reshare.spec.ts`, `ARCHITECTURE.md`, `feature_list.json`, `PROGRESS.md`.
 
 ### Session 037
 
