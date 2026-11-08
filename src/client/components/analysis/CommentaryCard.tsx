@@ -1,4 +1,7 @@
+import { motion } from 'motion/react';
 import type { SessionVerseCommentaryItem } from '../../../shared/session';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 
 export interface CommentaryCardProps {
   item: SessionVerseCommentaryItem;
@@ -15,20 +18,24 @@ export interface CommentaryCardProps {
 export function CommentaryCard({
   item,
   patristicNote = null,
+  index = 0,
 }: CommentaryCardProps) {
+  const reducedMotion = usePrefersReducedMotion();
+
   return (
-    <article
+    <motion.article
       className="commentary-card"
       data-testid="commentary-item"
       data-item-id={item.id}
       aria-label={`Commentary point ${item.id}: ${item.verseCitation}`}
+      {...getTextItemMotion(reducedMotion, index, 0.04)}
     >
       <header className="commentary-card-header">
         <div className="commentary-header-meta">
           <span className="commentary-letter-badge" aria-hidden="true">
             {item.id}
           </span>
-          <span className="commentary-verse-citation">{item.verseCitation}</span>
+          <span className="commentary-verse-citation commentary-card-title">{item.verseCitation}</span>
         </div>
         {item.catechismReferences.length > 0 && (
           <div className="commentary-ccc-tags" aria-label="Catechism references">
@@ -45,7 +52,7 @@ export function CommentaryCard({
         “{item.quotedText}”
       </blockquote>
 
-      <p className="commentary-body-text">{item.commentary}</p>
+      <p className="commentary-body-text commentary-card-body">{item.commentary}</p>
 
       {patristicNote && (
         <aside
@@ -64,6 +71,6 @@ export function CommentaryCard({
           <p className="patristic-callout-body">{patristicNote}</p>
         </aside>
       )}
-    </article>
+    </motion.article>
   );
 }

@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import type { PublicSessionMember } from '../../../shared/session';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import { triggerTactileHaptic } from '../prayer/RaisedHandsQueue';
 
 export interface LeaderReaderCardProps {
@@ -148,7 +149,12 @@ export function LeaderReaderCard({
           <div className="leader-liturgical-note-title">
             Liturgical Context (Facilitator Reference)
           </div>
-          <p className="leader-liturgical-note-body">{localLiturgicalNote}</p>
+          <motion.p
+            className="leader-liturgical-note-body"
+            {...getTextItemMotion(reducedMotion, 2)}
+          >
+            {localLiturgicalNote}
+          </motion.p>
         </div>
       )}
     </div>

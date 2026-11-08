@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import { useSacredStageStore } from '../../state/sacredStageStore';
 import { OpeningPrayerCard } from './OpeningPrayerCard';
 import { triggerTactileHaptic } from './RaisedHandsQueue';
@@ -66,15 +67,20 @@ export function ChosenVolunteerView({
         YOU WERE CHOSEN
       </motion.div>
 
-      <h3 className="prayer-chosen-title" data-testid="prayer-chosen-title">
+      <motion.h3
+        className="prayer-chosen-title"
+        data-testid="prayer-chosen-title"
+        {...getTextItemMotion(reducedMotion, 1)}
+      >
         It's your turn to pray
-      </h3>
-      <p
+      </motion.h3>
+      <motion.p
         className="prayer-chosen-instruction"
         data-testid="prayer-chosen-instruction"
+        {...getTextItemMotion(reducedMotion, 2)}
       >
         {chosenVolunteerInstruction ?? CHOSEN_INSTRUCTION_FALLBACK}
-      </p>
+      </motion.p>
 
       <OpeningPrayerCard suggestedPrayerText={suggestedPrayerText} />
 

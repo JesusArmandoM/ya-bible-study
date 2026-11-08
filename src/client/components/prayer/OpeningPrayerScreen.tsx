@@ -1,4 +1,4 @@
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo } from 'react';
 import type { SanctuaryRole } from '../../../shared/health';
 import type {
@@ -8,6 +8,8 @@ import type {
 } from '../../../shared/session';
 import { volunteerTurnPhase } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import {
   resolveSacredStage,
   useSacredStageStore,
@@ -121,6 +123,7 @@ export function OpeningPrayerScreen({
   onShareQr,
 }: OpeningPrayerScreenProps) {
   const isLeader = role === 'Study Leader';
+  const reducedMotion = usePrefersReducedMotion();
   const setStage = useSacredStageStore((s) => s.setStage);
   const triggerImpulse = useSacredStageStore((s) => s.triggerImpulse);
 
@@ -243,15 +246,27 @@ export function OpeningPrayerScreen({
       />
 
       <div className="prayer-heading">
-        <span className="prayer-eyebrow" data-testid="prayer-eyebrow">
+        <motion.span
+          className="prayer-eyebrow"
+          data-testid="prayer-eyebrow"
+          {...getTextItemMotion(reducedMotion, 0)}
+        >
           {eyebrow}
-        </span>
-        <h2 className="section-one-title" data-testid="section-one-title">
+        </motion.span>
+        <motion.h2
+          className="section-one-title prayer-title"
+          data-testid="section-one-title"
+          {...getTextItemMotion(reducedMotion, 1)}
+        >
           {title}
-        </h2>
-        <p className="section-one-copy" data-testid="section-one-copy">
+        </motion.h2>
+        <motion.p
+          className="section-one-copy"
+          data-testid="section-one-copy"
+          {...getTextItemMotion(reducedMotion, 2)}
+        >
           {subtitle}
-        </p>
+        </motion.p>
       </div>
 
       {lastSessionCommand === 'random_expired' && (

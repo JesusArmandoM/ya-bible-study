@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
 import type { SanctuaryRole } from '../../../shared/health';
 import type { PublicLiveSessionSnapshot } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import { resolveSacredStage, useSacredStageStore } from '../../state/sacredStageStore';
 import { SectionProgressHeader } from '../sections/SectionProgressHeader';
 import { ApplicationCard } from './ApplicationCard';
@@ -41,6 +44,7 @@ export function DeepAnalysisScreen({
   onNextSection,
 }: DeepAnalysisScreenProps) {
   const effectiveIsLeader = Boolean(isLeader || role === 'Study Leader');
+  const reducedMotion = usePrefersReducedMotion();
   const [activeTab, setActiveTab] = useState<DeepAnalysisTab>('all');
   const setStage = useSacredStageStore((s) => s.setStage);
 
@@ -95,29 +99,35 @@ export function DeepAnalysisScreen({
         />
 
         <header className="deep-analysis-header">
-          <span
+          <motion.span
             className="deep-analysis-eyebrow"
             data-testid="deep-analysis-eyebrow"
+            {...getTextItemMotion(reducedMotion, 0)}
           >
             {analysis?.eyebrow ?? 'DEEP ANALYSIS · 15 MIN'}
-          </span>
-          <h2
+          </motion.span>
+          <motion.h2
             className="deep-analysis-title"
             data-testid="deep-analysis-title"
+            {...getTextItemMotion(reducedMotion, 1)}
           >
             {analysis?.title ?? 'Deep Analysis & Catholic Doctrine'}
-          </h2>
-          <p className="deep-analysis-subtitle">
+          </motion.h2>
+          <motion.p
+            className="deep-analysis-subtitle"
+            {...getTextItemMotion(reducedMotion, 2)}
+          >
             Unpacking the theological depth, Catholic doctrine, and young adult life
             application of Matthew 15:21–28.
-          </p>
+          </motion.p>
         </header>
 
-        <nav
+        <motion.nav
           className="deep-analysis-tabs"
           data-testid="deep-analysis-tabs"
           role="tablist"
           aria-label="Deep Analysis Sections"
+          {...getTextItemMotion(reducedMotion, 3)}
         >
           <button
             type="button"
@@ -159,7 +169,7 @@ export function DeepAnalysisScreen({
           >
             Application ({youngAdultApplication.length})
           </button>
-        </nav>
+        </motion.nav>
 
         <main className="deep-analysis-content-stream">
           {showCommentary && verseCommentary.length > 0 && (

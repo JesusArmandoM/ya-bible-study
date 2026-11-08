@@ -4,6 +4,7 @@ import type {
   SessionReflection,
 } from '../../../shared/session';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import { ReflectionFeed } from './ReflectionFeed';
 
 export interface ActiveQuestionCardProps {
@@ -113,6 +114,7 @@ export function ActiveQuestionCard({
       <motion.article
         className="participant-active-card"
         data-testid="participant-active-question-card"
+        data-animated-text="true"
         initial={reducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
         animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
         transition={
@@ -128,12 +130,13 @@ export function ActiveQuestionCard({
           <span className="active-question-eyebrow">DEEP ANALYSIS · ACTIVE</span>
         </div>
 
-        <h2
-          className="active-question-prompt"
+        <motion.h2
+          className="active-question-prompt discussion-question-title"
           data-testid="active-question-prompt"
+          {...getTextItemMotion(reducedMotion, 1)}
         >
           {question.prompt}
-        </h2>
+        </motion.h2>
       </motion.article>
 
       <ReflectionFeed

@@ -27,6 +27,7 @@ export function LiveSessionStatsCard({ session }: LiveSessionStatsCardProps) {
     <section
       className="closing-stats-card"
       data-testid="session-stats-card"
+      data-animated-text="true"
       aria-label="Session metrics"
     >
       <div className="closing-stat-col" data-testid="stat-sections">

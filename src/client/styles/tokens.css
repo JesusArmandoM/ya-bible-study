@@ -29,18 +29,18 @@
   --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
-  --text-display-size: 2.375rem;
+  --text-display-size: 2.625rem;
   --text-display-lh: 1.12;
-  --text-h1-size: 2rem;
+  --text-h1-size: 2.25rem;
   --text-h1-lh: 1.18;
-  --text-h2-size: 1.35rem;
+  --text-h2-size: 1.5rem;
   --text-h2-lh: 1.3;
-  --text-scripture-size: 1.0625rem;
-  --text-scripture-lh: 1.55;
-  --text-eyebrow-size: 0.75rem;
+  --text-scripture-size: 1.3125rem;
+  --text-scripture-lh: 1.65;
+  --text-eyebrow-size: 0.8125rem;
   --text-eyebrow-tracking: 0.14em;
-  --text-body-size: 0.95rem;
-  --text-body-lh: 1.5;
+  --text-body-size: 1.125rem;
+  --text-body-lh: 1.6;
 
   /* Radii */
   --radius-sm: 12px;
