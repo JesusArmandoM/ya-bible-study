@@ -9,6 +9,7 @@ import type {
 import { volunteerTurnPhase } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import {
   resolveSacredStage,
   useSacredStageStore,
@@ -213,12 +214,20 @@ export function IcebreakerScreen({
       />
 
       <div className="icebreaker-heading">
-        <span className="icebreaker-eyebrow" data-testid="icebreaker-eyebrow">
+        <motion.span
+          className="icebreaker-eyebrow"
+          data-testid="icebreaker-eyebrow"
+          {...getTextItemMotion(reducedMotion, 0)}
+        >
           {eyebrow}
-        </span>
-        <h2 className="icebreaker-title" data-testid="icebreaker-title">
+        </motion.span>
+        <motion.h2
+          className="icebreaker-title"
+          data-testid="icebreaker-title"
+          {...getTextItemMotion(reducedMotion, 1)}
+        >
           {title}
-        </h2>
+        </motion.h2>
       </div>
 
       {isRandomizing && !isLeader ? (
@@ -253,18 +262,20 @@ export function IcebreakerScreen({
             YOU WERE CHOSEN
           </motion.div>
 
-          <h3
+          <motion.h3
             className="icebreaker-chosen-title"
             data-testid="icebreaker-chosen-title"
+            {...getTextItemMotion(reducedMotion, 1)}
           >
             It's your turn to share
-          </h3>
-          <p
+          </motion.h3>
+          <motion.p
             className="icebreaker-chosen-instruction"
             data-testid="icebreaker-chosen-instruction"
+            {...getTextItemMotion(reducedMotion, 2)}
           >
             {CHOSEN_INSTRUCTION}
-          </p>
+          </motion.p>
 
           <IcebreakerPromptCard
             mainQuestion={icebreaker?.mainQuestion}
@@ -331,32 +342,36 @@ export function IcebreakerScreen({
             </>
           ) : (
             <>
-              <span
+              <motion.span
                 className="icebreaker-share-eyebrow"
                 data-testid="icebreaker-share-eyebrow"
+                {...getTextItemMotion(reducedMotion, 0)}
               >
                 SHARE WHEN READY
-              </span>
-              <p
+              </motion.span>
+              <motion.p
                 className="icebreaker-share-question"
                 data-testid="icebreaker-share-question"
+                {...getTextItemMotion(reducedMotion, 1)}
               >
                 {icebreaker?.mainQuestion ?? QUESTION_FALLBACK}
-              </p>
+              </motion.p>
               {icebreaker?.followUpQuestion && (
-                <p
+                <motion.p
                   className="icebreaker-share-followup"
                   data-testid="icebreaker-share-followup"
+                  {...getTextItemMotion(reducedMotion, 2)}
                 >
                   {icebreaker.followUpQuestion}
-                </p>
+                </motion.p>
               )}
-              <p
+              <motion.p
                 className="icebreaker-share-subcopy"
                 data-testid="icebreaker-share-subcopy"
+                {...getTextItemMotion(reducedMotion, 3)}
               >
                 {PARTICIPANT_SUBCOPY}
-              </p>
+              </motion.p>
               <div className="icebreaker-orb-wrap">
                 <HandRaiseOrb
                   isRaised={isRaised}
@@ -396,9 +411,13 @@ export function IcebreakerScreen({
             />
           )}
           {icebreaker?.introText && (
-            <p className="icebreaker-intro" data-testid="icebreaker-intro">
+            <motion.p
+              className="icebreaker-intro icebreaker-description"
+              data-testid="icebreaker-intro"
+              {...getTextItemMotion(reducedMotion, 2)}
+            >
               {icebreaker.introText}
-            </p>
+            </motion.p>
           )}
           <IcebreakerPromptCard
             mainQuestion={icebreaker?.mainQuestion}

@@ -43,6 +43,7 @@ export function ReflectionCard({ reflection }: ReflectionCardProps) {
       className={`reflection-card ${isAnonymous ? 'is-anonymous' : ''}`}
       data-testid={`reflection-card-${reflection.id}`}
       data-reflection-id={reflection.id}
+      data-animated-text="true"
       initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
       animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
       exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
@@ -74,7 +75,7 @@ export function ReflectionCard({ reflection }: ReflectionCardProps) {
         </div>
       </div>
 
-      <p className="reflection-content" data-testid="reflection-content">
+      <p className="reflection-content discussion-question-body" data-testid="reflection-content">
         {reflection.content}
       </p>
     </motion.article>

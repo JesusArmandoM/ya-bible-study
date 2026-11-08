@@ -5,11 +5,51 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `animated-enlarged-section-typography`
+- Current next ready feature: none (all MVP vertical slice features accepted)
 - Current blocker: `none`
 - Last verified at: `2026-11-07`
 
 ## Session Log
+
+### Session 044
+
+- Date: `2026-11-07`
+- Goal: Implement and validate feature `animated-enlarged-section-typography` (Issue #49) per `docs/specs/animated-enlarged-section-typography.md` in worktree `feature/animated-enlarged-section-typography` (`PORT=3109`, `API_PORT=3209`, `PLAYWRIGHT_PORT=3309`).
+- Completed:
+  - Tokens and Global Styles (`src/client/styles/tokens.css` & `src/client/styles/global.css`):
+    - Updated typography variables in `tokens.css`: `--text-display-size: 2.625rem;`, `--text-h1-size: 2.25rem;`, `--text-h2-size: 1.5rem;` (24px), `--text-scripture-size: 1.3125rem;` (21px), `--text-scripture-lh: 1.65;`, `--text-body-size: 1.125rem;` (18px), `--text-body-lh: 1.6;`, `--text-eyebrow-size: 0.8125rem;` (13px, tracking 0.14em) matching DESIGN.md override #6.
+    - Updated typography rules across all 6 sections in `global.css`:
+      - Scripture and prayers: `.prayer-text`, `.prayer-text-body`, `.gospel-reading-text`, `.gospel-verse`, `.closing-prayer-text`, `.chosen-scripture-text`, `.scripture-verse`, `.commentary-scripture-quote` enforce `font-size: max(21px, var(--text-scripture-size, 1.3125rem))` and `line-height: var(--text-scripture-lh, 1.65)`.
+      - Body copy: `.commentary-card-body`, `.doctrine-card-summary`, `.application-card-summary`, `.icebreaker-description`, `.discussion-question-body`, `.discussion-context`, `.closing-summary`, `.closing-challenge-desc`, etc. enforce `font-size: max(18px, var(--text-body-size, 1.125rem))` and `line-height: var(--text-body-lh, 1.6)`.
+      - Headings: `.prayer-title`, `.section-one-title`, `.icebreaker-title`, `.gospel-reading-title`, `.commentary-card-title`, `.doctrine-card-title`, `.application-card-title`, `.discussion-question-title`, `.closing-card-title`, `.prayer-chosen-title`, etc. enforce `font-size: max(24px, var(--text-h2-size, 1.5rem))`.
+      - Eyebrows: `.prayer-eyebrow`, `.icebreaker-eyebrow`, `.scripture-card-label`, `.deep-analysis-eyebrow`, `.discussion-eyebrow`, `.closing-eyebrow`, etc. enforce `var(--text-eyebrow-size, 0.8125rem)` / `13px` with tracking `0.14em` uppercase.
+  - Animated Text Reveals (`src/client/components/common/AnimatedTextReveal.tsx`):
+    - Built reusable motion animation components (`AnimatedTextContainer`, `AnimatedTextItem`, `getTextItemMotion`) with `data-animated-text="true"` tagging and smooth staggered motion variants (`opacity: 0 -> 1`, `y: 12 -> 0`).
+    - Implemented instant duration 0 fallback respecting `usePrefersReducedMotion`.
+  - Section Integrations across all 6 sections:
+    - Section 1 (`OpeningPrayerScreen.tsx`, `OpeningPrayerCard.tsx`, `ChosenVolunteerView.tsx`): animated prayer header, subtitle, and prayer text paragraphs with staggered entrance and `data-animated-text="true"`.
+    - Section 2 (`IcebreakerScreen.tsx`, `IcebreakerPromptCard.tsx`): animated icebreaker title, description/intro, and prompt card question/followup with `data-animated-text="true"`.
+    - Section 3 (`GospelReadingScreen.tsx`, `ScriptureCard.tsx`, `ReadingDoneView.tsx`, `LeaderReaderCard.tsx`): animated Scripture citation, liturgical label, Gospel verses, and liturgical context note with `data-animated-text="true"`.
+    - Section 4 (`DeepAnalysisScreen.tsx`, `CommentaryCard.tsx`, `DoctrineCard.tsx`, `ApplicationCard.tsx`): animated header, category tabs, and commentary/doctrine/application cards with `data-animated-text="true"`.
+    - Section 5 (`DiscussionScreen.tsx`, `ActiveQuestionCard.tsx`, `ReflectionCard.tsx`, `LeaderQuestionQueue.tsx`): animated header, active question prompt, reflection feed, and leader question queue with `data-animated-text="true"`.
+    - Section 6 (`ClosingPrayerScreen.tsx`, `ClosingPrayerCard.tsx`, `WeeklyChallengesCard.tsx`, `NextWeekCard.tsx`, `LiveSessionStatsCard.tsx`): animated closing header, session stats, weekly challenge cards, next week announcement, and closing prayer text with `data-animated-text="true"`.
+  - Desktop Dual Side-by-Side Mode (`DualDeviceFrame.tsx`):
+    - Verified both frames render enlarged typography and synchronized animated text reveals under WebGL budget `<= 2`.
+  - Tests and Verification:
+    - Created unit suite `tests/unit/animated-enlarged-typography.test.tsx` (12/12 passed) verifying tokens, global CSS rules, component rendering with `data-animated-text="true"`, and reduced-motion fallback.
+    - Created multi-client Playwright E2E suite `tests/e2e/animated-enlarged-section-typography.spec.ts` (2/2 passed in 46.6s on `PLAYWRIGHT_PORT=3309`) verifying computed pixel sizes (`>= 21px` scripture, `>= 18px` body, `>= 24px` headings) across all 6 sections on mobile and in Desktop Dual Side-by-Side Mode.
+    - Verified `./init.sh` exit 0 (typecheck clean, all 63 Vitest suites / 555 tests passed, production Vite client/server build clean).
+    - Verified invariant: `grep -rn "Assistant" src/` returned 0 matches.
+    - Verified WebGL canvas budget: `<= 1` on mobile, `<= 2` in dual mode.
+- Independent Validator Assessment:
+  - Verdict: ACCEPT
+  - Evidence:
+    - `./init.sh`: clean exit 0 (tsc clean across tsconfig.client, tsconfig.server, tsconfig; 63/63 Vitest test suites / 555 unit and integration tests passed, production client/server build clean).
+    - `PLAYWRIGHT_PORT=3309 npx playwright test tests/e2e/animated-enlarged-section-typography.spec.ts`: 2/2 passed in 46.6s across both mobile and Desktop Dual Side-by-Side Mode.
+    - Terminology constraint: `grep -rn "Assistant" src/` returned 0 matches.
+    - Canvas budget constraint: WebGL `<canvas>` count strictly `<= 1` in standalone mobile viewports and `<= 2` in Desktop Dual Side-by-Side Mode.
+    - Sizing & Motion compliance: Verified DESIGN.md override #6 typography sizing (scripture/prayers >= 21px, body copy >= 18px, headings >= 24px, eyebrows 13px with 0.14em tracking) and staggered animated text reveals (`data-animated-text="true"`) across Sections 1–6, with duration 0 fallback honoring `prefers-reduced-motion: reduce`.
+  - Status updated to `accepted` in `feature_list.json`.
 
 ### Session 043
 

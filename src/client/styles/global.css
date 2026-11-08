@@ -1995,20 +1995,21 @@ button {
   background: var(--color-primary);
 }
 
-.section-one-title {
+.section-one-title,
+.prayer-title {
   margin: 0.35rem 0 0;
   font-family: var(--font-serif);
-  font-size: var(--text-h1-size);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
-  line-height: var(--text-h1-lh);
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text);
 }
 
 .section-one-copy {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-lh);
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
 }
 
@@ -2057,13 +2058,14 @@ button {
   color: var(--color-primary);
 }
 
+.prayer-text,
 .prayer-text-body {
   margin: 0;
   max-width: 100%;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: var(--text-scripture-size);
-  line-height: var(--text-scripture-lh);
+  font-size: max(21px, var(--text-scripture-size, 1.3125rem));
+  line-height: var(--text-scripture-lh, 1.65);
   color: #E2E8F0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -2634,17 +2636,17 @@ button {
 .prayer-chosen-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: var(--text-h1-size);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
-  line-height: var(--text-h1-lh);
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text);
 }
 
 .prayer-chosen-instruction {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-lh);
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
 }
 
@@ -3094,9 +3096,9 @@ button {
 
 .icebreaker-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   text-transform: uppercase;
   color: var(--color-primary);
 }
@@ -3104,19 +3106,20 @@ button {
 .icebreaker-title {
   margin: 0.35rem 0 0;
   font-family: var(--font-serif);
-  font-size: var(--text-h1-size);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
-  line-height: var(--text-h1-lh);
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
-.icebreaker-intro {
+.icebreaker-intro,
+.icebreaker-description {
   margin: 0;
   max-width: 100%;
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
@@ -3136,9 +3139,9 @@ button {
 
 .icebreaker-prompt-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   text-transform: uppercase;
   color: var(--color-primary);
 }
@@ -3147,9 +3150,9 @@ button {
   margin: 0;
   max-width: 100%;
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.45;
   color: #f8fafc;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -3168,8 +3171,8 @@ button {
   max-width: 100%;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 1.1rem;
-  line-height: 1.5;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: #e2e8f0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -3235,9 +3238,9 @@ button {
 
 .icebreaker-share-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 600;
-  letter-spacing: 0.15em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   text-transform: uppercase;
   color: var(--color-primary);
 }
@@ -3247,8 +3250,9 @@ button {
   max-width: 100%;
   font-family: var(--font-serif);
   font-size: 1.45rem;
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
-  line-height: 1.32;
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -3259,8 +3263,8 @@ button {
   max-width: 100%;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 1.1rem;
-  line-height: 1.5;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: #e2e8f0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -3269,8 +3273,8 @@ button {
 .icebreaker-share-subcopy {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
 }
 
@@ -3486,17 +3490,17 @@ button {
 .icebreaker-chosen-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: var(--text-h1-size);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
-  line-height: var(--text-h1-lh);
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text);
 }
 
 .icebreaker-chosen-instruction {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-lh);
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
 }
 
@@ -3675,19 +3679,22 @@ button {
   flex-shrink: 0;
 }
 
-.scripture-card-label {
+.scripture-card-label,
+.gospel-reading-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   text-transform: uppercase;
   color: var(--color-accent-indigo);
 }
 
-.scripture-card-citation {
+.scripture-card-citation,
+.gospel-reading-title {
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text-bright);
   margin: 0;
 }
@@ -3711,27 +3718,40 @@ button {
   gap: 0.75rem;
 }
 
-.scripture-verse {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.65;
-  color: #D1D5DB;
+.scripture-verse,
+.gospel-verse,
+.gospel-reading-text,
+.chosen-scripture-text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: max(21px, var(--text-scripture-size, 1.3125rem));
+  line-height: var(--text-scripture-lh, 1.65);
+  color: #F8FAFC;
   margin: 0;
 }
 
+.scripture-verse-text {
+  font-family: inherit;
+  font-style: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
 .scripture-verse-num {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-primary);
-  margin-right: 0.2rem;
+  margin-right: 0.35rem;
   line-height: 1;
 }
 
 .scripture-full-text {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.65;
-  color: #D1D5DB;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: max(21px, var(--text-scripture-size, 1.3125rem));
+  line-height: var(--text-scripture-lh, 1.65);
+  color: #F8FAFC;
   white-space: pre-line;
   margin: 0;
 }
@@ -4033,8 +4053,8 @@ button {
 
 .leader-liturgical-note-body {
   font-family: var(--font-sans);
-  font-size: 0.85rem;
-  line-height: 1.55;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: #E2E8F0;
   margin: 0;
 }
@@ -4310,16 +4330,17 @@ button {
 
 .reading-chosen-title {
   font-family: var(--font-serif);
-  font-size: 1.65rem;
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-text-bright);
   margin: 0;
 }
 
 .reading-chosen-instruction {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
   max-width: 440px;
   margin: 0;
@@ -4686,16 +4707,17 @@ button {
 
 .active-question-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.8rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   color: var(--color-primary);
   text-transform: uppercase;
 }
 
-.active-question-prompt {
+.active-question-prompt,
+.discussion-question-title {
   font-family: var(--font-serif);
-  font-size: 1.5rem;
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.35;
@@ -5442,11 +5464,13 @@ button {
   color: var(--color-text-muted);
 }
 
-.reflection-content {
+.reflection-content,
+.discussion-question-body,
+.discussion-context {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: #e2e8f0;
   margin: 0;
   white-space: pre-wrap;
@@ -6103,16 +6127,16 @@ button {
 
 .closing-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   text-transform: uppercase;
   color: var(--color-primary);
 }
 
 .closing-title {
   font-family: var(--font-serif);
-  font-size: 2rem;
+  font-size: var(--text-h1-size, 2.25rem);
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
@@ -6182,9 +6206,9 @@ button {
 
 .closing-next-week-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   color: var(--color-primary);
   display: flex;
   align-items: center;
@@ -6194,11 +6218,11 @@ button {
 
 .closing-next-week-announcement {
   font-family: var(--font-serif);
-  font-size: 1.15rem;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
   font-weight: 600;
   color: #FFFFFF;
   margin: 0;
-  line-height: 1.4;
+  line-height: var(--text-body-lh, 1.6);
 }
 
 .closing-challenges-card {
@@ -6220,9 +6244,9 @@ button {
 
 .closing-card-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   color: var(--color-primary);
   text-transform: uppercase;
 }
@@ -6278,9 +6302,10 @@ button {
   flex-shrink: 0;
 }
 
-.closing-challenge-title {
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
+.closing-challenge-title,
+.closing-card-title {
+  font-family: var(--font-serif);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
   color: #FFFFFF;
   flex: 1;
@@ -6294,10 +6319,11 @@ button {
   text-align: right;
 }
 
-.closing-challenge-desc {
+.closing-challenge-desc,
+.closing-summary {
   font-family: var(--font-sans);
-  font-size: 0.85rem;
-  line-height: 1.45;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
   color: var(--color-text-muted);
   margin: 0;
   padding-left: 1.95rem;
@@ -6316,9 +6342,9 @@ button {
 
 .closing-prayer-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   color: var(--color-primary);
   text-transform: uppercase;
 }
@@ -6326,8 +6352,8 @@ button {
 .closing-prayer-text {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 1.05rem;
-  line-height: 1.65;
+  font-size: max(21px, var(--text-scripture-size, 1.3125rem));
+  line-height: var(--text-scripture-lh, 1.65);
   color: #F8FAFC;
   margin: 0;
   white-space: pre-line;
@@ -7522,18 +7548,23 @@ button {
   flex-shrink: 0;
 }
 
-.commentary-verse-citation {
-  font-family: var(--font-sans);
-  font-size: 1rem;
+.commentary-verse-citation,
+.commentary-card-title {
+  font-family: var(--font-serif);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
+  line-height: var(--text-h2-lh, 1.3);
   color: var(--color-primary);
 }
 
 .doctrine-item-title,
-.application-item-title {
-  font-family: var(--font-sans);
-  font-size: 1.125rem;
+.doctrine-card-title,
+.application-item-title,
+.application-card-title {
+  font-family: var(--font-serif);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
   font-weight: 700;
+  line-height: var(--text-h2-lh, 1.3);
   color: #F8FAFC;
   margin: 0;
 }
@@ -7559,22 +7590,25 @@ button {
 
 .commentary-scripture-quote {
   font-family: var(--font-serif);
-  font-size: 1.1875rem;
+  font-size: max(21px, var(--text-scripture-size, 1.3125rem));
   font-style: italic;
   color: #F8FAFC;
-  line-height: 1.6;
+  line-height: var(--text-scripture-lh, 1.65);
   margin: 0;
   padding-left: 0.85rem;
   border-left: 3px solid rgba(226, 168, 62, 0.6);
 }
 
 .commentary-body-text,
+.commentary-card-body,
 .doctrine-body-summary,
-.application-body-summary {
+.doctrine-card-summary,
+.application-body-summary,
+.application-card-summary {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
   color: #CBD5E1;
-  line-height: 1.6;
+  line-height: var(--text-body-lh, 1.6);
   margin: 0;
 }
 
@@ -7601,19 +7635,19 @@ button {
 
 .patristic-callout-label {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-eyebrow-size, 0.8125rem);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
   color: var(--color-primary);
 }
 
 .patristic-callout-body {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 0.9375rem;
+  font-size: max(18px, var(--text-body-size, 1.125rem));
   color: #E2E8F0;
-  line-height: 1.55;
+  line-height: var(--text-body-lh, 1.6);
   margin: 0;
 }
 
@@ -7881,9 +7915,106 @@ button {
   margin: 0;
   font-family: var(--font-sans, system-ui);
   font-size: 1.125rem;
-  color: #E2A83E;
+  color: #E2E8F0;
   font-weight: 500;
 }
+
+/* =========================================================================
+   Authoritative Enlarged Typography Classes & Tokens (DESIGN.md override #6)
+   ========================================================================= */
+
+/* Scripture and prayers: >= 21px computed */
+.prayer-text,
+.prayer-text-body,
+.gospel-reading-text,
+.gospel-verse,
+.closing-prayer-text,
+.chosen-scripture-text,
+.scripture-verse,
+.scripture-full-text,
+.scripture-verse-text,
+.commentary-scripture-quote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: max(21px, var(--text-scripture-size, 1.3125rem));
+  line-height: var(--text-scripture-lh, 1.65);
+}
+
+/* Body copy: >= 18px computed */
+.commentary-card-body,
+.commentary-body-text,
+.doctrine-card-summary,
+.doctrine-body-summary,
+.application-card-summary,
+.application-body-summary,
+.icebreaker-description,
+.icebreaker-intro,
+.icebreaker-prompt-question,
+.icebreaker-prompt-followup,
+.icebreaker-share-followup,
+.icebreaker-share-subcopy,
+.discussion-question-body,
+.discussion-context,
+.reflection-content,
+.closing-summary,
+.closing-challenge-desc,
+.closing-next-week-announcement,
+.patristic-callout-body {
+  font-family: var(--font-sans);
+  font-size: max(18px, var(--text-body-size, 1.125rem));
+  line-height: var(--text-body-lh, 1.6);
+}
+
+/* Card / section headings: >= 24px computed */
+.prayer-title,
+.section-one-title,
+.icebreaker-title,
+.icebreaker-share-question,
+.gospel-reading-title,
+.scripture-card-citation,
+.commentary-card-title,
+.commentary-verse-citation,
+.doctrine-card-title,
+.doctrine-item-title,
+.application-card-title,
+.application-item-title,
+.discussion-question-title,
+.active-question-prompt,
+.closing-card-title,
+.closing-challenge-title,
+.closing-title,
+.prayer-chosen-title,
+.icebreaker-chosen-title,
+.reading-chosen-title {
+  font-family: var(--font-serif);
+  font-size: max(24px, var(--text-h2-size, 1.5rem));
+  font-weight: 700;
+  line-height: var(--text-h2-lh, 1.3);
+}
+
+/* Eyebrows: 13px (0.8125rem), tracking 0.14em, uppercase */
+.prayer-eyebrow,
+.prayer-text-label,
+.icebreaker-eyebrow,
+.icebreaker-prompt-eyebrow,
+.icebreaker-examples-eyebrow,
+.icebreaker-share-eyebrow,
+.scripture-card-label,
+.gospel-reading-eyebrow,
+.deep-analysis-eyebrow,
+.discussion-eyebrow,
+.active-question-eyebrow,
+.closing-eyebrow,
+.closing-card-eyebrow,
+.closing-next-week-eyebrow,
+.closing-prayer-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-eyebrow-size, 0.8125rem);
+  font-weight: 600;
+  letter-spacing: var(--text-eyebrow-tracking, 0.14em);
+  text-transform: uppercase;
+}
+
 
 
 

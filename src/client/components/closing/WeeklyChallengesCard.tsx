@@ -77,6 +77,7 @@ export function WeeklyChallengesCard({
     <section
       className="closing-challenges-card"
       data-testid="weekly-challenges-card"
+      data-animated-text="true"
       aria-label="Practical weekly spiritual challenges"
     >
       <div className="closing-card-header">
@@ -92,6 +93,7 @@ export function WeeklyChallengesCard({
               type="button"
               className={`closing-challenge-item ${isSelected ? 'is-selected' : ''}`}
               data-testid={`weekly-challenge-${challenge.optionNumber}`}
+              data-animated-text="true"
               aria-pressed={isSelected}
               onClick={() => handleSelectOption(challenge.optionNumber)}
             >
@@ -99,12 +101,12 @@ export function WeeklyChallengesCard({
                 <span className="closing-challenge-num" aria-hidden="true">
                   {challenge.optionNumber}
                 </span>
-                <span className="closing-challenge-title">{challenge.title}</span>
+                <span className="closing-challenge-title closing-card-title">{challenge.title}</span>
                 <span className="closing-challenge-check" aria-hidden="true">
                   {isSelected ? '✓' : ''}
                 </span>
               </div>
-              <p className="closing-challenge-desc">{challenge.description}</p>
+              <p className="closing-challenge-desc closing-summary">{challenge.description}</p>
             </button>
           );
         })}

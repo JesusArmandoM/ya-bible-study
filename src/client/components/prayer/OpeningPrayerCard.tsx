@@ -1,3 +1,7 @@
+import { motion } from 'motion/react';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
+
 export interface OpeningPrayerCardProps {
   /** Participant-visible suggested prayer text (`study.openingPrayer`). */
   suggestedPrayerText: string | null | undefined;
@@ -11,6 +15,7 @@ export interface OpeningPrayerCardProps {
 export function OpeningPrayerCard({
   suggestedPrayerText,
 }: OpeningPrayerCardProps) {
+  const reducedMotion = usePrefersReducedMotion();
   const hasText =
     typeof suggestedPrayerText === 'string' && suggestedPrayerText.trim().length > 0;
 
@@ -19,18 +24,28 @@ export function OpeningPrayerCard({
       className="prayer-text-card"
       aria-label="Suggested opening prayer"
     >
-      <span className="prayer-text-label">SUGGESTED OPENING PRAYER</span>
+      <motion.span
+        className="prayer-text-label"
+        {...getTextItemMotion(reducedMotion, 3)}
+      >
+        SUGGESTED OPENING PRAYER
+      </motion.span>
       {hasText ? (
-        <p className="prayer-text-body" data-testid="opening-prayer-text">
-          {suggestedPrayerText}
-        </p>
-      ) : (
-        <p
-          className="prayer-text-body prayer-text-body-fallback"
+        <motion.p
+          className="prayer-text prayer-text-body"
           data-testid="opening-prayer-text"
+          {...getTextItemMotion(reducedMotion, 4)}
+        >
+          {suggestedPrayerText}
+        </motion.p>
+      ) : (
+        <motion.p
+          className="prayer-text prayer-text-body prayer-text-body-fallback"
+          data-testid="opening-prayer-text"
+          {...getTextItemMotion(reducedMotion, 4)}
         >
           Opening Prayer content unavailable
-        </p>
+        </motion.p>
       )}
     </section>
   );

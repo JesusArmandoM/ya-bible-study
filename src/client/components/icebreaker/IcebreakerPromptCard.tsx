@@ -1,3 +1,7 @@
+import { motion } from 'motion/react';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
+
 export interface IcebreakerPromptCardProps {
   /** Sanitized group-facing main question (from the `/ws` summary). */
   mainQuestion?: string | null;
@@ -18,30 +22,41 @@ export function IcebreakerPromptCard({
   mainQuestion = null,
   followUpQuestion = null,
 }: IcebreakerPromptCardProps) {
+  const reducedMotion = usePrefersReducedMotion();
+
   return (
     <section
       className="icebreaker-prompt-card"
       data-testid="icebreaker-prompt-card"
       aria-label="Icebreaker question"
     >
-      <span className="icebreaker-prompt-eyebrow" data-testid="icebreaker-prompt-eyebrow">
+      <motion.span
+        className="icebreaker-prompt-eyebrow"
+        data-testid="icebreaker-prompt-eyebrow"
+        {...getTextItemMotion(reducedMotion, 3)}
+      >
         QUESTION
-      </span>
-      <p className="icebreaker-prompt-question" data-testid="icebreaker-prompt-question">
+      </motion.span>
+      <motion.p
+        className="icebreaker-prompt-question icebreaker-description"
+        data-testid="icebreaker-prompt-question"
+        {...getTextItemMotion(reducedMotion, 4)}
+      >
         {mainQuestion ?? QUESTION_FALLBACK}
-      </p>
+      </motion.p>
       <hr
         className="icebreaker-prompt-divider"
         data-testid="icebreaker-prompt-divider"
         aria-hidden="true"
       />
       {followUpQuestion && (
-        <p
-          className="icebreaker-prompt-followup"
+        <motion.p
+          className="icebreaker-prompt-followup icebreaker-description"
           data-testid="icebreaker-prompt-followup"
+          {...getTextItemMotion(reducedMotion, 5)}
         >
           {followUpQuestion}
-        </p>
+        </motion.p>
       )}
     </section>
   );

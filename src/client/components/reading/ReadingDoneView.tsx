@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import type { GospelVerse } from '../../../shared/study';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import { useSacredStageStore } from '../../state/sacredStageStore';
 import { triggerTactileHaptic } from '../prayer/RaisedHandsQueue';
 import { ScriptureCard } from './ScriptureCard';
@@ -65,15 +66,20 @@ export function ReadingDoneView({
         YOU WERE CHOSEN
       </motion.div>
 
-      <h3 className="reading-chosen-title" data-testid="reading-chosen-title">
+      <motion.h3
+        className="reading-chosen-title"
+        data-testid="reading-chosen-title"
+        {...getTextItemMotion(reducedMotion, 1)}
+      >
         It's your turn to read
-      </h3>
-      <p
+      </motion.h3>
+      <motion.p
         className="reading-chosen-instruction"
         data-testid="reading-chosen-instruction"
+        {...getTextItemMotion(reducedMotion, 2)}
       >
         {INSTRUCTION_TEXT}
-      </p>
+      </motion.p>
 
       <ScriptureCard
         citation={citation}

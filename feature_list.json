@@ -616,11 +616,21 @@
       "section-4-deep-analysis-screen",
       "leader-persistent-qr-code-reshare"
     ],
-    "status": "not_started",
+    "status": "accepted",
     "verification": [
       "Unit and Playwright tests verifying computed typography sizes (>= 21px scriptureItalic, >= 18px body), animated text entrance attributes across all 6 sections, and complete 6-section end-to-end flow in both mobile and Desktop Dual Side-by-Side Mode."
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-11-07: Updated tokens in src/client/styles/tokens.css (--text-display-size: 2.625rem, --text-h1-size: 2.25rem, --text-h2-size: 1.5rem, --text-scripture-size: 1.3125rem, --text-scripture-lh: 1.65, --text-body-size: 1.125rem, --text-body-lh: 1.6, --text-eyebrow-size: 0.8125rem, tracking 0.14em) matching DESIGN.md override #6.",
+      "2026-11-07: Updated src/client/styles/global.css ensuring computed font sizes: scripture & prayers (>= 21px / 1.3125rem, line-height 1.65), body copy (>= 18px / 1.125rem, line-height 1.6), headings (>= 24px / 1.5rem), and eyebrows (13px, tracking 0.14em, uppercase).",
+      "2026-11-07: Implemented reusable animated text reveal helper in src/client/components/common/AnimatedTextReveal.tsx with staggered motion variants, data-animated-text='true' tagging, and instant 0ms fallback respecting usePrefersReducedMotion.",
+      "2026-11-07: Integrated animated text reveals across all 6 sections (OpeningPrayerScreen, IcebreakerScreen, GospelReadingScreen, DeepAnalysisScreen, DiscussionScreen, ClosingPrayerScreen) and Desktop Dual Side-by-Side Mode (DualDeviceFrame).",
+      "2026-11-07: Created unit suite tests/unit/animated-enlarged-typography.test.tsx (12/12 passed) verifying tokens, global CSS rules, component rendering with data-animated-text='true', and reduced motion accessibility.",
+      "2026-11-07: Created multi-client Playwright E2E suite tests/e2e/animated-enlarged-section-typography.spec.ts (2/2 passed in 47.2s on PLAYWRIGHT_PORT=3309) verifying computed pixel sizes (>= 21px scripture, >= 18px body, >= 24px headings) and animated text reveals across all 6 sections on mobile and in Desktop Dual Side-by-Side Mode with canvas count <= 2.",
+      "2026-11-07: Ran ./init.sh (exit 0) confirming TypeScript typecheck clean across client and server tsconfigs, all 63 Vitest test suites (555 tests) passing, and production client/server bundles successfully built.",
+      "2026-11-07: Invariant check grep -rn 'Assistant' src/ returned 0 matches.",
+      "2026-11-07: Independent validation verdict ACCEPT: Verified ./init.sh passes cleanly (63 suites, 555 tests, build clean), dedicated Playwright E2E passes (2/2 in 46.6s), canvas budget <= 2 verified, zero Assistant occurrences in src/, and DESIGN.md override #6 typography sizing and motion accessibility fully verified."
+    ],
     "notes": "Follow DESIGN.md Typography tokens and override #6."
   }
 ]

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
 import type { SanctuaryRole } from '../../../shared/health';
 import type {
   PublicLiveSessionSnapshot,
   SessionDiscussionQuestion,
 } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import {
   resolveSacredStage,
   useSacredStageStore,
@@ -55,6 +58,7 @@ export function DiscussionScreen({
   const [isPastoralDrawerOpen, setIsPastoralDrawerOpen] = useState(false);
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
   const [isPrayerCardModalOpen, setIsPrayerCardModalOpen] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   const isLeader = role === 'Study Leader';
 
@@ -103,8 +107,18 @@ export function DiscussionScreen({
       />
 
       <header className="discussion-screen-header">
-        <span className="discussion-eyebrow">DEEP ANALYSIS · 25 MIN</span>
-        <h1 className="discussion-title">Lord, Help Me Pray</h1>
+        <motion.span
+          className="discussion-eyebrow"
+          {...getTextItemMotion(reducedMotion, 0)}
+        >
+          DEEP ANALYSIS · 25 MIN
+        </motion.span>
+        <motion.h1
+          className="discussion-title"
+          {...getTextItemMotion(reducedMotion, 1)}
+        >
+          Lord, Help Me Pray
+        </motion.h1>
 
         {isLeader && (
           <div className="pastoral-trigger-container">

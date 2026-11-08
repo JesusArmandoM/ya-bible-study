@@ -112,6 +112,7 @@ export function LeaderQuestionQueue({
               className={`queue-card ${isActive ? 'is-active' : ''}`}
               data-testid={`question-card-${q.id}`}
               data-active={isActive ? 'true' : 'false'}
+              data-animated-text="true"
               onClick={() => onSwitchQuestion(q.id)}
               whileTap={reducedMotion ? undefined : { scale: 0.99 }}
               layout
@@ -129,7 +130,7 @@ export function LeaderQuestionQueue({
               </div>
 
               <div className="queue-card-main">
-                <h3 className="queue-card-prompt">{q.prompt}</h3>
+                <h3 className="queue-card-prompt discussion-question-title">{q.prompt}</h3>
 
                 <div className="queue-card-meta">
                   <div className="meta-indicator">

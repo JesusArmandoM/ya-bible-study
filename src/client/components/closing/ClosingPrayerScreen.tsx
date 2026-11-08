@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import type { SanctuaryRole } from '../../../shared/health';
 import type { PublicLiveSessionSnapshot } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 import {
   resolveSacredStage,
   useSacredStageStore,
@@ -38,6 +40,7 @@ export function ClosingPrayerScreen({
   onShareQr,
 }: ClosingPrayerScreenProps) {
   const setStage = useSacredStageStore((s) => s.setStage);
+  const reducedMotion = usePrefersReducedMotion();
   const isLeader = role === 'Study Leader';
 
   useEffect(() => {
@@ -61,8 +64,18 @@ export function ClosingPrayerScreen({
       />
 
       <header className="closing-header-lockup">
-        <span className="closing-eyebrow">WRAPPING UP</span>
-        <h2 className="closing-title">Closing Prayer</h2>
+        <motion.span
+          className="closing-eyebrow"
+          {...getTextItemMotion(reducedMotion, 0)}
+        >
+          WRAPPING UP
+        </motion.span>
+        <motion.h2
+          className="closing-title"
+          {...getTextItemMotion(reducedMotion, 1)}
+        >
+          Closing Prayer
+        </motion.h2>
       </header>
 
       <div className="closing-content-stack">

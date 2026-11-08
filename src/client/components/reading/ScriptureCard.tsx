@@ -1,4 +1,7 @@
+import { motion } from 'motion/react';
 import type { GospelVerse } from '../../../shared/study';
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
+import { getTextItemMotion } from '../common/AnimatedTextReveal';
 
 export interface ScriptureCardProps {
   citation: string;
@@ -21,6 +24,7 @@ export function ScriptureCard({
   fullText,
   className,
 }: ScriptureCardProps) {
+  const reducedMotion = usePrefersReducedMotion();
   const hasVerses = Array.isArray(verses) && verses.length > 0;
 
   return (
@@ -30,18 +34,20 @@ export function ScriptureCard({
       aria-label={`${citation} Scripture reading`}
     >
       <header className="scripture-card-header">
-        <span
-          className="scripture-card-label"
+        <motion.span
+          className="scripture-card-label gospel-reading-eyebrow"
           data-testid="scripture-card-label"
+          {...getTextItemMotion(reducedMotion, 0)}
         >
           {liturgicalLabel}
-        </span>
-        <h3
-          className="scripture-card-citation"
+        </motion.span>
+        <motion.h3
+          className="scripture-card-citation gospel-reading-title"
           data-testid="scripture-card-citation"
+          {...getTextItemMotion(reducedMotion, 1)}
         >
           {citation}
-        </h3>
+        </motion.h3>
       </header>
 
       <div
@@ -53,11 +59,12 @@ export function ScriptureCard({
       >
         {hasVerses ? (
           <div className="scripture-verses-list">
-            {verses.map((verse) => (
-              <p
+            {verses.map((verse, idx) => (
+              <motion.p
                 key={verse.verseNumber}
-                className="scripture-verse"
+                className="scripture-verse gospel-verse gospel-reading-text"
                 data-testid={`scripture-verse-${verse.verseNumber}`}
+                {...getTextItemMotion(reducedMotion, 2 + idx, 0.06)}
               >
                 <sup
                   className="scripture-verse-num"
@@ -66,11 +73,16 @@ export function ScriptureCard({
                   {verse.verseNumber}
                 </sup>{' '}
                 <span className="scripture-verse-text">{verse.text}</span>
-              </p>
+              </motion.p>
             ))}
           </div>
         ) : (
-          <p className="scripture-full-text">{fullText}</p>
+          <motion.p
+            className="scripture-full-text gospel-reading-text"
+            {...getTextItemMotion(reducedMotion, 2)}
+          >
+            {fullText}
+          </motion.p>
         )}
       </div>
     </article>
