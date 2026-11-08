@@ -38,9 +38,19 @@
     - Invariant check: `grep -rn "Assistant" src/` returned 0 matches.
 - Verification run:
   - `./init.sh`: clean exit 0.
-  - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts`: 3 passed in 1.3m.
-  - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/random-volunteer-picker-countdown.spec.ts`: 4 passed in 1.2m.
+  - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts`: 3 passed in 1.4m.
+  - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/random-volunteer-picker-countdown.spec.ts`: 4 passed in 1.4m.
   - `grep -rn "Assistant" src/`: 0 matches.
+- Independent Validator Assessment:
+  - Verdict: ACCEPT
+  - Evidence:
+    - `./init.sh`: clean exit 0 (tsc clean, 62/62 Vitest test files / 543 unit and integration tests passed, client/server production build clean).
+    - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts`: 3/3 passed in 1.4m.
+    - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/random-volunteer-picker-countdown.spec.ts`: 4/4 passed in 1.4m.
+    - Terminology constraint: `grep -rn "Assistant" src/` returned 0 matches.
+    - Canvas budget constraint: WebGL `<canvas>` count strictly `<= 1` on mobile viewport and `<= 2` in Desktop Dual Side-by-Side Mode.
+    - Spec compliance: Verified full-screen 3D random picker polyhedron spin isolating Participants during `random_pending`, server auto-resolve to `assigned` on ~3.5s expiry without leader confirmation, high-visibility `"YOU WERE CHOSEN!"` screen with exclusive `Done` button for the winner, bystander `"<Name> was chosen!"` announcements, leader `Pick Again` re-roll capability in `assigned`, and gated section progression across Sections 1, 2, and 3.
+  - Status updated to `accepted` in `feature_list.json`.
 - Files updated:
   - `src/shared/session.ts`
   - `src/server/sessionStore.ts`
@@ -58,7 +68,7 @@
   - `tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts`
   - `feature_list.json`
   - `PROGRESS.md`
-- Next best step: Run independent `$feature-validator` on `fullscreen-3d-random-picker-reveal`.
+- Next best step: Run `$feature-spec` for `animated-enlarged-section-typography`.
 
 ### Session 042
 
