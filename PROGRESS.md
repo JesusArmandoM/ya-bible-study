@@ -5,11 +5,60 @@
 - Repository root: `/Users/armando/Documents/YA Bible Study`
 - Standard startup path: `./init.sh`
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
-- Current next ready feature: `fullscreen-3d-random-picker-reveal`
+- Current next ready feature: `animated-enlarged-section-typography`
 - Current blocker: `none`
-- Last verified at: `2026-11-06`
+- Last verified at: `2026-11-07`
 
 ## Session Log
+
+### Session 043
+
+- Date: `2026-11-07`
+- Goal: Implement and self-verify feature `fullscreen-3d-random-picker-reveal` (Issue #48) per `docs/specs/fullscreen-3d-random-picker-reveal.md` in worktree `feature/fullscreen-3d-random-picker-reveal` (`PORT=3108`, `API_PORT=3208`, `PLAYWRIGHT_PORT=3308`).
+- Completed:
+  - Shared domain and server-side random selection enhancements (`src/shared/session.ts` & `src/server/sessionStore.ts`):
+    - Set `RANDOM_SELECTION_COUNTDOWN_MS = 3500` (3.5s spin duration).
+    - In `applyStageRandomCandidate`, ensured `selectedMemberId: null` on re-roll so the phase cleanly resets to `random_pending`.
+    - Clamped `remainingCountdownSeconds` ceiling.
+    - In `handleRandomSelectionCommand`, supported `section_2_icebreaker` alongside Sections 1 & 3; enabled `retry_random` when `phase === 'random_pending' || phase === 'assigned'`; excluded previous candidate or assigned volunteer on re-roll when > 1 participant exists.
+    - In `handleRandomExpiry`, automatically locked in candidate via `applyConfirmRandomCandidate`, saved to `session.sectionTurns`, updated `lastActivityAt`, and broadcasted `confirm_random` without requiring manual leader confirmation.
+    - Removed `timer.unref()` in `scheduleRandomExpiry` so auto-resolve timers execute with high priority under heavy multi-context Chromium loads.
+  - Client component and screen updates:
+    - Created `src/client/components/random/RandomSelectionOverlay.tsx` (`data-testid="random-picker-overlay"`) with full-screen `min-height: 100dvh` layout, glowing aura, pill `RANDOM SELECTION` (`data-testid="random-picker-pill"`), title `Selecting a participant at random…` (`data-testid="random-picker-title"`), and subtitle `Spinning for a volunteer…` (`data-testid="random-picker-subtitle"`).
+    - In `App.tsx` and `DualDeviceFrame.tsx`, during `isParticipantRandomizing` (`volunteerTurnPhase === 'random_pending'`), unmounted section content so Participants see only the full-screen 3D random picker overlay using the persistent `<Sacred3DScene stage="random-polyhedron" />`.
+    - In Sections 1, 2, and 3 (`OpeningPrayerScreen.tsx`, `IcebreakerScreen.tsx`, `GospelReadingScreen.tsx`), rendered the `Pick Again` button (`data-testid="random-retry-button"`) within the Study Leader's active volunteer banner during `assigned` phase to enable re-rolling if a selected participant declines.
+    - Wired winner reveal: chosen participant gets exclusive `"YOU WERE CHOSEN!"` view (`prayer-chosen-view`, `icebreaker-chosen-view`, `reading-chosen-view`) with dedicated `Done` CTA; bystanders see `"<DisplayName> was chosen!"`.
+    - Added CSS styling in `src/client/styles/global.css` for `.random-picker-overlay`, `.random-picker-aura`, `.random-picker-pill`, `.random-picker-text`, `.random-picker-title`, `.random-picker-subtitle`, and `.random-retry-button.pick-again-button`.
+  - Tests and verification:
+    - Updated integration tests in `tests/integration/ws-random-selection.test.ts` for automatic transition to `assigned` on expiry and re-roll in `assigned` (8/8 passed).
+    - Updated unit test assertions in `tests/unit/random-selection-screen.test.tsx` and `tests/unit/random-selection-state.test.ts`.
+    - Created dedicated multi-client Playwright E2E suite `tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts` covering Sections 1, 2, and 3 random pick, 3D spin overlay isolation, auto-resolve winner reveal, Pick Again re-roll, Done turn progression, WebGL canvas budget (`<= 1` mobile, `<= 2` dual mode), and zero "Assistant" occurrences (3/3 passed in 1.3m).
+    - Updated existing Playwright suite `tests/e2e/random-volunteer-picker-countdown.spec.ts` (4/4 passed in 1.2m).
+    - `./init.sh` passed exit code 0 cleanly (tsc typecheck clean, 62 Vitest files / 543 tests passed, production Vite build + tsc server build clean).
+    - Invariant check: `grep -rn "Assistant" src/` returned 0 matches.
+- Verification run:
+  - `./init.sh`: clean exit 0.
+  - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts`: 3 passed in 1.3m.
+  - `PLAYWRIGHT_PORT=3308 npx playwright test tests/e2e/random-volunteer-picker-countdown.spec.ts`: 4 passed in 1.2m.
+  - `grep -rn "Assistant" src/`: 0 matches.
+- Files updated:
+  - `src/shared/session.ts`
+  - `src/server/sessionStore.ts`
+  - `src/client/components/random/RandomSelectionOverlay.tsx`
+  - `src/client/components/prayer/OpeningPrayerScreen.tsx`
+  - `src/client/components/icebreaker/IcebreakerScreen.tsx`
+  - `src/client/components/reading/GospelReadingScreen.tsx`
+  - `src/client/App.tsx`
+  - `src/client/components/dual/DualDeviceFrame.tsx`
+  - `src/client/styles/global.css`
+  - `tests/integration/ws-random-selection.test.ts`
+  - `tests/unit/random-selection-screen.test.tsx`
+  - `tests/unit/random-selection-state.test.ts`
+  - `tests/e2e/random-volunteer-picker-countdown.spec.ts`
+  - `tests/e2e/fullscreen-3d-random-picker-reveal.spec.ts`
+  - `feature_list.json`
+  - `PROGRESS.md`
+- Next best step: Run independent `$feature-validator` on `fullscreen-3d-random-picker-reveal`.
 
 ### Session 042
 

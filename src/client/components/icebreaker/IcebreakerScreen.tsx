@@ -6,6 +6,7 @@ import type {
   SessionIcebreakerContent,
   SessionUpdatedCommand,
 } from '../../../shared/session';
+import { volunteerTurnPhase } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion';
 import {
@@ -16,6 +17,12 @@ import { SectionProgressHeader } from '../sections/SectionProgressHeader';
 import { HandRaiseOrb } from '../prayer/HandRaiseOrb';
 import { LockedAdvanceBar } from '../prayer/LockedAdvanceBar';
 import { triggerTactileHaptic } from '../prayer/RaisedHandsQueue';
+import {
+  RandomPickButton,
+  RandomSelectionPanel,
+  type RandomCandidateData,
+} from '../random/RandomSelectionPanel';
+import { RandomSelectionOverlay } from '../random/RandomSelectionOverlay';
 import { ExamplesToListenForCard } from './ExamplesToListenForCard';
 import { HandRaiseCountPill } from './HandRaiseCountPill';
 import { IcebreakerPromptCard } from './IcebreakerPromptCard';
@@ -43,6 +50,12 @@ export interface IcebreakerScreenProps {
   onOverrideTurn?: () => void | Promise<void>;
   /** Study Leader: reset icebreaker volunteer turn (`reset_turn`). */
   onResetTurn?: () => void | Promise<void>;
+  /** Study Leader: stage a random candidate (`pick_random`). */
+  onPickRandomly?: () => void | Promise<void>;
+  /** Study Leader: re-roll the pending candidate (`retry_random`). */
+  onRetryRandom?: () => void | Promise<void>;
+  /** Study Leader: confirm the pending candidate (`confirm_random`). */
+  onConfirmRandom?: () => void | Promise<void>;
   /** Latest broadcast command for trigger impulses. */
   lastSessionCommand?: SessionUpdatedCommand | null;
   /** Sanitized PUBLIC_URL origin from GET /api/health (null when unset). */
@@ -100,6 +113,9 @@ export function IcebreakerScreen({
   onCompleteTurn,
   onOverrideTurn,
   onResetTurn,
+  onPickRandomly,
+  onRetryRandom,
+  onConfirmRandom,
   lastSessionCommand = null,
   publicUrl = null,
   onShareQr,
@@ -110,6 +126,8 @@ export function IcebreakerScreen({
   const triggerImpulse = useSacredStageStore((s) => s.triggerImpulse);
 
   const turn = session.volunteerTurn ?? null;
+  const turnPhase = turn ? volunteerTurnPhase(turn) : null;
+  const isRandomizing = turnPhase === 'random_pending';
   const selectedMemberId = turn?.selectedMemberId ?? null;
   const completedAt = turn?.completedAt ?? null;
   const isChosenVolunteer =
@@ -117,16 +135,34 @@ export function IcebreakerScreen({
   const selectedMember = selectedMemberId
     ? (session.members.find((m) => m.memberId === selectedMemberId) ?? null)
     : null;
+  const candidateMemberId = turn?.candidateMemberId ?? null;
+  const candidateMember: RandomCandidateData | null =
+    candidateMemberId !== null
+      ? (() => {
+          const match = session.members.find(
+            (m) => m.memberId === candidateMemberId,
+          );
+          return match
+            ? {
+                displayName: match.displayName,
+                initials: match.initials,
+                avatarPalette: match.avatarPalette,
+                connectionStatus: match.connectionStatus,
+              }
+            : null;
+        })()
+      : null;
 
   // Stage wiring: Section 2 owns the warm bronze hospitality-rings treatment
-  // of the sanctuary emblem (or chosen-aura for the chosen volunteer).
+  // of the sanctuary emblem (or chosen-aura for the chosen volunteer / random-polyhedron while randomizing).
   useEffect(() => {
     const resolved = resolveSacredStage({
       screen: 'section-2-icebreaker',
       isChosenVolunteer,
+      isRandomizing,
     });
     setStage(resolved.stage, { accentMode: resolved.accentMode });
-  }, [setStage, isChosenVolunteer]);
+  }, [setStage, isChosenVolunteer, isRandomizing]);
 
   useEffect(() => {
     if (
@@ -134,6 +170,13 @@ export function IcebreakerScreen({
       lastSessionCommand === 'override_turn'
     ) {
       triggerImpulse('completion-pulse');
+    } else if (
+      lastSessionCommand === 'pick_random' ||
+      lastSessionCommand === 'retry_random'
+    ) {
+      triggerImpulse('random-spin');
+    } else if (lastSessionCommand === 'confirm_random') {
+      triggerImpulse('confirm-burst');
     }
   }, [lastSessionCommand, triggerImpulse]);
 
@@ -178,7 +221,9 @@ export function IcebreakerScreen({
         </h2>
       </div>
 
-      {isChosenVolunteer ? (
+      {isRandomizing && !isLeader ? (
+        <RandomSelectionOverlay />
+      ) : isChosenVolunteer ? (
         <section
           className="icebreaker-chosen-view"
           data-testid="icebreaker-chosen-view"
@@ -279,7 +324,7 @@ export function IcebreakerScreen({
                     className="icebreaker-active-volunteer-note"
                     data-testid="icebreaker-active-volunteer-note"
                   >
-                    {`${selectedMember.displayName} is sharing`}
+                    {`${selectedMember.displayName} was chosen! ${selectedMember.displayName} is sharing`}
                   </p>
                 )}
               </div>
@@ -336,6 +381,20 @@ export function IcebreakerScreen({
         </>
       ) : (
         <>
+          {isRandomizing && candidateMember && turn?.candidateExpiresAt && (
+            <RandomSelectionPanel
+              candidate={candidateMember}
+              candidateExpiresAt={turn.candidateExpiresAt}
+              chosenLine="has been randomly chosen to share."
+              isLeader
+              onRetryRandom={() => {
+                void Promise.resolve(onRetryRandom?.()).catch(() => {});
+              }}
+              onConfirmRandom={() => {
+                void Promise.resolve(onConfirmRandom?.()).catch(() => {});
+              }}
+            />
+          )}
           {icebreaker?.introText && (
             <p className="icebreaker-intro" data-testid="icebreaker-intro">
               {icebreaker.introText}
@@ -357,11 +416,31 @@ export function IcebreakerScreen({
               data-testid="icebreaker-chosen-banner"
               role="status"
             >
-              {`${selectedMember.displayName} is sharing — waiting for Done`}
+              <span>{`${selectedMember.displayName} is sharing — waiting for Done`}</span>
+              {onRetryRandom && (
+                <button
+                  type="button"
+                  className="random-retry-button pick-again-button"
+                  data-testid="random-retry-button"
+                  onClick={() => {
+                    void Promise.resolve(onRetryRandom()).catch(() => {});
+                  }}
+                >
+                  Pick Again
+                </button>
+              )}
             </div>
           )}
           <div className="icebreaker-advance-zone" data-testid="icebreaker-advance-zone">
             <HandRaiseCountPill count={raisedCount} />
+            {turnPhase === 'collecting_hands' && onPickRandomly && (
+              <RandomPickButton
+                onPickRandomly={() => {
+                  void Promise.resolve(onPickRandomly()).catch(() => {});
+                }}
+                connectedParticipantCount={session.connectedParticipantCount}
+              />
+            )}
             <div className="leader-advance-nav-row">
               {onPreviousSection && (
                 <button

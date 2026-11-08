@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SanctuaryRole } from '../../../shared/health';
 import type { StudySectionId } from '../../../shared/session';
+import { volunteerTurnPhase } from '../../../shared/session';
 import type { StudyDocument } from '../../../shared/study';
 import type { SessionSocketClient } from '../../lib/sessionSocket';
 import { useLiveSession } from '../../lib/useLiveSession';
@@ -20,6 +21,7 @@ import { GospelReadingScreen } from '../reading/GospelReadingScreen';
 import { DeepAnalysisScreen } from '../analysis/DeepAnalysisScreen';
 import { Sacred3DScene } from '../stage/Sacred3DScene';
 import { SectionEntryOverlay } from '../stage/SectionEntryOverlay';
+import { RandomSelectionOverlay } from '../random/RandomSelectionOverlay';
 
 export interface DualDeviceFrameProps {
   role: SanctuaryRole;
@@ -74,6 +76,11 @@ export function DualDeviceFrame({
   const isConnected = liveSession.connectionStatus === 'connected';
   const isWaitingView =
     !isLeader && (session?.status === 'lobby' || session?.status === 'setup');
+  const isTurnRandomizing = Boolean(
+    session?.volunteerTurn &&
+      volunteerTurnPhase(session.volunteerTurn) === 'random_pending',
+  );
+  const isParticipantRandomizing = !isLeader && isTurnRandomizing;
 
   const [isSectionEntryActive, setIsSectionEntryActive] = useState<boolean>(false);
   const [entrySectionId, setEntrySectionId] = useState<StudySectionId | null>(null);
@@ -144,18 +151,24 @@ export function DualDeviceFrame({
       <div className="dual-device-chassis" data-testid={`${testId}-chassis`}>
         <div className="dual-device-screen-scroll">
           <SacredStageProvider store={stageStore}>
-            <SectionEntryOverlay
-              active={isSectionEntryActive && Boolean(entrySectionId)}
-              sectionId={entrySectionId ?? currentSectionId ?? 'section_1_prayer'}
-              onDismiss={() => setIsSectionEntryActive(false)}
-              stageStore={stageStore}
-              className="dual-frame-stage-wrapper"
-              stageLayout={isWaitingView ? 'waiting' : 'default'}
-              hasSession={true}
-              role={role}
-            >
-              <Sacred3DScene store={stageStore} />
-            </SectionEntryOverlay>
+            {isParticipantRandomizing ? (
+              <RandomSelectionOverlay stageStore={stageStore}>
+                <Sacred3DScene store={stageStore} />
+              </RandomSelectionOverlay>
+            ) : (
+              <SectionEntryOverlay
+                active={isSectionEntryActive && Boolean(entrySectionId)}
+                sectionId={entrySectionId ?? currentSectionId ?? 'section_1_prayer'}
+                onDismiss={() => setIsSectionEntryActive(false)}
+                stageStore={stageStore}
+                className="dual-frame-stage-wrapper"
+                stageLayout={isWaitingView ? 'waiting' : 'default'}
+                hasSession={true}
+                role={role}
+              >
+                <Sacred3DScene store={stageStore} />
+              </SectionEntryOverlay>
+            )}
 
             {liveSession.connectionStatus === 'connecting' && !session ? (
               <div
@@ -180,7 +193,7 @@ export function DualDeviceFrame({
                 <ParticipantWaitingScreen />
               )
             ) : session?.status === 'in_progress' ? (
-              isSectionEntryActive ? null : (
+              isSectionEntryActive || isParticipantRandomizing ? null : (
               currentSectionId === 'section_1_prayer' ? (
                 <OpeningPrayerScreen
                   role={liveSession.role ?? role}
@@ -234,6 +247,15 @@ export function DualDeviceFrame({
                     void liveSession.overrideTurn().catch(() => {});
                   }}
                   onResetTurn={handleResetTurn}
+                  onPickRandomly={() => {
+                    void randomSelection.pickRandom().catch(() => {});
+                  }}
+                  onRetryRandom={() => {
+                    void randomSelection.retryRandom().catch(() => {});
+                  }}
+                  onConfirmRandom={() => {
+                    void randomSelection.confirmRandom().catch(() => {});
+                  }}
                   lastSessionCommand={liveSession.lastSessionCommand}
                 />
               ) : currentSectionId === 'section_3_reading' ? (

@@ -1,7 +1,12 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import type { HealthResponse } from '../shared/health';
-import { toSessionStudySummary, type SessionStudySummary, type StudySectionId } from '../shared/session';
+import {
+  toSessionStudySummary,
+  volunteerTurnPhase,
+  type SessionStudySummary,
+  type StudySectionId,
+} from '../shared/session';
 import { OpeningPrayerScreen } from './components/prayer/OpeningPrayerScreen';
 import { SectionPlaceholderScreen } from './components/prayer/SectionPlaceholderScreen';
 import { IcebreakerScreen } from './components/icebreaker/IcebreakerScreen';
@@ -15,6 +20,7 @@ import { TitleLobbyScreen } from './components/lobby/TitleLobbyScreen';
 import { LeaderStudySetupScreen } from './components/setup/LeaderStudySetupScreen';
 import { Sacred3DScene } from './components/stage/Sacred3DScene';
 import { SectionEntryOverlay } from './components/stage/SectionEntryOverlay';
+import { RandomSelectionOverlay } from './components/random/RandomSelectionOverlay';
 import { SessionResilienceChip } from './components/session/SessionResilienceChip';
 import { ActiveSessionBanner } from './components/welcome/ActiveSessionBanner';
 import { LeaderAccessSheet } from './components/welcome/LeaderAccessSheet';
@@ -107,6 +113,11 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
   const isLeader = liveSession.role === 'Study Leader';
   const sessionStatus = liveSession.session?.status ?? null;
   const hasSession = Boolean(liveSession.session);
+  const isTurnRandomizing = Boolean(
+    liveSession.session?.volunteerTurn &&
+      volunteerTurnPhase(liveSession.session.volunteerTurn) === 'random_pending',
+  );
+  const isParticipantRandomizing = !isLeader && isTurnRandomizing;
   const stageLayout = !hasSession
     ? 'welcome'
     : !isLeader && (sessionStatus === 'lobby' || sessionStatus === 'setup')
@@ -336,77 +347,86 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
           </header>
         )}
 
-        <SectionEntryOverlay
-          key="persistent-sacred-stage"
-          active={hasSession && isSectionEntryActive && Boolean(entrySectionId)}
-          sectionId={entrySectionId ?? liveSession.session?.currentSectionId ?? 'section_1_prayer'}
-          onDismiss={() => setIsSectionEntryActive(false)}
-          stageStore={defaultSacredStageStore}
-          className={hasSession ? '' : 'sanctuary-stage-card'}
-          stageLayout={stageLayout}
-          hasSession={hasSession}
-          role={hasSession ? undefined : 'region'}
-          ariaLabel={hasSession ? undefined : 'Sanctuary readiness'}
-          dataHealth={hasSession ? undefined : healthState}
-        >
-          {!hasSession && (
-            <div key="stage-header" className="sanctuary-stage-header">
-              <span className="sanctuary-stage-eyebrow">MIDNIGHT SANCTUARY</span>
-              <span
-                className="sanctuary-stage-moment"
-                data-testid="sacred-active-moment"
-                aria-live="polite"
+        {isParticipantRandomizing ? (
+          <RandomSelectionOverlay
+            key="persistent-sacred-stage"
+            stageStore={defaultSacredStageStore}
+          >
+            <Sacred3DScene key="sacred-3d-scene" />
+          </RandomSelectionOverlay>
+        ) : (
+          <SectionEntryOverlay
+            key="persistent-sacred-stage"
+            active={hasSession && isSectionEntryActive && Boolean(entrySectionId)}
+            sectionId={entrySectionId ?? liveSession.session?.currentSectionId ?? 'section_1_prayer'}
+            onDismiss={() => setIsSectionEntryActive(false)}
+            stageStore={defaultSacredStageStore}
+            className={hasSession ? '' : 'sanctuary-stage-card'}
+            stageLayout={stageLayout}
+            hasSession={hasSession}
+            role={hasSession ? undefined : 'region'}
+            ariaLabel={hasSession ? undefined : 'Sanctuary readiness'}
+            dataHealth={hasSession ? undefined : healthState}
+          >
+            {!hasSession && (
+              <div key="stage-header" className="sanctuary-stage-header">
+                <span className="sanctuary-stage-eyebrow">MIDNIGHT SANCTUARY</span>
+                <span
+                  className="sanctuary-stage-moment"
+                  data-testid="sacred-active-moment"
+                  aria-live="polite"
+                >
+                  {activeStageMeta.eyebrow}
+                </span>
+              </div>
+            )}
+
+            <Sacred3DScene key="sacred-3d-scene" />
+
+            {!hasSession && (
+              <div
+                key="stage-pills"
+                className="sacred-stage-pill-grid"
+                role="group"
+                aria-label="Sacred stage emblems"
               >
-                {activeStageMeta.eyebrow}
-              </span>
-            </div>
-          )}
+                {SACRED_STAGE_VARIANTS.map((variantId) => {
+                  const meta = SACRED_STAGE_METADATA[variantId];
+                  const isActive = activeStage === variantId;
+                  return (
+                    <motion.button
+                      key={variantId}
+                      type="button"
+                      className="sacred-stage-pill"
+                      data-active={isActive ? 'true' : 'false'}
+                      data-stage-pill={variantId}
+                      data-testid={`stage-pill-${variantId}`}
+                      aria-pressed={isActive}
+                      whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                      onClick={() => handleStageSelect(variantId)}
+                    >
+                      <span
+                        className="sacred-stage-pill-dot"
+                        aria-hidden="true"
+                        style={{
+                          backgroundColor: isActive ? '#11131F' : meta.primaryColor,
+                        }}
+                      />
+                      <span className="sacred-stage-pill-label">{meta.label}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
 
-          <Sacred3DScene key="sacred-3d-scene" />
-
-          {!hasSession && (
-            <div
-              key="stage-pills"
-              className="sacred-stage-pill-grid"
-              role="group"
-              aria-label="Sacred stage emblems"
-            >
-              {SACRED_STAGE_VARIANTS.map((variantId) => {
-                const meta = SACRED_STAGE_METADATA[variantId];
-                const isActive = activeStage === variantId;
-                return (
-                  <motion.button
-                    key={variantId}
-                    type="button"
-                    className="sacred-stage-pill"
-                    data-active={isActive ? 'true' : 'false'}
-                    data-stage-pill={variantId}
-                    data-testid={`stage-pill-${variantId}`}
-                    aria-pressed={isActive}
-                    whileTap={reducedMotion ? undefined : { scale: 0.96 }}
-                    transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-                    onClick={() => handleStageSelect(variantId)}
-                  >
-                    <span
-                      className="sacred-stage-pill-dot"
-                      aria-hidden="true"
-                      style={{
-                        backgroundColor: isActive ? '#11131F' : meta.primaryColor,
-                      }}
-                    />
-                    <span className="sacred-stage-pill-label">{meta.label}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          )}
-
-          {!hasSession && (
-            <p key="stage-copy" className="sanctuary-stage-copy">
-              {stageSummary}
-            </p>
-          )}
-        </SectionEntryOverlay>
+            {!hasSession && (
+              <p key="stage-copy" className="sanctuary-stage-copy">
+                {stageSummary}
+              </p>
+            )}
+          </SectionEntryOverlay>
+        )}
 
         {liveSession.session ? (
           isLeader && sessionStatus === 'setup' ? (
@@ -471,7 +491,7 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
               }}
             />
           ) : sessionStatus === 'in_progress' ? (
-              isSectionEntryActive ? null : (
+              isSectionEntryActive || isParticipantRandomizing ? null : (
               liveSession.session.currentSectionId === 'section_1_prayer' ? (
                 <OpeningPrayerScreen
                   role={liveSession.role ?? 'Participant'}
@@ -566,6 +586,21 @@ export function App({ sessionClient, initialDualMode }: AppProps = {}) {
                   }}
                   onResetTurn={() => {
                     void liveSession.resetTurn().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onPickRandomly={() => {
+                    void randomSelection.pickRandom().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onRetryRandom={() => {
+                    void randomSelection.retryRandom().catch(() => {
+                      // Failure is surfaced via the session error path.
+                    });
+                  }}
+                  onConfirmRandom={() => {
+                    void randomSelection.confirmRandom().catch(() => {
                       // Failure is surfaced via the session error path.
                     });
                   }}

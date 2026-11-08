@@ -211,7 +211,7 @@ describe('RandomSelectionPanel — shared countdown state (ux/9)', () => {
     );
 
     const countdown = screen.getByTestId('random-countdown');
-    expect(countdown).toHaveTextContent('0:30');
+    expect(countdown).toHaveTextContent('0:04');
     expect(countdown).toHaveAttribute('role', 'timer');
     expect(countdown).toHaveAttribute('aria-live', 'polite');
   });
@@ -298,19 +298,19 @@ describe('RandomSelectionPanel — server-authoritative countdown display', () =
           avatarPalette: 'emerald',
           connectionStatus: 'connected',
         }}
-        candidateExpiresAt="2026-10-30T20:00:30.000Z"
+        candidateExpiresAt="2026-10-30T20:00:03.500Z"
         chosenLine="has been randomly chosen to pray."
         isLeader={false}
       />,
     );
 
-    expect(screen.getByTestId('random-countdown')).toHaveTextContent('0:30');
+    expect(screen.getByTestId('random-countdown')).toHaveTextContent('0:04');
     act(() => {
-      vi.advanceTimersByTime(5_000);
+      vi.advanceTimersByTime(2_000);
     });
-    expect(screen.getByTestId('random-countdown')).toHaveTextContent('0:25');
+    expect(screen.getByTestId('random-countdown')).toHaveTextContent('0:02');
     act(() => {
-      vi.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(10_000);
     });
     // Clamped: the countdown never renders negative or wraps.
     expect(screen.getByTestId('random-countdown')).toHaveTextContent('0:00');

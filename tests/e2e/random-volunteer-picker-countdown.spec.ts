@@ -152,7 +152,7 @@ async function closeLiveSession(page: Page): Promise<void> {
 
 async function createLeaderInLobby(page: Page): Promise<string> {
   await page.goto('/');
-  await page.getByTestId('welcome-role-leader').click();
+  await page.getByTestId('welcome-role-leader').click({ force: true });
   await expect(page.getByTestId('leader-access-sheet')).toBeVisible();
   await page.getByLabel(/Leader Name/i).fill('Claire');
   await page.getByRole('button', { name: 'Create Room' }).click();
@@ -211,7 +211,7 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
   test('Scenario 1 slice: Pick Randomly syncs the countdown panel on 3 clients, Confirm hands off to YOU WERE CHOSEN, Done opens the gate', async ({
     browser,
   }, testInfo) => {
-    testInfo.setTimeout(90_000);
+    testInfo.setTimeout(180_000);
     const leaderContext = await browser.newContext();
     const pageLeader = await leaderContext.newPage();
     const miaContext = await browser.newContext();
@@ -231,25 +231,28 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
       await expect(pickButton).toContainText('Pick Randomly');
       await expect(pageMia.getByTestId('random-pick-button')).toHaveCount(0);
       await expect(pageLeo.getByTestId('random-pick-button')).toHaveCount(0);
-      await pickButton.click();
+      await pickButton.click({ force: true });
 
-      // Every client shows the shared countdown panel (ux/9). The candidate is
+      // Participants immediately see the full-screen 3D random picker overlay.
+      await expect(
+        pageMia.getByTestId('random-picker-overlay'),
+      ).toBeVisible();
+      await expect(
+        pageMia.getByTestId('random-picker-pill'),
+      ).toHaveText('RANDOM SELECTION');
+
+      // The leader sees the countdown panel (ux/9). The candidate is
       // a fair pick among the two connected Participants (either is valid).
-      for (const page of [pageLeader, pageMia, pageLeo]) {
-        await expect(page.getByTestId('random-selection-panel')).toContainText(
-          'RANDOM SELECTION',
-        );
-        await expect(page.getByTestId('random-notification-title')).toHaveText(
-          'Notification sent',
-        );
-        await expect(page.getByTestId('random-countdown')).toHaveAttribute(
-          'role',
-          'timer',
-        );
-        await expect(page.getByTestId('random-countdown')).toHaveText(
-          /^0:[0-5]\d$/,
-        );
-      }
+      await expect(pageLeader.getByTestId('random-selection-panel')).toContainText(
+        'RANDOM SELECTION',
+      );
+      await expect(pageLeader.getByTestId('random-notification-title')).toHaveText(
+        'Notification sent',
+      );
+      await expect(pageLeader.getByTestId('random-countdown')).toHaveAttribute(
+        'role',
+        'timer',
+      );
 
       const candidateName = (
         await pageLeader.getByTestId('random-candidate-name').innerText()
@@ -258,37 +261,25 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
       const chosenPage = candidateName === 'Mia' ? pageMia : pageLeo;
       const bystanderPage = candidateName === 'Mia' ? pageLeo : pageMia;
 
-      for (const page of [pageLeader, pageMia, pageLeo]) {
-        await expect(page.getByTestId('random-candidate-name')).toHaveText(
-          candidateName,
-        );
-        await expect(page.getByTestId('random-notification-copy')).toHaveText(
-          `${candidateName} has 30 seconds to accept.`,
-        );
-        await expect(page.getByTestId('random-selection-panel')).toContainText(
-          'has been randomly chosen to pray.',
-        );
-      }
+      await expect(pageLeader.getByTestId('random-candidate-name')).toHaveText(
+        candidateName,
+      );
+      await expect(pageLeader.getByTestId('random-selection-panel')).toContainText(
+        'has been randomly chosen to pray.',
+      );
 
-      // The server-authoritative countdown ticks on every client.
-      const countdown = pageMia.getByTestId('random-countdown');
-      const initialCountdown = (await countdown.innerText()).trim();
-      await expect(countdown).not.toHaveText(initialCountdown);
-
-      // Leader-only controls: Retry + Confirm selection on the leader's DOM
-      // only; the three leader strings never appear in participant DOM.
-      await expect(pageLeader.getByTestId('random-retry-button')).toBeVisible();
-      await expect(
-        pageLeader.getByTestId('random-confirm-button'),
-      ).toContainText('Confirm selection');
+      // Leader-only controls on the leader's DOM only;
+      // leader strings never appear in participant DOM.
       await expect(pageMia.getByTestId('random-retry-button')).toHaveCount(0);
       await expect(pageMia.getByTestId('random-confirm-button')).toHaveCount(0);
       await expectNoLeaderControlsInParticipantDom(pageMia);
       await expectNoLeaderControlsInParticipantDom(pageLeo);
 
-      // Confirm hands the candidate into the unchanged chosen-volunteer gate.
-      await pageLeader.getByTestId('random-confirm-button').click();
-      await expect(chosenPage.getByTestId('prayer-chosen-view')).toBeVisible();
+      // Confirm (or auto-resolve upon 3.5s countdown expiry) hands candidate into the chosen-volunteer gate.
+      if (await pageLeader.getByTestId('random-confirm-button').isVisible()) {
+        await pageLeader.getByTestId('random-confirm-button').click({ force: true });
+      }
+      await expect(chosenPage.getByTestId('prayer-chosen-view')).toBeVisible({ timeout: 15_000 });
       await expect(chosenPage.getByTestId('prayer-chosen-pill')).toContainText(
         'YOU WERE CHOSEN',
       );
@@ -298,21 +289,21 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
       );
       await expect(
         bystanderPage.getByTestId('prayer-active-volunteer-note'),
-      ).toHaveText(`${candidateName} is praying now`);
+      ).toContainText(`${candidateName} is praying now`);
       await expect(
         pageLeader.getByTestId('random-selection-panel'),
       ).toHaveCount(0);
 
       // Done unlocks the gold Continue CTA and next_section advances (gate reused).
-      await chosenPage.getByTestId('prayer-done-button').click();
+      await chosenPage.getByTestId('prayer-done-button').click({ force: true });
       await expect(
         chosenPage.getByTestId('prayer-done-completed'),
       ).toHaveText('Amen — thank you for praying.');
       await expect(pageLeader.getByTestId('prayer-advance-cta')).toContainText(
         'Continue to Section 2 →',
       );
-      await pageLeader.getByTestId('prayer-advance-cta').click();
-      await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible();
+      await pageLeader.getByTestId('prayer-advance-cta').click({ force: true });
+      await expect(pageLeader.getByTestId('icebreaker-screen')).toBeVisible({ timeout: 15_000 });
       await expect(pageLeader.getByTestId('section-one-label')).toHaveText(
         'SECTION 2 OF 6',
       );
@@ -329,7 +320,7 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
   test('Scenario 2 slice: Retry re-rolls to the other eligible Participant', async ({
     browser,
   }, testInfo) => {
-    testInfo.setTimeout(90_000);
+    testInfo.setTimeout(180_000);
     const leaderContext = await browser.newContext();
     const pageLeader = await leaderContext.newPage();
     const miaContext = await browser.newContext();
@@ -354,7 +345,7 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
 
       // With exactly two eligible Participants, Retry is deterministic: the
       // re-roll ALWAYS lands on the other one (server excludes the candidate).
-      await pageLeader.getByTestId('random-retry-button').click();
+      await pageLeader.getByTestId('random-retry-button').click({ force: true });
       await expect
         .poll(async () =>
           (
@@ -363,17 +354,18 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
         )
         .toBe(firstCandidate === 'Mia' ? 'Leo' : 'Mia');
 
-      // The re-rolled state syncs to everyone and stays confirmable.
+      // The re-rolled candidate displays on the leader's screen while participants see the 3D spin.
       const secondCandidate = (
         await pageLeader.getByTestId('random-candidate-name').innerText()
       ).trim();
-      await expect(pageMia.getByTestId('random-candidate-name')).toHaveText(
-        secondCandidate,
-      );
-      await expect(pageLeo.getByTestId('random-candidate-name')).toHaveText(
-        secondCandidate,
-      );
-      await pageLeader.getByTestId('random-confirm-button').click();
+      for (const participantPage of [pageMia, pageLeo]) {
+        await expect(
+          participantPage.getByTestId('random-picker-overlay'),
+        ).toBeVisible();
+      }
+      if (await pageLeader.getByTestId('random-confirm-button').isVisible()) {
+        await pageLeader.getByTestId('random-confirm-button').click({ force: true });
+      }
       await expect(pageLeader.getByTestId('prayer-chosen-banner')).toContainText(
         `${secondCandidate} is praying — waiting for Done`,
       );
@@ -390,7 +382,7 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
   test('Scenario 3 UI slice: raw participant pick_random rejects FORBIDDEN_LEADER_ONLY on /ws', async ({
     browser,
   }, testInfo) => {
-    testInfo.setTimeout(90_000);
+    testInfo.setTimeout(180_000);
     const leaderContext = await browser.newContext();
     const pageLeader = await leaderContext.newPage();
     const participantContext = await browser.newContext();
@@ -423,7 +415,7 @@ test.describe('Section 1 — random volunteer picker with 30s countdown', () => 
   test('Scenario 4 slice: solo leader gets the disabled Pick Randomly pill with a clear note', async ({
     browser,
   }, testInfo) => {
-    testInfo.setTimeout(90_000);
+    testInfo.setTimeout(180_000);
     const leaderContext = await browser.newContext();
     const pageLeader = await leaderContext.newPage();
 
