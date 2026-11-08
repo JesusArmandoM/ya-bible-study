@@ -7,9 +7,28 @@
 - Standard verification path: `./init.sh` (`npm run typecheck && npm test && npm run build`) + `npm run test:e2e`
 - Current next ready feature: none (all MVP vertical slice features accepted)
 - Current blocker: `none`
-- Last verified at: `2026-11-07`
+- Last verified at: `2026-11-08`
 
 ## Session Log
+
+### Session 045
+
+- Date: `2026-11-08`
+- Goal: Fix broken layout on Welcome and Lobby screens reported on mobile viewports.
+- Root Cause Analysis:
+  1. Welcome screen: `.section-entry-stage-slot` in `src/client/styles/global.css` had `display: flex;` without `flex-direction: column;`. This caused the stage card children (`sanctuary-stage-header`, `sacred-stage-container`, `sacred-stage-pill-grid`, and `sanctuary-stage-copy`) to lay out horizontally side-by-side, squishing the 3D canvas and stage pills into a deformed row.
+  2. Study Leader Lobby screen: Total vertical height on standard mobile (390x844) exceeded 940px, causing the primary "Start Study →" action button to be pushed below the fold.
+- Fix Implementation (`src/client/styles/global.css`):
+  - Added `flex-direction: column;` to `.section-entry-stage-slot` (preserving React DOM hierarchy and persistent `<canvas>` object identity).
+  - Applied responsive clamping to `.hero-title` (`clamp(1.85rem, 6.5vw, var(--text-display-size))`) and `.title-lobby-title` (`clamp(1.85rem, 6vw, var(--text-display-size))`).
+  - Adjusted mobile spacing and padding on `.title-lobby` (`1.15rem 1.15rem 1.25rem`), `.title-lobby-metrics` (`0.75rem 0.65rem`), and `.lobby-actions` (`0.5rem` margin-top).
+  - Scaled `.post-join-stage-shell[data-stage-layout='lobby'] .sacred-stage-container` to `height: 135px; max-width: 220px;` so the entire lobby view fits cleanly within standard 844px mobile viewports.
+- Verification:
+  - Unit tests: `tests/unit/post-join-fullscreen-isolation.test.tsx` (4/4 passed), verifying persistent canvas instance equality (`Object.is`).
+  - Full test suite: `./init.sh` exit 0 (TypeScript clean, 63/63 Vitest suites / 555 tests passed, production Vite/tsc build clean).
+  - Playwright E2E: `tests/e2e/title-lobby-qr-join.spec.ts` and `tests/e2e/fullscreen-3d-section-entry-animations.spec.ts` (4/4 passed).
+  - Visual inspection via Chrome DevTools: Confirmed Welcome stage card is vertically stacked and centered, and Title Lobby fits completely within 390x844 mobile viewport with "Start Study →" CTA fully visible and accessible.
+  - Deployed build served on live Cloudflare tunnel (`https://undergraduate-premium-fever-lakes.trycloudflare.com`).
 
 ### Session 044
 
