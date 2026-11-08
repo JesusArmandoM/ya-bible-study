@@ -180,23 +180,23 @@ describe('eligibleRandomCandidateIds — connected Participants in join order', 
 describe('remainingCountdownSeconds — display-only clamped countdown', () => {
   const nowMs = Date.parse('2026-10-30T20:00:00.000Z');
 
-  it('is 30 (RANDOM_SELECTION_COUNTDOWN_MS) at the moment of staging', () => {
-    expect(RANDOM_SELECTION_COUNTDOWN_MS).toBe(30_000);
-    expect(remainingCountdownSeconds('2026-10-30T20:00:30.000Z', nowMs)).toBe(30);
+  it('is 4 (RANDOM_SELECTION_COUNTDOWN_MS = 3500) at the moment of staging', () => {
+    expect(RANDOM_SELECTION_COUNTDOWN_MS).toBe(3500);
+    expect(remainingCountdownSeconds('2026-10-30T20:00:03.500Z', nowMs)).toBe(4);
   });
 
   it('ticks down with the wall clock', () => {
-    expect(remainingCountdownSeconds('2026-10-30T20:00:30.000Z', nowMs + 5_000)).toBe(25);
+    expect(remainingCountdownSeconds('2026-10-30T20:00:03.500Z', nowMs + 1_000)).toBe(3);
     // Ceil semantics: "1" shows while any of the last second remains.
-    expect(remainingCountdownSeconds('2026-10-30T20:00:30.000Z', nowMs + 29_001)).toBe(1);
-    expect(remainingCountdownSeconds('2026-10-30T20:00:30.000Z', nowMs + 30_000)).toBe(0);
+    expect(remainingCountdownSeconds('2026-10-30T20:00:03.500Z', nowMs + 2_600)).toBe(1);
+    expect(remainingCountdownSeconds('2026-10-30T20:00:03.500Z', nowMs + 3_500)).toBe(0);
   });
 
-  it('clamps to 0..30 and treats an invalid expiry as 0', () => {
+  it('clamps to 0..4 and treats an invalid expiry as 0', () => {
     // Expired window clamps to 0 (never negative).
-    expect(remainingCountdownSeconds('2026-10-30T20:00:30.000Z', nowMs + 60_000)).toBe(0);
-    // A handcrafted far-future expiry still clamps to the 30s ceiling.
-    expect(remainingCountdownSeconds('2026-10-30T20:05:00.000Z', nowMs)).toBe(30);
+    expect(remainingCountdownSeconds('2026-10-30T20:00:03.500Z', nowMs + 60_000)).toBe(0);
+    // A handcrafted far-future expiry still clamps to the ~4s ceiling.
+    expect(remainingCountdownSeconds('2026-10-30T20:05:00.000Z', nowMs)).toBe(4);
     // Invalid ISO never propagates.
     expect(remainingCountdownSeconds('not-a-date', nowMs)).toBe(0);
     expect(remainingCountdownSeconds('', nowMs)).toBe(0);

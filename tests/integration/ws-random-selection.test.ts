@@ -431,11 +431,9 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
     );
     expect(confirmed.session.volunteerTurn?.selectedMemberId).toBe(j1.memberId);
 
-    // Assigned: pick/retry/confirm all reject (reassignment stays choose_volunteer's job).
+    // Assigned: pick_random and confirm_random reject; retry_random allows re-rolling.
     randomCommand(leader, created, 'pick_random', 'assigned-pick');
     await expectError(leader, 'INVALID_STATE_TRANSITION', 'assigned-pick');
-    randomCommand(leader, created, 'retry_random', 'assigned-retry');
-    await expectError(leader, 'INVALID_STATE_TRANSITION', 'assigned-retry');
     randomCommand(leader, created, 'confirm_random', 'assigned-confirm');
     await expectError(leader, 'INVALID_STATE_TRANSITION', 'assigned-confirm');
 
@@ -452,7 +450,7 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
       await expectError(leader, 'INVALID_STATE_TRANSITION', `done-${type}`);
     }
 
-    // (i) Past Section 1 there is no turn -> the shared gate rejects.
+    // (i) Section 2 Icebreaker has an open turn for pick_random.
     leader.send({
       type: 'next_section',
       sessionCode: created.sessionCode,
@@ -462,11 +460,47 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
     });
     await leader.waitFor('session_updated', (m) => m.command === 'next_section');
     randomCommand(leader, created, 'pick_random', 'section-2-pick');
-    await expectError(leader, 'INVALID_STATE_TRANSITION', 'section-2-pick');
-    randomCommand(leader, created, 'retry_random', 'section-2-retry');
-    await expectError(leader, 'INVALID_STATE_TRANSITION', 'section-2-retry');
-    randomCommand(leader, created, 'confirm_random', 'section-2-confirm');
-    await expectError(leader, 'INVALID_STATE_TRANSITION', 'section-2-confirm');
+    await leader.waitFor('session_updated', (m) => m.command === 'pick_random');
+
+    // (j) Past Section 3 (Section 4 Deep Analysis), the shared gate rejects.
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'ov-2',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'override_turn');
+    leader.send({
+      type: 'next_section',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'next-2',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'next_section');
+    leader.send({
+      type: 'override_turn',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'ov-3',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'override_turn');
+    leader.send({
+      type: 'next_section',
+      sessionCode: created.sessionCode,
+      leaderToken: created.leaderToken,
+      memberId: created.memberId,
+      requestId: 'next-3',
+    });
+    await leader.waitFor('session_updated', (m) => m.command === 'next_section');
+    randomCommand(leader, created, 'pick_random', 'section-4-pick');
+    await expectError(leader, 'INVALID_STATE_TRANSITION', 'section-4-pick');
+    randomCommand(leader, created, 'retry_random', 'section-4-retry');
+    await expectError(leader, 'INVALID_STATE_TRANSITION', 'section-4-retry');
+    randomCommand(leader, created, 'confirm_random', 'section-4-confirm');
+    await expectError(leader, 'INVALID_STATE_TRANSITION', 'section-4-confirm');
   }, 20_000);
 
   it('Scenario 3/4: zero connected Participants rejects the pick and re-roll', async () => {
@@ -630,7 +664,7 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
       fastStore.dispose();
     });
 
-    it('Scenario 4: the server timer clears the candidate and broadcasts random_expired to everyone', async () => {
+    it('Scenario 4: the server timer automatically resolves the candidate to assigned and broadcasts confirm_random', async () => {
       const leader = await fastConnect();
       leader.send({ type: 'create_session', displayName: 'Claire', requestId: 'c1' });
       const created = await leader.waitFor('session_created');
@@ -666,36 +700,37 @@ describe('WebSocket random volunteer picker + 30s countdown (protocol v3)', () =
         joined.memberId,
       );
 
-      // The unref'd per-session timer fires on the server clock: every client
-      // drops back to collecting_hands.
-      const expiredLeader = await leader.waitFor(
+      // The unref'd per-session timer fires on the server clock: automatically
+      // resolves candidate to assigned and broadcasts confirm_random to everyone.
+      const confirmedLeader = await leader.waitFor(
         'session_updated',
-        (m) => m.command === 'random_expired',
+        (m) => m.command === 'confirm_random',
       );
-      expect(expiredLeader.session.volunteerTurn?.candidateMemberId).toBeNull();
-      expect(expiredLeader.session.volunteerTurn?.candidateExpiresAt).toBeNull();
-      expect(expiredLeader.session.volunteerTurn?.selectedMemberId).toBeNull();
-      const expiredP1 = await p1.waitFor(
+      expect(confirmedLeader.session.volunteerTurn?.selectedMemberId).toBe(joined.memberId);
+      expect(confirmedLeader.session.volunteerTurn?.candidateMemberId).toBeNull();
+      expect(confirmedLeader.session.volunteerTurn?.candidateExpiresAt).toBeNull();
+      const confirmedP1 = await p1.waitFor(
         'session_updated',
-        (m) => m.command === 'random_expired',
+        (m) => m.command === 'confirm_random',
       );
-      expect(expiredP1.session.volunteerTurn?.candidateMemberId).toBeNull();
+      expect(confirmedP1.session.volunteerTurn?.selectedMemberId).toBe(joined.memberId);
 
-      // Back to collecting_hands: picking again works.
+      // In assigned state, leader can re-roll via retry_random if participant declines.
       leader.send({
-        type: 'pick_random',
+        type: 'retry_random',
         sessionCode: created.sessionCode,
         leaderToken: created.leaderToken,
         memberId: created.memberId,
-        requestId: 'pick-2',
+        requestId: 'retry-2',
       });
-      const repicked = await leader.waitFor(
+      const rerolled = await leader.waitFor(
         'session_updated',
-        (m) => m.command === 'pick_random' && m.requestId === 'pick-2',
+        (m) => m.command === 'retry_random' && m.requestId === 'retry-2',
       );
-      expect(repicked.session.volunteerTurn?.candidateMemberId).toBe(
+      expect(rerolled.session.volunteerTurn?.candidateMemberId).toBe(
         joined.memberId,
       );
+      expect(rerolled.session.volunteerTurn?.selectedMemberId).toBeNull();
     }, 15_000);
 
     it('Scenario 4/5: the expiry timer self-cancels silently once a manual choice supersedes the pick', async () => {

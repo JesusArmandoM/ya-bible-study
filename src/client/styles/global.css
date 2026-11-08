@@ -2576,6 +2576,16 @@ button {
   color: var(--color-text-muted);
 }
 
+.prayer-chosen-banner .random-retry-button,
+.icebreaker-chosen-banner .random-retry-button,
+.reading-chosen-banner .random-retry-button {
+  flex: none;
+  min-height: 40px;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.925rem;
+  margin-left: 0.5rem;
+}
+
 /* Chosen-volunteer view (ux/6) */
 .prayer-chosen-view {
   display: flex;
@@ -7778,6 +7788,103 @@ button {
   color: var(--color-text-muted, #CBD5E1);
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
 }
+
+/* Full-Screen 3D Random Picker Reveal */
+.random-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background, #0B0D17);
+  overflow: hidden;
+  pointer-events: auto;
+  user-select: none;
+  padding: 1.5rem 1rem;
+}
+
+.dual-device-chassis .random-picker-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  z-index: 50;
+}
+
+.random-picker-aura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.random-picker-pill {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-sans, system-ui);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #B855C8;
+  background: rgba(184, 85, 200, 0.14);
+  border: 1px solid rgba(184, 85, 200, 0.45);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-pill, 9999px);
+  box-shadow: 0 0 20px rgba(184, 85, 200, 0.25);
+  margin-bottom: 1.5rem;
+}
+
+.random-picker-stage-slot {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.random-picker-overlay .sacred-stage-container {
+  height: 240px;
+  max-width: 300px;
+  border-radius: var(--radius-lg, 24px);
+  border-color: rgba(184, 85, 200, 0.35);
+  box-shadow: 0 0 64px rgba(184, 85, 200, 0.22);
+}
+
+.random-picker-text {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 26rem;
+  text-align: center;
+}
+
+.random-picker-title {
+  margin: 0;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text, #F8FAFC);
+}
+
+.random-picker-subtitle {
+  margin: 0;
+  font-family: var(--font-sans, system-ui);
+  font-size: 1.125rem;
+  color: #E2A83E;
+  font-weight: 500;
+}
+
 
 
 

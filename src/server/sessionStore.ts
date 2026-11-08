@@ -1200,6 +1200,7 @@ export class LiveSessionStore {
       }
 
       session.lastActivityAt = currentNow;
+      this.cancelRandomExpiryTimer(session);
       if (session.volunteerTurn.selectedMemberId === rawTarget) {
         // Same-target re-choose: idempotent no-op broadcast.
         this.broadcastSessionUpdated(session, command, socket, requestId);
@@ -1951,10 +1952,14 @@ export class LiveSessionStore {
     currentNow: number,
   ): void {
     const turn = session.volunteerTurn;
+    const isSupportedSection =
+      session.currentSectionId === 'section_1_prayer' ||
+      session.currentSectionId === 'section_2_icebreaker' ||
+      session.currentSectionId === 'section_3_reading';
     if (
       session.status !== 'in_progress' ||
       !turn ||
-      turn.mode === 'open_share' ||
+      !isSupportedSection ||
       turn.sectionId !== session.currentSectionId ||
       turn.completedAt != null
     ) {
@@ -1979,8 +1984,6 @@ export class LiveSessionStore {
         );
         return;
       }
-      // Lazy server-clock window check — authoritative even before the expiry
-      // timer fires. Clients can only render the countdown.
       const expiresMs = Date.parse(turn.candidateExpiresAt ?? '');
       if (!Number.isFinite(expiresMs) || expiresMs <= currentNow) {
         this.sendError(
@@ -1992,6 +1995,9 @@ export class LiveSessionStore {
         return;
       }
       session.volunteerTurn = applyConfirmRandomCandidate(turn);
+      if (session.currentSectionId && session.volunteerTurn) {
+        session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+      }
       this.cancelRandomExpiryTimer(session);
       session.lastActivityAt = currentNow;
       this.broadcastSessionUpdated(session, command, socket, requestId);
@@ -1999,7 +2005,6 @@ export class LiveSessionStore {
     }
 
     if (command === 'pick_random' && phase !== 'collecting_hands') {
-      // Retry is the re-roll; a staged/assigned/completed turn never re-picks.
       this.sendError(
         socket,
         'INVALID_STATE_TRANSITION',
@@ -2009,11 +2014,11 @@ export class LiveSessionStore {
       return;
     }
 
-    if (command === 'retry_random' && phase !== 'random_pending') {
+    if (command === 'retry_random' && phase !== 'random_pending' && phase !== 'assigned') {
       this.sendError(
         socket,
         'INVALID_STATE_TRANSITION',
-        'Retry is only available while a random selection candidate is pending.',
+        'Retry is only available while a random selection is pending or a volunteer is assigned.',
         requestId,
       );
       return;
@@ -2030,13 +2035,14 @@ export class LiveSessionStore {
       return;
     }
 
-    // `retry_random` re-rolls excluding the current candidate (valid even
-    // after window expiry); with a single eligible Participant the full pool
-    // is the fallback so Retry never deadlocks.
+    // `retry_random` (or re-rolling while a candidate/assigned member exists)
+    // excludes the current candidate or selected member; with a single
+    // eligible Participant the full pool is the fallback so Retry never deadlocks.
     let pool = eligible;
-    if (command === 'retry_random') {
+    if (command === 'retry_random' || phase === 'assigned' || phase === 'random_pending') {
+      const excludingId = turn.candidateMemberId ?? turn.selectedMemberId;
       const excluding = eligible.filter(
-        (memberId) => memberId !== turn.candidateMemberId,
+        (memberId) => memberId !== excludingId,
       );
       if (excluding.length > 0) {
         pool = excluding;
@@ -2066,6 +2072,9 @@ export class LiveSessionStore {
       candidateMemberId,
       candidateExpiresAt,
     );
+    if (session.currentSectionId && session.volunteerTurn) {
+      session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
+    }
     session.lastActivityAt = currentNow;
     this.scheduleRandomExpiry(session, currentNow + this.randomCountdownMs);
     this.broadcastSessionUpdated(session, command, socket, requestId);
@@ -2084,7 +2093,6 @@ export class LiveSessionStore {
     const timer = setTimeout(() => {
       this.handleRandomExpiry(session);
     }, delayMs);
-    timer.unref();
     session.randomExpiryTimer = timer;
   }
 
@@ -2096,11 +2104,10 @@ export class LiveSessionStore {
   }
 
   /**
-   * Server-authoritative countdown expiry: clears `candidate*` and broadcasts
-   * `session_updated { command: 'random_expired' }` so every client drops the
-   * panel back to `collecting_hands`. Self-cancels silently when a manual
-   * `choose_volunteer` / `override_turn` superseded the pick (a staged
-   * candidate is inert in `assigned` / `turn_completed`).
+   * Server-authoritative countdown expiry: automatically resolves candidate
+   * to `assigned` via `applyConfirmRandomCandidate` and broadcasts
+   * `session_updated { command: 'confirm_random' }` without requiring manual
+   * leader confirmation.
    */
   private handleRandomExpiry(session: InternalLiveSession): void {
     session.randomExpiryTimer = undefined;
@@ -2111,23 +2118,12 @@ export class LiveSessionStore {
     if (turn.selectedMemberId != null || turn.completedAt != null) {
       return;
     }
-    session.volunteerTurn = applyClearRandomCandidate(turn);
-    this.broadcastRandomExpiry(session);
-  }
-
-  private broadcastRandomExpiry(session: InternalLiveSession): void {
-    const message: ServerWsMessage = {
-      type: 'session_updated',
-      command: 'random_expired',
-      sessionCode: session.sessionCode,
-      session: toPublicSnapshot(session),
-    };
-
-    for (const member of session.members.values()) {
-      if (member.socket) {
-        this.sendToSocket(member.socket, message);
-      }
+    session.volunteerTurn = applyConfirmRandomCandidate(turn);
+    if (session.currentSectionId && session.volunteerTurn) {
+      session.sectionTurns.set(session.currentSectionId, session.volunteerTurn);
     }
+    session.lastActivityAt = this.now();
+    this.broadcastSessionUpdated(session, 'confirm_random');
   }
 
   private isParticipantCaller(
@@ -2223,7 +2219,7 @@ export class LiveSessionStore {
   private broadcastSessionUpdated(
     session: InternalLiveSession,
     command: SessionUpdatedCommand,
-    requesterSocket: SessionPeerSocket,
+    requesterSocket?: SessionPeerSocket,
     requestId?: string,
   ): void {
     const snapshot = toPublicSnapshot(session);
@@ -2244,7 +2240,7 @@ export class LiveSessionStore {
       });
     }
 
-    if (!notifiedSockets.has(requesterSocket)) {
+    if (requesterSocket && !notifiedSockets.has(requesterSocket)) {
       this.sendToSocket(requesterSocket, {
         type: 'session_updated',
         ...(requestId ? { requestId } : {}),
@@ -2314,10 +2310,10 @@ export class LiveSessionStore {
   }
 
   private sendToSocket(
-    socket: SessionPeerSocket,
+    socket: SessionPeerSocket | undefined,
     message: ServerWsMessage,
   ): void {
-    if (socket.readyState === SOCKET_OPEN_READY_STATE) {
+    if (socket && socket.readyState === SOCKET_OPEN_READY_STATE) {
       socket.send(JSON.stringify(message));
     }
   }

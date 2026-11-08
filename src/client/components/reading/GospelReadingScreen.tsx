@@ -16,6 +16,7 @@ import {
   RandomSelectionPanel,
   type RandomCandidateData,
 } from '../random/RandomSelectionPanel';
+import { RandomSelectionOverlay } from '../random/RandomSelectionOverlay';
 import { SectionProgressHeader } from '../sections/SectionProgressHeader';
 import { LeaderReaderCard } from './LeaderReaderCard';
 import { ParticipantRosterStrip } from './ParticipantRosterStrip';
@@ -227,7 +228,9 @@ export function GospelReadingScreen({
         </p>
       </header>
 
-      {isRandomizing && candidateMember && turn?.candidateExpiresAt ? (
+      {isRandomizing && !isLeader ? (
+        <RandomSelectionOverlay />
+      ) : isRandomizing && candidateMember && turn?.candidateExpiresAt ? (
         <RandomSelectionPanel
           candidate={candidateMember}
           candidateExpiresAt={turn.candidateExpiresAt}
@@ -264,7 +267,19 @@ export function GospelReadingScreen({
               data-testid="reading-chosen-banner"
               role="status"
             >
-              {`${selectedMember.displayName} is reading aloud — waiting for Done`}
+              <span>{`${selectedMember.displayName} is reading aloud — waiting for Done`}</span>
+              {onRetryRandom && (
+                <button
+                  type="button"
+                  className="random-retry-button pick-again-button"
+                  data-testid="random-retry-button"
+                  onClick={() => {
+                    void Promise.resolve(onRetryRandom()).catch(() => {});
+                  }}
+                >
+                  Pick Again
+                </button>
+              )}
             </div>
           )}
 
@@ -397,7 +412,7 @@ export function GospelReadingScreen({
                   className="reading-active-volunteer-note"
                   data-testid="reading-active-volunteer-note"
                 >
-                  {selectedMember.displayName} is reading aloud
+                  {`${selectedMember.displayName} was chosen! ${selectedMember.displayName} is reading aloud`}
                 </p>
               )}
             </div>

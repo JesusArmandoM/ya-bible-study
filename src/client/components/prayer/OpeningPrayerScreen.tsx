@@ -26,6 +26,7 @@ import {
   RandomSelectionPanel,
   type RandomCandidateData,
 } from '../random/RandomSelectionPanel';
+import { RandomSelectionOverlay } from '../random/RandomSelectionOverlay';
 
 export interface OpeningPrayerScreenProps {
   role: SanctuaryRole;
@@ -296,7 +297,7 @@ export function OpeningPrayerScreen({
               data-testid="prayer-chosen-banner"
               role="status"
             >
-              {`${selectedMember.displayName} is praying — waiting for Done`}
+              <span>{`${selectedMember.displayName} is praying — waiting for Done`}</span>
               {selectedMember.connectionStatus === 'disconnected' && (
                 <span
                   className="prayer-chosen-banner-status"
@@ -304,6 +305,18 @@ export function OpeningPrayerScreen({
                 >
                   {' · reconnecting'}
                 </span>
+              )}
+              {onRetryRandom && (
+                <button
+                  type="button"
+                  className="random-retry-button pick-again-button"
+                  data-testid="random-retry-button"
+                  onClick={() => {
+                    void Promise.resolve(onRetryRandom()).catch(() => {});
+                  }}
+                >
+                  Pick Again
+                </button>
               )}
             </div>
           )}
@@ -373,21 +386,11 @@ export function OpeningPrayerScreen({
           />
           <LockedAdvanceBar role="Participant" />
         </>
+      ) : isRandomizing ? (
+        <RandomSelectionOverlay />
       ) : (
         <>
-          {isRandomizing && randomCandidateData ? (
-            <AnimatePresence>
-              <RandomSelectionPanel
-                key="random-selection-panel"
-                candidate={randomCandidateData}
-                candidateExpiresAt={turn?.candidateExpiresAt ?? ''}
-                chosenLine={RANDOM_CHOSEN_LINE}
-                isLeader={false}
-              />
-            </AnimatePresence>
-          ) : (
-            <HandRaiseOrb isRaised={isRaised} onToggle={onToggleHandRaised} />
-          )}
+          <HandRaiseOrb isRaised={isRaised} onToggle={onToggleHandRaised} />
           <p className="prayer-random-hint" data-testid="prayer-random-hint">
             {RANDOM_HINT_COPY}
           </p>
@@ -397,7 +400,7 @@ export function OpeningPrayerScreen({
               data-testid="prayer-active-volunteer-note"
               role="status"
             >
-              {`${selectedMember.displayName} is praying now`}
+              {`${selectedMember.displayName} was chosen! ${selectedMember.displayName} is praying now`}
             </p>
           )}
           {completedAt !== null && (

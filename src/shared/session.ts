@@ -22,7 +22,7 @@ export const MAX_DISPLAY_NAME_LENGTH = 48;
 export const DEFAULT_SESSION_TTL_MS = 4 * 60 * 60 * 1000;
 export const DEFAULT_SESSION_SWEEP_INTERVAL_MS = 60 * 1000;
 export const DEFAULT_WS_MAX_PAYLOAD_BYTES = 64 * 1024;
-export const RANDOM_SELECTION_COUNTDOWN_MS = 30_000;
+export const RANDOM_SELECTION_COUNTDOWN_MS = 3500;
 
 export const AVATAR_PALETTES = [
   'gold',
@@ -1557,6 +1557,7 @@ export function applyStageRandomCandidate(
 ): VolunteerTurnState {
   return {
     ...turn,
+    selectedMemberId: null,
     candidateMemberId,
     candidateExpiresAt: isoExpiresAt,
   };
@@ -1630,7 +1631,7 @@ export function remainingCountdownSeconds(
   candidateExpiresAt: string,
   nowMs: number,
 ): number {
-  const maxSeconds = RANDOM_SELECTION_COUNTDOWN_MS / 1000;
+  const maxSeconds = Math.ceil(RANDOM_SELECTION_COUNTDOWN_MS / 1000);
   const expiresMs = Date.parse(candidateExpiresAt);
   if (!Number.isFinite(expiresMs)) {
     return 0;
